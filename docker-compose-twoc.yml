@@ -52,7 +52,7 @@ services:
       - SYSTEM_SECRET=youReallyNeedToChangeThis
       - OAUTH2_SHARE_ERROR_DEBUG=1
 #      - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
-    restart: unless-stopped
+    restart: on-failure
 
   hydra:
     build:
@@ -79,7 +79,7 @@ services:
       - SYSTEM_SECRET=youReallyNeedToChangeThis
       - OAUTH2_SHARE_ERROR_DEBUG=1
 #      - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
-    restart: unless-stopped
+    restart: on-failure
 
   consent:
     environment:
@@ -89,7 +89,7 @@ services:
       - hydra-admin
     ports:
       - "3000:3000"
-    restart: unless-stopped
+    restart: on-failure
 
   postgresd:
     image: postgres:9.6
