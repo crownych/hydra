@@ -142,8 +142,8 @@
   name = "gopkg.in/yaml.v2"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/ory/metrics-middleware"
+  revision = "db3300574e48a229d5ddb1e30ea4adfd139d493a"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
