@@ -392,7 +392,8 @@
   version = "v3.3.0"
 
 [[projects]]
-  digest = "1:15b7b58347fd46d17c1f12a80c0f58003974f1aa36619a9045929d94d5d4a217"
+  branch = "master"
+  digest = "1:5be525f18dccdb8958cf89cb9ad9fa5aed18885c618bb6c3b98ed9c965bc2b82"
   name = "github.com/ory/fosite"
   packages = [
     ".",
@@ -405,8 +406,8 @@
     "token/jwt",
   ]
   pruneopts = ""
-  revision = "e1e18d6b22697abeceff6e22d4741c3bf04174f8"
-  version = "v0.24.0"
+  revision = "438fb0c68acde145f8280047b72ea6e01831b40c"
+  source = "github.com/104corp/fosite"
 
 [[projects]]
   digest = "1:88233ef02f3da33b9d4cf4f6c514c206ce4efec67f455c5be6dd3aa0fdf3bd32"
@@ -452,7 +453,6 @@
   version = "v0.8.8"
 
 [[projects]]
-  branch = "master"
   digest = "1:353065522bf16bf23dd507dd38a953da7b73978b51dc886aaf84e92c6b7956ac"
   name = "github.com/ory/metrics-middleware"
   packages = ["."]
