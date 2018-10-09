@@ -126,6 +126,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:046a699004979280a3644e97d4758e832e81d70910974f1ff8728cf83a632a24"
+  name = "github.com/goincremental/negroni-sessions"
+  packages = [
+    ".",
+    "cookiestore",
+  ]
+  pruneopts = ""
+  revision = "40b49004abeec57f602bad8509521a865b2be95e"
+
+[[projects]]
+  branch = "master"
   digest = "1:ebecfce0dfef837fa002818f8a5b08ad9a76550b7981258d46884aac60eed01c"
   name = "github.com/golang/gddo"
   packages = [
@@ -856,6 +867,8 @@
     "github.com/dgrijalva/jwt-go",
     "github.com/go-resty/resty",
     "github.com/go-sql-driver/mysql",
+    "github.com/goincremental/negroni-sessions",
+    "github.com/goincremental/negroni-sessions/cookiestore",
     "github.com/golang/mock/gomock",
     "github.com/gorilla/context",
     "github.com/gorilla/securecookie",

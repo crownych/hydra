@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	OpenIDConnectKeyName = "hydra.openid.id-token"
-	OAuth2JWTKeyName     = "hydra.jwt.access-token"
+	OpenIDConnectKeyName = "openid.id-token"
+	OAuth2JWTKeyName     = "jwt.access-token"
 
 	DefaultConsentPath = "/oauth2/fallbacks/consent"
 	DefaultLogoutPath  = "/oauth2/fallbacks/logout"
