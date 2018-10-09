@@ -62,6 +62,7 @@ func (h *Handler) GetGenerators() map[string]KeyGenerator {
 	if h.Generators == nil || len(h.Generators) == 0 {
 		h.Generators = map[string]KeyGenerator{
 			"RS256": &RS256Generator{},
+			"ES256": &ECDSA256Generator{},
 			"ES512": &ECDSA512Generator{},
 			"HS256": &HS256Generator{},
 			"HS512": &HS512Generator{},

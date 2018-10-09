@@ -37,3 +37,14 @@ func TestStart(t *testing.T) {
 	}
 	h.RegisterRoutes(router, router)
 }
+
+func TestStartCorp104(t *testing.T) {
+	router := httprouter.New()
+	h := &Handler{
+		Config: &config.Config{
+			DatabaseURL:               "memory",
+			OAuth2AccessTokenStrategy: "jwt",
+		},
+	}
+	h.RegisterRoutesForCorp104(router, router)
+}

@@ -35,7 +35,8 @@ This command does not work with the "memory" database. Both services (administra
 connection to be able to synchronize.
 
 ` + serveControls,
-	Run: server.RunServeAdmin(c),
+	//Run: server.RunServeAdmin(c),
+	Run: server.RunServeAdminForCorp104(c),
 }
 
 func init() {
