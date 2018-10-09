@@ -97,3 +97,57 @@ func publicKey(key interface{}) interface{} {
 		return nil
 	}
 }
+
+func createOrGetJWKForCorp104(c *config.Config, set string, kid string, prefix string) (key *jose.JSONWebKey, err error) {
+	ctx := c.Context()
+
+	expectDependency(c.GetLogger(), ctx.KeyManager)
+
+	keys, err := ctx.KeyManager.GetKeySet(context.TODO(), set)
+	if errors.Cause(err) == pkg.ErrNotFound || keys != nil && len(keys.Keys) == 0 {
+		c.GetLogger().Infof("JSON Web Key Set %s does not exist yet, generating new key pair...", set)
+		keys, err = createJWKSForCorp104(ctx, set, kid)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+
+	key, err = jwk.FindKeyByPrefix(keys, prefix)
+	if err != nil {
+		c.GetLogger().Infof("JSON Web Key with prefix %s not found in JSON Web Key Set %s, generating new key pair...", prefix, set)
+
+		keys, err = createJWKSForCorp104(ctx, set, kid)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err = jwk.FindKeyByPrefix(keys, prefix)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return key, nil
+}
+
+func createJWKSForCorp104(ctx *config.Context, set, kid string) (*jose.JSONWebKeySet, error) {
+	generator := jwk.ECDSA256Generator{}
+	keys, err := generator.Generate(kid, "sig")
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not generate %s key", set)
+	}
+
+	for i, k := range keys.Keys {
+		k.Use = "sig"
+		keys.Keys[i] = k
+	}
+
+	err = ctx.KeyManager.AddKeySet(context.TODO(), set, keys)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not persist %s key", set)
+	}
+
+	return keys, nil
+}

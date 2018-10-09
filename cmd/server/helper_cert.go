@@ -170,3 +170,53 @@ func createSelfSignedCertificate(key interface{}) (cert *x509.Certificate, err e
 	}
 	return cert, nil
 }
+
+func getOrCreateTLSCertificateForCorp104(cmd *cobra.Command, c *config.Config) tls.Certificate {
+	if cert := loadCertificateFromFile(cmd, c); cert != nil {
+		c.GetLogger().Info("Loaded tls certificate from file")
+		return *cert
+	} else if cert := loadCertificateFromEnv(c); cert != nil {
+		c.GetLogger().Info("Loaded certificate from environment variable")
+		return *cert
+	}
+
+	ctx := c.Context()
+	expectDependency(c.GetLogger(), ctx.KeyManager)
+
+	privateKey, err := createOrGetJWKForCorp104(c, tlsKeyName, "", "private")
+	if err != nil {
+		c.GetLogger().WithError(err).Fatalf(`Could not fetch TLS keys - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
+	}
+
+	if len(privateKey.Certificates) == 0 {
+		cert, err := createSelfSignedCertificate(privateKey.Key)
+		if err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not generate a self signed TLS certificate.`)
+		}
+
+		privateKey.Certificates = []*x509.Certificate{cert}
+		if err := ctx.KeyManager.DeleteKey(context.TODO(), tlsKeyName, privateKey.KeyID); err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not update (delete) the self signed TLS certificate.`)
+		}
+		if err := ctx.KeyManager.AddKey(context.TODO(), tlsKeyName, privateKey); err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not update (add) the self signed TLS certificate.`)
+		}
+	}
+
+	block, err := jwk.PEMBlockForKey(privateKey.Key)
+	if err != nil {
+		pkg.Must(err, "Could not encode key to PEM: %s", err)
+	}
+
+	if len(privateKey.Certificates) == 0 {
+		c.GetLogger().Fatal("TLS certificate chain can not be empty")
+	}
+
+	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: privateKey.Certificates[0].Raw})
+	pemKey := pem.EncodeToMemory(block)
+	cert, err := tls.X509KeyPair(pemCert, pemKey)
+	pkg.Must(err, "Could not decode certificate: %s", err)
+
+	return cert
+}
+

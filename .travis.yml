@@ -21,5 +21,5 @@ script:
   - |
     echo 'mode: atomic' > coverage.txt
   - |
-    go list ./... | grep -v /vendor | grep -v /internal | xargs -n1 -I{} sh -c 'go test -coverprofile=coverage.tmp -coverpkg $(go list ./... | grep -v /vendor | grep -v /internal | tr "\n" ",") {} && tail -n +2 coverage.tmp >> coverage.txt || exit 255' && rm coverage.tmp
+    go list ./... | grep -v /vendor | grep -v /internal | xargs -n1 -I{} sh -c 'CGO_ENABLED=0 go test -coverprofile=coverage.tmp -coverpkg $(go list ./... | grep -v /vendor | grep -v /internal | tr "\n" ",") {} && tail -n +2 coverage.tmp >> coverage.txt || exit 255' && rm coverage.tmp
   - goveralls -coverprofile="coverage.txt"
