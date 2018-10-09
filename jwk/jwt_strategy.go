@@ -251,8 +251,8 @@ func (j *ES256JWTStrategy) refresh(ctx context.Context) error {
 	}
 
 	if j.privateKey.PublicKey.Curve != j.publicKey.Curve ||
-		j.privateKey.PublicKey.X != j.publicKey.X ||
-		j.privateKey.PublicKey.Y.String() != j.publicKey.Y.String() {
+		j.privateKey.PublicKey.X.Cmp(j.publicKey.X) != 0 ||
+		j.privateKey.PublicKey.Y.Cmp(j.publicKey.Y) != 0 {
 		return errors.New("public and private key pair fetched from store does not match")
 	}
 
