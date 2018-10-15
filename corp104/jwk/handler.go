@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	IDTokenKeyName    = "vip3.openid.id-token"
+	IDTokenKeyName    = "openid.id-token"
 	KeyHandlerPath    = "/keys"
 	WellKnownKeysPath = "/jwks.json"
 )
