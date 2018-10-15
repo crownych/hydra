@@ -25,7 +25,7 @@ package main
 import (
 	"os"
 
-	"github.com/ory/hydra/cmd"
+	"github.com/ory/hydra/corp104/cmd"
 	"github.com/pkg/profile"
 )
 
