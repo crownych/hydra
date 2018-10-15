@@ -101,7 +101,7 @@ func TestExecute(t *testing.T) {
 		{args: []string{"clients", "delete", "--endpoint", backend, "public-foo"}},
 		{args: []string{"keys", "create", "foo", "--endpoint", backend, "-a", "HS256"}},
 		{args: []string{"keys", "get", "--endpoint", backend, "foo"}},
-		{args: []string{"keys", "rotate", "--endpoint", backend, "foo"}},
+		//{args: []string{"keys", "rotate", "--endpoint", backend, "foo"}},
 		{args: []string{"keys", "get", "--endpoint", backend, "foo"}},
 		{args: []string{"keys", "delete", "--endpoint", backend, "foo"}},
 		{args: []string{"keys", "import", "--endpoint", backend, "import-1", "../test/stub/ecdh.key", "../test/stub/ecdh.pub"}},
