@@ -59,7 +59,7 @@ services:
       - OIDC_SUBJECT_TYPES_SUPPORTED=public,pairwise
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
 #     - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
-    restart: unless-stopped
+    restart: on-failure
 
   consent:
     environment:
@@ -69,7 +69,7 @@ services:
       - hydra
     ports:
       - "3000:3000"
-    restart: unless-stopped
+    restart: on-failure
 
   postgresd:
     image: postgres:9.6
