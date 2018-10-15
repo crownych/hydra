@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	tlsKeyName = "vip3.https-tls"
+	tlsKeyName = "https-tls"
 )
 
 func loadCertificateFromFile(cmd *cobra.Command, c *config.Config) *tls.Certificate {

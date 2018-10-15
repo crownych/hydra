@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	OpenIDConnectKeyName = "vip3.openid.id-token"
-	OAuth2JWTKeyName     = "vip3.jwt.access-token"
+	OpenIDConnectKeyName = "openid.id-token"
+	OAuth2JWTKeyName     = "jwt.access-token"
 
 	DefaultConsentPath = "/oauth2/fallbacks/consent"
 	DefaultLogoutPath  = "/logout"
