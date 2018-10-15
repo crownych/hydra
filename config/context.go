@@ -36,5 +36,4 @@ type Context struct {
 	FositeStore    pkg.FositeStorer
 	KeyManager     jwk.Manager
 	ConsentManager consent.Manager
-	WebSession     *WebSession // 換成 interface ?
 }

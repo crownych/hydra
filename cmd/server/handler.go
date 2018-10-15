@@ -28,7 +28,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goincremental/negroni-sessions"
 	"github.com/gorilla/context"
 	"github.com/julienschmidt/httprouter"
 	"github.com/meatballhat/negroni-logrus"
@@ -57,7 +56,6 @@ func EnhanceRouter(c *config.Config, cmd *cobra.Command, serverHandler *Handler,
 	for _, m := range middlewares {
 		n.Use(m)
 	}
-	n.Use(sessions.Sessions(c.GetWebSessionName(), c.Context().WebSession.Store))
 	n.UseFunc(serverHandler.RejectInsecureRequests)
 	n.UseHandler(router)
 	if enableCors {

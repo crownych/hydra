@@ -94,6 +94,9 @@ type Config struct {
 	JaegerSamplingValue              float64 `mapstructure:"TRACING_PROVIDER_JAEGER_SAMPLING_VALUE" yaml:"-"`
 	ForceHTTP                        bool    `yaml:"-"`
 
+	// Cookie name of web session
+	WebSessionName                   string  `mapstructure:"WEB_SESSION_NAME" yaml:"-"`
+
 	BuildVersion string                     `yaml:"-"`
 	BuildHash    string                     `yaml:"-"`
 	BuildTime    string                     `yaml:"-"`
@@ -341,6 +344,7 @@ func (c *Config) Context() *Context {
 			AccessTokenLifespan:   c.GetAccessTokenLifespan(),
 			AuthorizeCodeLifespan: c.GetAuthCodeLifespan(),
 		},
+		WebSession: NewWebSession(c),
 	}
 
 	return c.context
@@ -422,4 +426,12 @@ func (c *Config) Persist() error {
 	}
 
 	return nil
+}
+
+func (c *Config) GetWebSessionName() string {
+	if c.WebSessionName != "" {
+		return c.WebSessionName
+	}
+	c.WebSessionName = "sid"
+	return c.WebSessionName
 }
