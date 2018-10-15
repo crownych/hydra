@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	IDTokenKeyName    = "openid.id-token"
+	IDTokenKeyName    = "hydra.openid.id-token"
 	KeyHandlerPath    = "/keys"
 	WellKnownKeysPath = "/.well-known/jwks.json"
 )
