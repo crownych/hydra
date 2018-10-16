@@ -432,6 +432,6 @@ func (c *Config) GetWebSessionName() string {
 	if c.WebSessionName != "" {
 		return c.WebSessionName
 	}
-	c.WebSessionName = "sid"
+	c.WebSessionName = "web_sid"
 	return c.WebSessionName
 }
