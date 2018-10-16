@@ -63,4 +63,6 @@ type Handler struct {
 	UserinfoEndpoint string
 
 	ShareOAuth2Debug bool
+
+	OAuthServerMetadataStrategy jwk.JWTStrategy
 }

@@ -38,8 +38,9 @@ import (
 
 var testServer *httptest.Server
 var IDKS *jose.JSONWebKeySet
+var OSMKS *jose.JSONWebKeySet
 
-func initTestHandler() {
+func init() {
 	router := httprouter.New()
 	IDKS, _ = testGenerator.Generate("test-id", "sig")
 
@@ -50,12 +51,13 @@ func initTestHandler() {
 		[]string{},
 	)
 	h.Manager.AddKeySet(context.TODO(), IDTokenKeyName, IDKS)
+	OSMKS, _ = testGenerator.Generate("test-oauth-meta", "sig")
+	h.Manager.AddKeySet(context.TODO(), OAuthServerMetadataKeyName, OSMKS)
 	h.SetRoutes(router, router)
 	testServer = httptest.NewServer(router)
 }
 
 func TestHandlerWellKnown(t *testing.T) {
-	initTestHandler()
 
 	JWKPath := WellKnownKeysPath
 	res, err := http.Get(testServer.URL + JWKPath)
