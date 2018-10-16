@@ -236,26 +236,27 @@ func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm
 
 // Generate JWKS for OAuth authorization server metadata and return JWTStrategy
 func initOAuthServerMetadataJWKSAndStrategy(c *config.Config) jwk.JWTStrategy {
-	// Generate JWKS for oauth authorization server metadata
+	// 產生 JWKS
 	kid := uuid.New()
 	if _, err := createOrGetJWK(c, oauth2.OAuthServerMetadataKeyName, kid, "private"); err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch private signing key for OAuth 2.0 Authorization Server Metadata - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 	}
-
-	if pubKey, err := createOrGetJWK(c, oauth2.OAuthServerMetadataKeyName, kid, "public"); err != nil {
+	pubKey, err := createOrGetJWK(c, oauth2.OAuthServerMetadataKeyName, kid, "public")
+	if err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch public signing key for OAuth 2.0 Authorization Server Metadata - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
-	} else {
-		// 輸出驗證 Metadata 的 JWK 及 PEM
-		mataPubKeyBytes, _ := pubKey.MarshalJSON()
-		var pubKeyInfo map[string]string
-		json.Unmarshal(mataPubKeyBytes, &pubKeyInfo)
-		pubX, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["x"])
-		pubY, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["y"])
-		derBytes, _ := x509.MarshalPKIXPublicKey(&ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(pubX), Y: new(big.Int).SetBytes(pubY)})
-		pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
-		c.GetLogger().Infof("JSON Web Key used to verify oauth server metadata\n\n%s\n\n%s", mataPubKeyBytes, pemBytes)
 	}
-	// OAuth2 authorization server metadata strategy
+
+	// 輸出驗證 Metadata 用的 Public Key JWK 及 PEM
+	mataPubKeyBytes, _ := pubKey.MarshalJSON()
+	var pubKeyInfo map[string]string
+	json.Unmarshal(mataPubKeyBytes, &pubKeyInfo)
+	pubX, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["x"])
+	pubY, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["y"])
+	derBytes, _ := x509.MarshalPKIXPublicKey(&ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(pubX), Y: new(big.Int).SetBytes(pubY)})
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
+	c.GetLogger().Infof("JSON Web Key used to verify oauth server metadata\n\n%s\n\n%s", mataPubKeyBytes, pemBytes)
+
+	// 建立 OAuth2 authorization server metadata strategy
 	metadataStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, oauth2.OAuthServerMetadataKeyName)
 	pkg.Must(err, "Could not fetch private signing key for OAuth 2.0 Authorization Metadata - did you forget to run \"hydra migrate sql\" or forget to set the SYSTEM_SECRET?")
 
