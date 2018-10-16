@@ -21,6 +21,7 @@
 package oauth2
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -61,7 +62,13 @@ const (
 	ServiceDocURL    = "https://github.com/104corp/vip3-auth"
 	CheckSessionPath = "/check-session"
 	ResourceSetPath  = "/resource-set"
+
+	OAuthServerMetadataKeyName = "oauth.server-metadata"
 )
+
+type SignedMetadata struct {
+	Token string `json:"signed_metadata"`
+}
 
 // swagger:model wellKnown
 type WellKnown struct {
@@ -155,6 +162,35 @@ type WellKnown struct {
 	RequestObjectSigningAlgValuesSupported []string `json:"request_object_signing_alg_values_supported"`
 }
 
+func (w *WellKnown) ToMap() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["issuer"] = w.Issuer
+	m["jwks_uri"] = w.JWKsURI
+	m["service_documentation"] = w.ServiceDocumentation
+	m["authorization_endpoint"] = w.AuthURL
+	m["token_endpoint"] = w.TokenURL
+	m["registration_endpoint"] = w.RegistrationEndpoint
+	m["revocation_endpoint"] = w.RevocationEndpoint
+	m["check_session_iframe"] = w.CheckSessionIFrame
+	m["end_session_endpoint"] = w.EndSessionEndpoint
+	m["resource_set_endpoint"] = w.ResourceSetEndpoint
+	m["scopes_supported"] = w.ScopesSupported
+	m["response_types_supported"] = w.ResponseTypes
+	m["grant_types_supported"] = w.GrantTypesSupported
+	m["token_endpoint_auth_methods_supported"] = w.TokenEndpointAuthMethodsSupported
+	m["token_endpoint_auth_signing_alg_values_supported"] = w.TokenEndpointAuthSigningAlgValuesSupported
+	m["revocation_endpoint_auth_methods_supported"] = w.RevocationEndpointAuthMethodsSupported
+	m["revocation_endpoint_auth_signing_alg_values_supported"] = w.RevocationEndpointAuthSigningAlgValuesSupported
+	m["id_token_signing_alg_values_supported"] = w.IDTokenSigningAlgValuesSupported
+	m["request_parameter_supported"] = w.RequestParameterSupported
+	m["request_object_signing_alg_values_supported"] = w.RevocationEndpointAuthSigningAlgValuesSupported
+	return m
+}
+
+func (w *WellKnown) ToMapClaims() jwt2.MapClaims {
+	return w.ToMap()
+}
+
 // swagger:model flushInactiveOAuth2TokensRequest
 type FlushInactiveOAuth2TokensRequest struct {
 	// NotAfter sets after which point tokens should not be flushed. This is useful when you want to keep a history
@@ -206,7 +242,7 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 		scopesSupported = append(scopesSupported, strings.Split(h.ScopesSupported, ",")...)
 	}
 
-	h.H.Write(w, r, &WellKnown{
+	claims := (&WellKnown{
 		Issuer:               strings.TrimRight(h.IssuerURL, "/") + "/",
 		JWKsURI:              strings.TrimRight(h.IssuerURL, "/") + JWKPath,
 		ServiceDocumentation: ServiceDocURL,
@@ -226,7 +262,15 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 		IDTokenSigningAlgValuesSupported:  				 []string{"ES256"},
 		RequestParameterSupported:         				 true,
 		RequestObjectSigningAlgValuesSupported: 		 []string{"ES256"},
-	})
+	}).ToMapClaims()
+
+	metaStrategy := h.OAuthServerMetadataStrategy
+	extraHeaders := make(map[string]interface{})
+	pubKeyId, _ := metaStrategy.GetPublicKeyID(context.TODO())
+	extraHeaders["kid"] = pubKeyId
+	token, _, _ := metaStrategy.Generate(context.TODO(), claims, &jwt.Headers{Extra: extraHeaders})
+
+	h.H.Write(w, r, &SignedMetadata{token})
 }
 
 // swagger:route POST /userinfo oAuth2 userinfo
