@@ -206,7 +206,7 @@ func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm
 		OAuth2:           o,
 		ScopeStrategy:    c.GetScopeStrategy(),
 		Consent: consent.NewStrategy(
-			c.LoginURL, c.ConsentURL, c.Issuer,
+			c.LoginURL, c.ConsentURL, c.DisableConsentFlow, c.Issuer,
 			oauth2.AuthPath, cm,
 			sessions.NewCookieStore(c.GetCookieSecret()), c.GetScopeStrategy(),
 			!c.ForceHTTP, time.Minute*15,

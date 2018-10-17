@@ -54,6 +54,7 @@ const (
 type DefaultStrategy struct {
 	AuthenticationURL             string
 	ConsentURL                    string
+	DisableUserConsent            bool
 	IssuerURL                     string
 	OAuth2AuthURL                 string
 	M                             Manager
@@ -69,6 +70,7 @@ type DefaultStrategy struct {
 func NewStrategy(
 	authenticationURL string,
 	consentURL string,
+	disableUserConsent bool,
 	issuerURL string,
 	oAuth2AuthURL string,
 	m Manager,
@@ -83,6 +85,7 @@ func NewStrategy(
 	return &DefaultStrategy{
 		AuthenticationURL:             authenticationURL,
 		ConsentURL:                    consentURL,
+		DisableUserConsent:            disableUserConsent,
 		IssuerURL:                     issuerURL,
 		OAuth2AuthURL:                 oAuth2AuthURL,
 		M:                             m,
@@ -562,10 +565,11 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 		return nil, errors.WithStack(fosite.ErrServerError.WithDebug("The authenticatedAt value was not set."))
 	}
 
-	// 沒有重導至 User Agent，因此無須查驗 CSRF
-	//if err := validateCsrfSession(r, s.CookieStore, cookieConsentCSRFName, session.ConsentRequest.CSRF); err != nil {
-	//	return nil, err
-	//}
+	if !s.DisableUserConsent {
+		if err := validateCsrfSession(r, s.CookieStore, cookieConsentCSRFName, session.ConsentRequest.CSRF); err != nil {
+			return nil, err
+		}
+	}
 
 	pw, err := s.obfuscateSubjectIdentifier(session.ConsentRequest.Subject, req, session.ConsentRequest.ForceSubjectIdentifier)
 	if err != nil {
@@ -601,20 +605,25 @@ func (s *DefaultStrategy) HandleOAuth2AuthorizationRequest(w http.ResponseWriter
 			return nil, err
 		}
 
-		// 建立 consent request
-		challenge, verifier, err := s.createConsentRequest(w, r, req, authSession)
-		if err != nil {
-			return nil, err
-		}
+		if s.DisableUserConsent {
+			// 建立 consent request
+			challenge, verifier, err := s.createConsentRequest(w, r, req, authSession)
+			if err != nil {
+				return nil, err
+			}
 
-		// 不 redirect 出去，直接處理掉
-		err = s.handleConsentRequest(w, r, req, challenge)
-		if err != nil {
-			return nil, err
-		}
+			// 不 redirect 出去，直接處理掉
+			err = s.handleConsentRequest(w, r, req, challenge)
+			if err != nil {
+				return nil, err
+			}
 
-		// 重設原本預計從 query string 拿取的 consent_verifier
-		consentVerifier = verifier
+			// 重設原本預計從 query string 拿取的 consent_verifier
+			consentVerifier = verifier
+		} else {
+			// ok, we need to process this request and redirect to auth endpoint
+			return nil, s.requestConsent(w, r, req, authSession)
+		}
 	}
 
 	consentSession, err := s.verifyConsent(w, r, req, consentVerifier)
@@ -626,6 +635,26 @@ func (s *DefaultStrategy) HandleOAuth2AuthorizationRequest(w http.ResponseWriter
 }
 
 func (s *DefaultStrategy) createConsentRequest(w http.ResponseWriter, r *http.Request, req fosite.AuthorizeRequester, authSession *HandledAuthenticationRequest) (challenge string, verifier string, err error) {
+
+	prompt := stringsx.Splitx(req.GetRequestForm().Get("prompt"), " ")
+	if stringslice.Has(prompt, "consent") {
+		return "", "", errors.WithStack(fosite.ErrConsentRequired.WithDebug(`Prompt "consent" was not supported`))
+	}
+
+	consentSessions, err := s.M.FindPreviouslyGrantedConsentRequests(r.Context(), req.GetClient().GetID(), authSession.Subject)
+	if err != nil && errors.Cause(err) != ErrNoPreviousConsentFound{
+		return "", "", err
+	}
+
+	skip := false
+	found := matchScopes(s.ScopeStrategy, consentSessions, req.GetRequestedScopes())
+	if found != nil {
+		skip = true
+	}
+
+	if stringslice.Has(prompt, "none") && !skip {
+		return "", "", errors.WithStack(fosite.ErrConsentRequired.WithDebug(`Prompt "none" was requested, but no previous consent was found`))
+	}
 
 	// Set up csrf/challenge/verifier values
 	v := strings.Replace(uuid.New(), "-", "", -1)
@@ -667,6 +696,7 @@ func (s *DefaultStrategy) handleConsentRequest(w http.ResponseWriter, r *http.Re
 
 	p.Challenge = challenge
 	p.RequestedAt = cr.RequestedAt
+	p.GrantedScope = []string(req.GetRequestedScopes())
 
 	hr, err := s.M.HandleConsentRequest(r.Context(), challenge, &p)
 	if err != nil {

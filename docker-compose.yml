@@ -59,6 +59,7 @@ services:
       - OIDC_SUBJECT_TYPES_SUPPORTED=public
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
+      - DISABLE_CONSENT_FLOW=1
     restart: on-failure
 
   consent:
