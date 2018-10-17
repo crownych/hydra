@@ -360,11 +360,18 @@ func TestUserinfo(t *testing.T) {
 }
 
 func TestHandlerWellKnown(t *testing.T) {
+	jwkManager := new(jwk.MemoryManager)
+	keySet := oauth2.OAuthServerMetadataKeyName
+	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-oauth-meta", "sig")
+	jwkManager.AddKeySet(context.TODO(), keySet, keys)
+	metadataStrategy, _ := jwk.NewES256JWTStrategy(jwkManager, keySet)
+
 	h := &oauth2.Handler{
 		H:             herodot.NewJSONWriter(nil),
 		ScopeStrategy: fosite.WildcardScopeStrategy,
 		IssuerURL:     "https://auth.v3.104.com.tw",
 		SubjectTypes:  []string{"public"},
+		OAuthServerMetadataStrategy: metadataStrategy,
 	}
 
 	r := httprouter.New()
@@ -377,7 +384,7 @@ func TestHandlerWellKnown(t *testing.T) {
 	require.NoError(t, err)
 	defer res.Body.Close()
 
-	trueConfig := oauth2.WellKnown{
+	trueConfig := (&oauth2.WellKnown{
 		Issuer:                            				 strings.TrimRight(h.IssuerURL, "/") + "/",
 		JWKsURI:                           				 strings.TrimRight(h.IssuerURL, "/") + oauth2.JWKPath,
 		ServiceDocumentation:							 oauth2.ServiceDocURL,
@@ -397,9 +404,30 @@ func TestHandlerWellKnown(t *testing.T) {
 		IDTokenSigningAlgValuesSupported:  				 []string{"ES256"},
 		RequestParameterSupported:         				 true,
 		RequestObjectSigningAlgValuesSupported: 		 []string{"ES256"},
+	}).ToMap()
+
+	var signedMetadataResp oauth2.SignedMetadata
+	err = json.NewDecoder(res.Body).Decode(&signedMetadataResp)
+	require.NoError(t, err, "problem decoding signed_metadata json response: %+v", err)
+	// validate & decode
+	dToken, err := metadataStrategy.Decode(context.TODO(), signedMetadataResp.Token)
+	require.NoError(t, err, "problem validating signed_metadata json response: %+v", err)
+	// compare content
+	claimMap := map[string]interface{}(dToken.Claims.(jwt2.MapClaims))
+	for k, v := range trueConfig {
+		switch v := v.(type) {
+		case string:
+			assert.EqualValues(t, v, claimMap[k])
+		case []string:
+			actual := claimMap[k]
+			if mv, ok := claimMap[k].([]interface{}); ok {
+				mvs := make([]string, len(mv))
+				for mvsi, mvsv := range mv {
+					mvs[mvsi] = fmt.Sprint(mvsv)
+				}
+				actual = mvs
+			}
+			assert.EqualValues(t, v, actual)
+		}
 	}
-	var wellKnownResp oauth2.WellKnown
-	err = json.NewDecoder(res.Body).Decode(&wellKnownResp)
-	require.NoError(t, err, "problem decoding wellknown json response: %+v", err)
-	assert.EqualValues(t, trueConfig, wellKnownResp)
 }
