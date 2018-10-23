@@ -100,7 +100,9 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	secret, _ := cmd.Flags().GetString("secret")
 	id, _ := cmd.Flags().GetString("id")
 	tokenEndpointAuthMethod, _ := cmd.Flags().GetString("token-endpoint-auth-method")
+	requestObjectSigningAlg, _ := cmd.Flags().GetString("request_object_signing_alg")
 	jwksUri, _ := cmd.Flags().GetString("jwks-uri")
+	jwks, _ := cmd.Flags().GetString("jwks")
 	tosUri, _ := cmd.Flags().GetString("tos-uri")
 	policyUri, _ := cmd.Flags().GetString("policy-uri")
 	logoUri, _ := cmd.Flags().GetString("logo-uri")
@@ -129,7 +131,9 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 		RedirectUris:            callbacks,
 		ClientName:              name,
 		TokenEndpointAuthMethod: tokenEndpointAuthMethod,
+		RequestObjectSigningAlg: requestObjectSigningAlg,
 		JwksUri:                 jwksUri,
+		Jwks:                    LoadJsonWebKeySet(jwks),
 		TosUri:                  tosUri,
 		PolicyUri:               policyUri,
 		LogoUri:                 logoUri,
@@ -178,4 +182,13 @@ func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
 	cl, response, err := m.GetOAuth2Client(args[0])
 	checkResponse(response, err, http.StatusOK)
 	fmt.Printf("%s\n", formatResponse(cl))
+}
+
+func LoadJsonWebKeySet(str string) hydra.JsonWebKeySet {
+	var keySet = new(hydra.JsonWebKeySet)
+	err := json.Unmarshal([]byte(str), keySet)
+	if err != nil {
+		panic(err.Error())
+	}
+	return *keySet
 }
