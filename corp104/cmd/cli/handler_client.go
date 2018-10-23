@@ -186,6 +186,10 @@ func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
 
 func LoadJsonWebKeySet(str string) hydra.JsonWebKeySet {
 	var keySet = new(hydra.JsonWebKeySet)
+	if str == "" {
+		return *keySet
+	}
+
 	err := json.Unmarshal([]byte(str), keySet)
 	if err != nil {
 		panic(err.Error())

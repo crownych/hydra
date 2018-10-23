@@ -157,3 +157,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/goincremental/negroni-sessions"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/lestrrat-go/jwx"
