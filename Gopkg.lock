@@ -260,6 +260,31 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f2ff872d42a40ac158ccee9e3cb4c9862f8499b8a192358c80e497c2aebf0981"
+  name = "github.com/lestrrat-go/jwx"
+  packages = [
+    "internal/base64",
+    "internal/option",
+    "jwa",
+    "jwk",
+    "jws",
+    "jws/sign",
+    "jws/verify",
+    "jwt",
+  ]
+  pruneopts = ""
+  revision = "0d477e6a1f0ec69634840308e3873fe71d928dd0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:816d40e9baad94fd9318634d17e1203cf8209facd490b966660de4ac72b3358a"
+  name = "github.com/lestrrat-go/pdebug"
+  packages = ["."]
+  pruneopts = ""
+  revision = "39f9a71bcabe9432cbdfe4d3d33f41988acd2ce6"
+
+[[projects]]
+  branch = "master"
   digest = "1:c7bbf42b56f999fc18f12707f6f9a3f47171de8bc6d4d7d3e8449093d55a4629"
   name = "github.com/lib/pq"
   packages = [
@@ -404,7 +429,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5be525f18dccdb8958cf89cb9ad9fa5aed18885c618bb6c3b98ed9c965bc2b82"
+  digest = "1:870830cbfd374144dae9501ac67800b92a0c0f0bd3a533c8317364109588787e"
   name = "github.com/ory/fosite"
   packages = [
     ".",
@@ -417,7 +442,7 @@
     "token/jwt",
   ]
   pruneopts = ""
-  revision = "438fb0c68acde145f8280047b72ea6e01831b40c"
+  revision = "2d6284431c2e336ae086e7fc35e8df26f1f76a69"
   source = "github.com/104corp/fosite"
 
 [[projects]]
@@ -877,6 +902,10 @@
     "github.com/imdario/mergo",
     "github.com/jmoiron/sqlx",
     "github.com/julienschmidt/httprouter",
+    "github.com/lestrrat-go/jwx/jwa",
+    "github.com/lestrrat-go/jwx/jwk",
+    "github.com/lestrrat-go/jwx/jws",
+    "github.com/lestrrat-go/jwx/jwt",
     "github.com/lib/pq",
     "github.com/meatballhat/negroni-logrus",
     "github.com/mendsley/gojwk",
