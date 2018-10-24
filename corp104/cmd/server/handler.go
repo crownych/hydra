@@ -33,14 +33,15 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/ory/go-convenience/corsx"
+	"github.com/ory/go-convenience/stringslice"
 	"github.com/ory/graceful"
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/config"
 	"github.com/ory/hydra/corp104/consent"
-	"github.com/ory/hydra/health"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/health"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/metrics-middleware"
 	"github.com/pkg/errors"
@@ -58,6 +59,7 @@ func EnhanceRouter(c *config.Config, cmd *cobra.Command, serverHandler *Handler,
 		n.Use(m)
 	}
 	n.Use(sessions.Sessions(c.GetWebSessionName(), c.Context().WebSession.Store))
+	n.UseFunc(serverHandler.CheckWebSession)
 	n.UseFunc(serverHandler.RejectInsecureRequests)
 	n.UseHandler(router)
 	if enableCors {
@@ -288,4 +290,42 @@ func (h *Handler) RejectInsecureRequests(rw http.ResponseWriter, r *http.Request
 	}
 
 	h.H.WriteErrorCode(rw, r, http.StatusBadGateway, errors.New("Can not serve request over insecure http"))
+}
+
+func (h *Handler) CheckWebSession(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+
+	path := r.URL.Path
+	// FIXME: Edge case 還沒有處理喔！
+	needle := path[0:strings.IndexAny(path[1:], "/")+1]
+
+	if stringslice.Has(h.Config.GetByPassSessionCheckRoutes(), needle) {
+		h.Config.GetLogger().Println("bypass web session check")
+		next.ServeHTTP(rw, r)
+		return
+	}
+
+	session := sessions.GetSession(r)
+	if ok := h.check(session); !ok {
+		h.Config.GetLogger().Warnln("unauthorized request")
+		http.Redirect(rw, r, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	next.ServeHTTP(rw, r)
+	return
+}
+
+func (h *Handler) check(session sessions.Session) bool {
+	if session == nil {
+		return false
+	}
+
+	// TODO: 檢查條件待補
+	_, ok := session.Get("client_metadata").(string)
+	if !ok {
+		h.Config.GetLogger().Warnln("web session check failed")
+	}
+
+	return true
+	//return ok
 }
