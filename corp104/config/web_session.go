@@ -14,7 +14,7 @@ func NewWebSession(c *Config) (session *WebSession) {
 	store.Options(sessions.Options{
 		Path:     "/",
 		MaxAge:   0,
-		Secure:   false,
+		Secure:   !c.ForceHTTP,
 		HTTPOnly: true,
 	})
 	return &WebSession{

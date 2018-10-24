@@ -60,6 +60,7 @@ services:
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
+      - BY_PASS_ROUTES=/register,/authorize
     restart: on-failure
 
   consent:
