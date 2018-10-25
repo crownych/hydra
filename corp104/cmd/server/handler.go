@@ -269,7 +269,7 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 	oauth2Provider := newOAuth2Provider(c)
 
 	// Set up handlers
-	h.Clients = newClientHandler(c, backend, clientsManager)
+	h.Clients = newClientHandler(c, frontend, clientsManager)
 	h.Keys = newJWKHandler(c, frontend, backend)
 	h.Consent = newConsentHandler(c, frontend, backend)
 	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager)
