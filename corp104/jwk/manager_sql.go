@@ -301,7 +301,7 @@ func (m *SQLManager) RotateKeys(new *AEAD) error {
 
 func (m *SQLManager) GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error) {
 	var ds []sqlData
-	if err := m.DB.Get(&ds, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE kid=? ORDER BY created_at DESC"), kid); err != nil {
+	if err := m.DB.Select(&ds, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE kid=? ORDER BY created_at DESC"), kid); err != nil {
 		return nil, sqlcon.HandleError(err)
 	}
 
