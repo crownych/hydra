@@ -21,7 +21,11 @@
 package client
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"fmt"
+	"github.com/pborman/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,8 +38,11 @@ import (
 func TestValidate(t *testing.T) {
 	v := &Validator{
 		DefaultClientScopes: []string{"openid"},
-		SubjectTypes:        []string{"pairwise", "public"},
+		SubjectTypes:        []string{"public"},
 	}
+
+	var ecTestKey256, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
 	for k, tc := range []struct {
 		in        *Client
 		check     func(t *testing.T, c *Client)
@@ -43,7 +50,20 @@ func TestValidate(t *testing.T) {
 		v         *Validator
 	}{
 		{
-			in: new(Client),
+			// public client
+			in: &Client{
+				ClientID: uuid.New(),
+				RedirectURIs: []string{"https://localhost/login/cb"},
+				GrantTypes: []string{"implicit"},
+				ResponseTypes: []string{"token", "id_token"},
+				Name: "SPA",
+				ClientURI: "https://localhost/spa",
+				Contacts: []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId: "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion: "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm: "ES256",
+			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)
 				assert.NotEmpty(t, c.GetID())
@@ -51,54 +71,30 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			in: &Client{ClientID: "foo"},
+			// confidential client
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key: &ecTestKey256.PublicKey,
+							KeyID: "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use: "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes: []string{"urn:ietf:params:oauth:grant-type:token-exchange"},
+				Name: "foo",
+				ClientURI: "https://localhost/client",
+				Contacts: []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId: "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion: "0.0.1",
+			},
 			check: func(t *testing.T, c *Client) {
 				assert.Equal(t, c.GetID(), c.ClientID)
 			},
-		},
-		{
-			in: &Client{ClientID: "foo"},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, c.GetID(), c.ClientID)
-			},
-		},
-		{
-			in:        &Client{ClientID: "foo", UserinfoSignedResponseAlg: "foo"},
-			expectErr: true,
-		},
-		{
-			in:        &Client{ClientID: "foo", TokenEndpointAuthMethod: "private_key_jwt"},
-			expectErr: true,
-		},
-		{
-			in:        &Client{ClientID: "foo", JSONWebKeys: &jose.JSONWebKeySet{}, JSONWebKeysURI: "asdf", TokenEndpointAuthMethod: "private_key_jwt"},
-			expectErr: true,
-		},
-		{
-			in: &Client{ClientID: "foo"},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, "public", c.SubjectType)
-			},
-		},
-		{
-			v: &Validator{
-				DefaultClientScopes: []string{"openid"},
-				SubjectTypes:        []string{"pairwise"},
-			},
-			in: &Client{ClientID: "foo"},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, "pairwise", c.SubjectType)
-			},
-		},
-		{
-			in: &Client{ClientID: "foo", SubjectType: "pairwise"},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, "pairwise", c.SubjectType)
-			},
-		},
-		{
-			in:        &Client{ClientID: "foo", SubjectType: "foo"},
-			expectErr: true,
 		},
 	} {
 		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {

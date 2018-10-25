@@ -40,8 +40,8 @@ func TestClient(t *testing.T) {
 
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
 	assert.EqualValues(t, []byte(c.Secret), c.GetHashedSecret())
-	assert.EqualValues(t, fosite.Arguments{"authorization_code"}, c.GetGrantTypes())
-	assert.EqualValues(t, fosite.Arguments{"code"}, c.GetResponseTypes())
+	assert.EqualValues(t, fosite.Arguments{"implicit"}, c.GetGrantTypes())
+	assert.EqualValues(t, fosite.Arguments{"token", "id_token"}, c.GetResponseTypes())
 	assert.EqualValues(t, c.Owner, c.GetOwner())
 	assert.True(t, c.IsPublic())
 	assert.Len(t, c.GetScopes(), 2)

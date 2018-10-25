@@ -36,7 +36,8 @@ type OAuth2Client struct {
 	// GrantTypes is an array of grant types the client is allowed to use.
 	GrantTypes []string `json:"grant_types,omitempty"`
 
-	Jwks JsonWebKeySet `json:"jwks,omitempty"`
+	// Client’s JWKS document value, which contains the client’s public keys.
+	Jwks *JsonWebKeySet `json:"jwks,omitempty"`
 
 	// URL for the Client's JSON Web Key Set [JWK] document. If the Client signs requests to the Server, it contains the signing key(s) the Server uses to validate signatures from the Client. The JWK Set MAY also contain the Client's encryption keys(s), which are used by the Server to encrypt responses to the Client. When both signing and encryption keys are made available, a use (Key Use) parameter value is REQUIRED for all keys in the referenced JWK Set to indicate each key's intended usage. Although some algorithms allow the same key to be used for both signatures and encryption, doing so is NOT RECOMMENDED, as it is less secure. The JWK x5c parameter MAY be used to provide X.509 representations of keys provided. When used, the bare key values MUST still be present and MUST match those in the certificate.
 	JwksUri string `json:"jwks_uri,omitempty"`
@@ -79,4 +80,16 @@ type OAuth2Client struct {
 
 	// JWS alg algorithm [JWA] REQUIRED for signing UserInfo Responses. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is for the UserInfo Response to return the Claims as a UTF-8 encoded JSON object using the application/json content-type.
 	UserinfoSignedResponseAlg string `json:"userinfo_signed_response_alg,omitempty"`
+
+	// A unique identifier string to identify the client software to be dynamically registered.
+	SoftwareId string `json:"software_id"`
+
+	// A version identifier string for the client software identified by “software_id”.
+	SoftwareVersion string `json:"software_version"`
+
+	// Resource Sets
+	ResourceSets []string `json:"resource_sets"`
+
+	// JWS alg algorithm [JWA] REQUIRED for signing the ID Token issued to this Client. The value none MUST NOT be used as the ID Token alg value unless the Client uses only Response Types that return no ID Token from the Authorization Endpoint (such as when only using the Authorization Code Flow).
+	IdTokenSignedResponseAlg string `json:"id_token_signed_response_alg,omitempty"`
 }

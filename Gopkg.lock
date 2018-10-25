@@ -263,9 +263,16 @@
   digest = "1:f2ff872d42a40ac158ccee9e3cb4c9862f8499b8a192358c80e497c2aebf0981"
   name = "github.com/lestrrat-go/jwx"
   packages = [
+    "buffer",
     "internal/base64",
+    "internal/concatkdf",
+    "internal/debug",
+    "internal/emap",
     "internal/option",
+    "internal/padbuf",
     "jwa",
+    "jwe",
+    "jwe/aescbc",
     "jwk",
     "jws",
     "jws/sign",
@@ -513,6 +520,14 @@
   pruneopts = ""
   revision = "068c69998749cdb876c4adf179a8ed702864ad2b"
   version = "v0.0.7"
+
+[[projects]]
+  digest = "1:4c0404dc03d974acd5fcd8b8d3ce687b13bd169db032b89275e8b9d77b98ce8c"
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
 
 [[projects]]
   digest = "1:63e142fc50307bcb3c57494913cfc9c12f6061160bdf97a678f78c71615f939b"
@@ -903,6 +918,7 @@
     "github.com/jmoiron/sqlx",
     "github.com/julienschmidt/httprouter",
     "github.com/lestrrat-go/jwx/jwa",
+    "github.com/lestrrat-go/jwx/jwe",
     "github.com/lestrrat-go/jwx/jwk",
     "github.com/lestrrat-go/jwx/jws",
     "github.com/lestrrat-go/jwx/jwt",
@@ -936,6 +952,7 @@
     "github.com/ory/pagination",
     "github.com/ory/sqlcon",
     "github.com/ory/sqlcon/dockertest",
+    "github.com/patrickmn/go-cache",
     "github.com/pborman/uuid",
     "github.com/phayes/freeport",
     "github.com/pkg/errors",

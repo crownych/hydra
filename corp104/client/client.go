@@ -21,12 +21,11 @@
 package client
 
 import (
+	"github.com/ory/fosite"
 	"strings"
 
-	"github.com/ory/fosite"
-
 	// Naming the dependency jose is important for go-swagger to work, see https://github.com/go-swagger/go-swagger/issues/1587
-	jose "gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2"
 )
 
 // Client represents an OAuth 2.0 Client.
@@ -49,14 +48,16 @@ type Client struct {
 	RedirectURIs []string `json:"redirect_uris"`
 
 	// GrantTypes is an array of grant types the client is allowed to use.
-	//
-	// Pattern: client_credentials|authorize_code|implicit|refresh_token
+	// Public Client 必須是 [“implicit”].
+	// Confidential Client 必須是 [“urn:ietf:params:oauth:grant-type:token-exchange”].
 	GrantTypes []string `json:"grant_types"`
+
 
 	// ResponseTypes is an array of the OAuth 2.0 response type strings that the client can
 	// use at the authorization endpoint.
 	//
 	// Pattern: id_token|code|token
+	// Public Client 必須是 [“token”, "id_token"].
 	ResponseTypes []string `json:"response_types"`
 
 	// Scope is a string containing a space-separated list of scope values (as
@@ -133,6 +134,7 @@ type Client struct {
 
 	// Requested Client Authentication method for the Token Endpoint. The options are client_secret_post,
 	// client_secret_basic, private_key_jwt, and none.
+	// Confidential Client: 必須是 "private_key_jwt"
 	TokenEndpointAuthMethod string `json:"token_endpoint_auth_method,omitempty"`
 
 	// Array of request_uri values that are pre-registered by the RP for use at the OP. Servers MAY cache the
@@ -149,6 +151,17 @@ type Client struct {
 	// [JWT] serialized, and signed using JWS. The default, if omitted, is for the UserInfo Response to return the Claims
 	// as a UTF-8 encoded JSON object using the application/json content-type.
 	UserinfoSignedResponseAlg string `json:"userinfo_signed_response_alg,omitempty"`
+
+	// Resource Sets
+	ResourceSets []string `json:"resource_sets"`
+
+	// A unique identifier string to identify the client software to be dynamically registered.
+	SoftwareId string `json:"software_id"`
+
+	// A version identifier string for the client software identified by “software_id”.
+	SoftwareVersion string `json:"software_version"`
+
+	IdTokenSignedResponseAlgorithm string `json:"id_token_signed_response_alg,omitempty"`
 }
 
 func (c *Client) GetID() string {
@@ -172,9 +185,12 @@ func (c *Client) GetGrantTypes() fosite.Arguments {
 	//
 	// JSON array containing a list of the OAuth 2.0 Grant Types that the Client is declaring
 	// that it will restrict itself to using.
-	// If omitted, the default is that the Client will use only the authorization_code Grant Type.
 	if len(c.GrantTypes) == 0 {
-		return fosite.Arguments{"authorization_code"}
+		if c.IsPublic() {
+			return fosite.Arguments{"implicit"}
+		} else {
+			return fosite.Arguments{"urn:ietf:params:oauth:grant-type:token-exchange"}
+		}
 	}
 	return fosite.Arguments(c.GrantTypes)
 }
@@ -183,10 +199,9 @@ func (c *Client) GetResponseTypes() fosite.Arguments {
 	// https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
 	//
 	// <JSON array containing a list of the OAuth 2.0 response_type values that the Client is declaring
-	// that it will restrict itself to using. If omitted, the default is that the Client will use
-	// only the code Response Type.
-	if len(c.ResponseTypes) == 0 {
-		return fosite.Arguments{"code"}
+	// that it will restrict itself to using.
+	if len(c.ResponseTypes) == 0 && c.IsPublic() {
+		return fosite.Arguments{"token", "id_token"}
 	}
 	return fosite.Arguments(c.ResponseTypes)
 }
@@ -208,19 +223,19 @@ func (c *Client) GetJSONWebKeys() *jose.JSONWebKeySet {
 }
 
 func (c *Client) GetTokenEndpointAuthSigningAlgorithm() string {
-	return "RS256"
+	return "ES256"
 }
 
 func (c *Client) GetRequestObjectSigningAlgorithm() string {
 	if c.RequestObjectSigningAlgorithm == "" {
-		return "RS256"
+		return "ES256"
 	}
 	return c.RequestObjectSigningAlgorithm
 }
 
 func (c *Client) GetTokenEndpointAuthMethod() string {
 	if c.TokenEndpointAuthMethod == "" {
-		return "client_secret_basic"
+		return "none"
 	}
 	return c.TokenEndpointAuthMethod
 }

@@ -21,7 +21,6 @@
 package oauth2
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -266,9 +265,9 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 
 	metaStrategy := h.OAuthServerMetadataStrategy
 	extraHeaders := make(map[string]interface{})
-	pubKeyId, _ := metaStrategy.GetPublicKeyID(context.TODO())
+	pubKeyId, _ := metaStrategy.GetPublicKeyID(r.Context())
 	extraHeaders["kid"] = pubKeyId
-	token, _, _ := metaStrategy.Generate(context.TODO(), claims, &jwt.Headers{Extra: extraHeaders})
+	token, _, _ := metaStrategy.Generate(r.Context(), claims, &jwt.Headers{Extra: extraHeaders})
 
 	h.H.Write(w, r, &SignedMetadata{token})
 }
@@ -311,7 +310,7 @@ func (h *Handler) UserinfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c.UserinfoSignedResponseAlg == "RS256" {
+	if c.UserinfoSignedResponseAlg == "ES256" {
 		interim := ar.GetSession().(*Session).IDTokenClaims().ToMap()
 
 		delete(interim, "nonce")

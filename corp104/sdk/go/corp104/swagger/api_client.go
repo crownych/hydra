@@ -68,6 +68,20 @@ func (c *APIClient) SelectHeaderAccept(accepts []string) string {
 	return strings.Join(accepts, ",")
 }
 
+func (c *APIClient) SelectHeaderCookie(cookies map[string]string) string {
+
+	if len(cookies) == 0 {
+		return ""
+	}
+
+	var cookieList []string
+	for name, value := range cookies {
+		cookieList = append(cookieList, name + "=" + value)
+	}
+
+	return strings.Join(cookieList, ";")
+}
+
 func contains(haystack []string, needle string) bool {
 	for _, a := range haystack {
 		if strings.ToLower(a) == strings.ToLower(needle) {

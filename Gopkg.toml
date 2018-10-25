@@ -161,3 +161,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/lestrrat-go/jwx"
+
+[[constraint]]
+  name = "github.com/patrickmn/go-cache"
+  version = "2.1.0"

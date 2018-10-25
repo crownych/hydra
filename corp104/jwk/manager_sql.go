@@ -298,3 +298,34 @@ func (m *SQLManager) RotateKeys(new *AEAD) error {
 	}
 	return nil
 }
+
+func (m *SQLManager) GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error) {
+	var ds []sqlData
+	if err := m.DB.Select(&ds, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE kid=? ORDER BY created_at DESC"), kid); err != nil {
+		return nil, sqlcon.HandleError(err)
+	}
+
+	if len(ds) == 0 {
+		return nil, errors.Wrap(pkg.ErrNotFound, "")
+	}
+
+	setKeys := make(map[string][]jose.JSONWebKey)
+	for _, d := range ds {
+		key, err := m.Cipher.Decrypt(d.Key)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		var c jose.JSONWebKey
+		if err := json.Unmarshal(key, &c); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		setKeys[d.Set] = append(setKeys[d.Set], c)
+	}
+
+	if len(setKeys) == 0 {
+		return nil, errors.WithStack(pkg.ErrNotFound)
+	}
+
+	return setKeys, nil
+}

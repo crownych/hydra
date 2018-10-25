@@ -6,12 +6,12 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**AcceptConsentRequest**](OAuth2Api.md#AcceptConsentRequest) | **Put** /oauth2/auth/requests/consent/{challenge}/accept | Accept an consent request
 [**AcceptLoginRequest**](OAuth2Api.md#AcceptLoginRequest) | **Put** /oauth2/auth/requests/login/{challenge}/accept | Accept an login request
-[**CreateOAuth2Client**](OAuth2Api.md#CreateOAuth2Client) | **Post** /clients | Create an OAuth 2.0 client
-[**DeleteOAuth2Client**](OAuth2Api.md#DeleteOAuth2Client) | **Delete** /clients/{id} | Deletes an OAuth 2.0 Client
+[**CreateOAuth2Client**](OAuth2Api.md#CreateOAuth2Client) | **Post** /register | Create an OAuth 2.0 client
+[**DeleteOAuth2Client**](OAuth2Api.md#DeleteOAuth2Client) | **Delete** /register/{id} | Deletes an OAuth 2.0 Client
 [**FlushInactiveOAuth2Tokens**](OAuth2Api.md#FlushInactiveOAuth2Tokens) | **Post** /oauth2/flush | Flush Expired OAuth2 Access Tokens
 [**GetConsentRequest**](OAuth2Api.md#GetConsentRequest) | **Get** /oauth2/auth/requests/consent/{challenge} | Get consent request information
 [**GetLoginRequest**](OAuth2Api.md#GetLoginRequest) | **Get** /oauth2/auth/requests/login/{challenge} | Get an login request
-[**GetOAuth2Client**](OAuth2Api.md#GetOAuth2Client) | **Get** /clients/{id} | Get an OAuth 2.0 Client.
+[**GetOAuth2Client**](OAuth2Api.md#GetOAuth2Client) | **Get** /register/{id} | Get an OAuth 2.0 Client.
 [**GetWellKnown**](OAuth2Api.md#GetWellKnown) | **Get** /.well-known/oauth-authorization-server | Server well known configuration
 [**IntrospectOAuth2Token**](OAuth2Api.md#IntrospectOAuth2Token) | **Post** /oauth2/introspect | Introspect OAuth2 tokens
 [**ListOAuth2Clients**](OAuth2Api.md#ListOAuth2Clients) | **Get** /clients | List OAuth 2.0 Clients
@@ -25,7 +25,7 @@ Method | HTTP request | Description
 [**RevokeOAuth2Token**](OAuth2Api.md#RevokeOAuth2Token) | **Post** /revoke | Revoke OAuth2 tokens
 [**RevokeUserClientConsentSessions**](OAuth2Api.md#RevokeUserClientConsentSessions) | **Delete** /oauth2/auth/sessions/consent/{user}/{client} | Revokes consent sessions of a user for a specific OAuth 2.0 Client
 [**RevokeUserLoginCookie**](OAuth2Api.md#RevokeUserLoginCookie) | **Get** /oauth2/auth/sessions/login/revoke | Logs user out by deleting the session cookie
-[**UpdateOAuth2Client**](OAuth2Api.md#UpdateOAuth2Client) | **Put** /clients/{id} | Update an OAuth 2.0 Client
+[**UpdateOAuth2Client**](OAuth2Api.md#UpdateOAuth2Client) | **Put** /register/{id} | Update an OAuth 2.0 Client
 [**Userinfo**](OAuth2Api.md#Userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 [**WellKnown**](OAuth2Api.md#WellKnown) | **Get** /jwks.json | Get Well-Known JSON Web Keys
 
@@ -95,7 +95,7 @@ No authorization required
 
 Create an OAuth 2.0 client
 
-Create a new OAuth 2.0 client If you pass `client_secret` the secret will be used, otherwise a random secret will be generated. The secret will be returned in the response and you will not be able to retrieve it later on. Write the secret down and keep it somwhere safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
+OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
 
 
 ### Parameters
@@ -106,7 +106,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**OAuth2Client**](oAuth2Client.md)
+[**RegistrationResponse**](RegistrationResponse.md)
 
 ### Authorization
 
@@ -647,7 +647,7 @@ Update an existing OAuth 2.0 Client. If you pass `client_secret` the secret will
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **string**|  | 
- **body** | [**OAuth2Client**](OAuth2Client.md)|  | 
+ **body** | [**OAuth2Client**](SoftwareStatement.md)|  | 
 
 ### Return type
 

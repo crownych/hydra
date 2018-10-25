@@ -38,4 +38,6 @@ type Manager interface {
 	DeleteKey(ctx context.Context, set, kid string) error
 
 	DeleteKeySet(ctx context.Context, set string) error
+
+	GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error)
 }
