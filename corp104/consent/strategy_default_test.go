@@ -131,6 +131,7 @@ func TestStrategy(t *testing.T) {
 	strategy := NewStrategy(
 		lp.URL,
 		cp.URL,
+		false,
 		ap.URL,
 		"/oauth2/auth",
 		manager,

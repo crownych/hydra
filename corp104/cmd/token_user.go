@@ -84,7 +84,7 @@ var tokenUserCmd = &cobra.Command{
 		if frontend == "" {
 			fu, err := url.Parse(c.GetClusterURLWithoutTailingSlashOrFail(cmd))
 			pkg.Must(err, `Unable to parse cluster url ("%s"): %s`, c.GetClusterURLWithoutTailingSlashOrFail(cmd), err)
-			frontend = urlx.AppendPaths(fu, "/oauth2/auth").String()
+			frontend = urlx.AppendPaths(fu, oauth22.AuthPath).String()
 		}
 
 		conf := oauth2.Config{

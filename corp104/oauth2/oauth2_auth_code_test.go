@@ -160,7 +160,7 @@ func TestAuthCodeWithDefaultStrategy(t *testing.T) {
 					cookieStore := sessions.NewCookieStore([]byte("foo-secret"))
 
 					consentStrategy := consent.NewStrategy(
-						lp.URL, cp.URL, ts.URL, AuthPath, cm,
+						lp.URL, cp.URL, false, ts.URL, AuthPath, cm,
 						cookieStore,
 						fosite.ExactScopeStrategy, false, time.Hour, jwts,
 						openid.NewOpenIDConnectRequestValidator(nil, jwts),

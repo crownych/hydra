@@ -77,7 +77,7 @@ func init() {
 	// will be global for your application.
 
 	//RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "Config file (default is $HOME/.hydra.yaml)")
-	RootCmd.PersistentFlags().Bool("skip-tls-verify", false, "Foolishly accept TLS certificates signed by unkown certificate authorities")
+	RootCmd.PersistentFlags().Bool("skip-tls-verify", false, "Foolishly accept TLS certificates signed by unknown certificate authorities")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -214,6 +214,15 @@ func initConfig() {
 
 	viper.BindEnv("TRACING_SERVICE_NAME")
 	viper.SetDefault("TRACING_SERVICE_NAME", "Ory Hydra")
+
+	viper.BindEnv("WEB_SESSION_NAME")
+	viper.SetDefault("WEB_SESSION_NAME", "")
+
+	viper.BindEnv("BY_PASS_ROUTES")
+	viper.SetDefault("BY_PASS_ROUTES", "")
+
+	viper.BindEnv("DISABLE_CONSENT_FLOW")
+	viper.SetDefault("DISABLE_CONSENT_FLOW", false)
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {

@@ -96,6 +96,8 @@ type Config struct {
 
 	// Cookie name of web session
 	WebSessionName                   string  `mapstructure:"WEB_SESSION_NAME" yaml:"-"`
+	ByPassSessionCheckRoutes		 string  `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
+	DisableConsentFlow               bool    `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
 
 	BuildVersion string                     `yaml:"-"`
 	BuildHash    string                     `yaml:"-"`
@@ -434,4 +436,16 @@ func (c *Config) GetWebSessionName() string {
 	}
 	c.WebSessionName = "web_sid"
 	return c.WebSessionName
+}
+
+func (c *Config) GetByPassSessionCheckRoutes() []string {
+	if c.ByPassSessionCheckRoutes == "" {
+		return nil
+	}
+
+	return strings.Split(c.ByPassSessionCheckRoutes, ",")
+}
+
+func (c *Config) ConsentFlow() bool {
+	return c.DisableConsentFlow
 }
