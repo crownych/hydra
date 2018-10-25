@@ -9,7 +9,7 @@ import (
 )
 
 
-func TestOAuth2API(t *testing.T) {
+func _TestOAuth2API(t *testing.T) {
 	//var serverURL = ""
 	var serverURL = "http://localhost:4444"
 	if serverURL == "" {
