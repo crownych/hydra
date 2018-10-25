@@ -4,32 +4,20 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/jws"
+	"github.com/ory/go-convenience/stringslice"
 	"strings"
 )
 
-func contains(sl []interface{}, v interface{}) bool {
-	for _, vv := range sl {
-		if vv == v {
-			return true
+func hasStrings(s1 []string, s2... string) bool {
+	if len(s2) == 0 {
+		return false
+	}
+	for _, needle := range s2 {
+		if !stringslice.Has(s1, needle) {
+			return false
 		}
 	}
-	return false
-}
-
-func containsStrings(sl []string, s2... string) bool {
-	founds := 0
-	for _, vv := range sl {
-		for _, v := range s2 {
-			if vv == v {
-				founds++
-				break
-			}
-		}
-	}
-	if founds == len(s2) {
-		return true
-	}
-	return false
+	return true
 }
 
 func getHeadersFromJws(compactJws string) (map[string]interface{}, error) {

@@ -148,7 +148,7 @@ func (v *Validator) Validate(c *Client) error {
 		if err := checkRequired("response_types", c.ResponseTypes); err != nil {
 			return err
 		}
-		if !(len(c.ResponseTypes) == 2 && containsStrings(c.ResponseTypes, "token", "id_token")) {
+		if !(len(c.ResponseTypes) == 2 && hasStrings(c.ResponseTypes, "token", "id_token")) {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field response_types should be \"token\" and \"id_token\"."))
 		}
 

@@ -40,6 +40,7 @@ func TestHelperClientAutoGenerateKey(k string, m Storage) func(t *testing.T) {
 			ClientID:          "foo",
 			Secret:            "secret",
 			RedirectURIs:      []string{"http://redirect"},
+			TermsOfServiceURI: "foo",
 		}
 		assert.NoError(t, m.CreateClient(ctx, c))
 		//assert.NotEmpty(t, c.ID)
@@ -80,12 +81,22 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 			RedirectURIs:                  []string{"http://redirect", "http://redirect1"},
 			GrantTypes:                    []string{"implicit", "refresh_token"},
 			ResponseTypes:                 []string{"code token", "token id_token", "code"},
+			Scope:                         "scope-a scope-b",
+			Owner:                         "aeneas",
+			PolicyURI:                     "http://policy",
+			TermsOfServiceURI:             "http://tos",
+			ClientURI:                     "http://client",
+			LogoURI:                       "http://logo",
 			Contacts:                      []string{"aeneas1", "aeneas2"},
+			SecretExpiresAt:               0,
+			SectorIdentifierURI:           "https://sector",
 			JSONWebKeys:                   &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{KeyID: "foo", Key: []byte("asdf"), Certificates: []*x509.Certificate{}}}},
 			JSONWebKeysURI:                "https://...",
 			TokenEndpointAuthMethod:       "none",
 			RequestURIs:                   []string{"foo", "bar"},
+			AllowedCORSOrigins:            []string{"foo", "bar"},
 			RequestObjectSigningAlgorithm: "rs256",
+			UserinfoSignedResponseAlg:     "RS256",
 		}
 
 		assert.NoError(t, m.CreateClient(ctx, c))
@@ -99,6 +110,8 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 			Name:              "name",
 			Secret:            "secret",
 			RedirectURIs:      []string{"http://redirect"},
+			TermsOfServiceURI: "foo",
+			SecretExpiresAt:   1,
 		}))
 
 		d, err := m.GetClient(ctx, "1234")
@@ -111,6 +124,10 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 		assert.Len(t, ds, 2)
 		assert.NotEqual(t, ds["1234"].ClientID, ds["2-1234"].ClientID)
 		assert.NotEqual(t, ds["1234"].ClientID, ds["2-1234"].ClientID)
+
+		//test if SecretExpiresAt was set properly
+		assert.Equal(t, ds["1234"].SecretExpiresAt, 0)
+		assert.Equal(t, ds["2-1234"].SecretExpiresAt, 1)
 
 		ds, err = m.GetClients(ctx, 1, 0)
 		assert.NoError(t, err)
@@ -125,6 +142,7 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 			Name:              "name-new",
 			Secret:            "secret-new",
 			RedirectURIs:      []string{"http://redirect/new"},
+			TermsOfServiceURI: "bar",
 		})
 		require.NoError(t, err)
 
@@ -135,6 +153,7 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 			// http always returns an empty secret
 			assert.NotEqual(t, d.GetHashedSecret(), nc.GetHashedSecret())
 		}
+		assert.Equal(t, "bar", nc.TermsOfServiceURI)
 		assert.Equal(t, "name-new", nc.Name)
 		assert.EqualValues(t, []string{"http://redirect/new"}, nc.GetRedirectURIs())
 		assert.Zero(t, len(nc.Contacts))
@@ -160,8 +179,16 @@ func compare(t *testing.T, expected *Client, actual fosite.Client, k string) {
 	assert.EqualValues(t, expected.IsPublic(), actual.IsPublic())
 
 	if actual, ok := actual.(*Client); ok {
+		assert.EqualValues(t, expected.Owner, actual.Owner)
 		assert.EqualValues(t, expected.Name, actual.Name)
+		assert.EqualValues(t, expected.PolicyURI, actual.PolicyURI)
+		assert.EqualValues(t, expected.TermsOfServiceURI, actual.TermsOfServiceURI)
+		assert.EqualValues(t, expected.ClientURI, actual.ClientURI)
+		assert.EqualValues(t, expected.LogoURI, actual.LogoURI)
 		assert.EqualValues(t, expected.Contacts, actual.Contacts)
+		assert.EqualValues(t, expected.SecretExpiresAt, actual.SecretExpiresAt)
+		assert.EqualValues(t, expected.SectorIdentifierURI, actual.SectorIdentifierURI)
+		assert.EqualValues(t, expected.UserinfoSignedResponseAlg, actual.UserinfoSignedResponseAlg)
 	}
 
 	if actual, ok := actual.(fosite.OpenIDConnectClient); ok {

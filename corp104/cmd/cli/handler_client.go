@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type ClientHandler struct {
@@ -104,77 +105,65 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	var err error
 	m := h.newClientManager(cmd)
-	// Options for all client types
-	id, err := cmd.Flags().GetString("id")
-	if err!= nil {
-		pkg.Must(err, "Please provide the client's id using flag --id.")
-	}
-
-	name, err := cmd.Flags().GetString("name")
-	if err!= nil {
-		pkg.Must(err, "Please provide the client's name using flag --name.")
-	}
-
-	grantTypes, err := cmd.Flags().GetStringSlice("grant-types")
-	if err != nil {
-		pkg.Must(err, "Please provide a list of allowed grant types using flag --grant-types.")
-	}
-
-	clientUri, err := cmd.Flags().GetString("client-uri")
-	if err != nil {
-		pkg.Must(err, "Please provide a URL string of a web page providing information about the client using flag --client-uri.")
-	}
-
-	contacts, err := cmd.Flags().GetStringSlice("contacts")
-	if err != nil {
-		pkg.Must(err, "Please provide a list of people responsible for the client using flag --contacts.")
-	}
-
-	softwareId, err := cmd.Flags().GetString("software-id")
-	if err != nil {
-		pkg.Must(err, "Please provide client's JSON Web Key Set document representing public keys using flag --software-id.")
-	}
-
-	softwareVersion, err := cmd.Flags().GetString("software-version")
-	if err != nil {
-		pkg.Must(err, "Please provide client's JSON Web Key Set document representing public keys using flag  --software-version.")
-	}
-
-	resourceSets, _ := cmd.Flags().GetStringSlice("resource-sets")
-
-	jwksJSON, err := cmd.Flags().GetString("jwks")
-	if err != nil {
-		pkg.Must(err, "Please provide client's JSON Web Key Set document representing public keys using flag --jwks.")
-	}
-
-	signingJwkJSON, err := cmd.Flags().GetString("signing-jwk")
-	if err != nil {
-		pkg.Must(err, "Please provide client's JSON Web Key document representing signing private key using flag --signing-jwk.")
-	}
-
-	// Options for public client
-	callbacks, _ := cmd.Flags().GetStringSlice("callbacks")
 	responseTypes, _ := cmd.Flags().GetStringSlice("response-types")
+	grantTypes, _ := cmd.Flags().GetStringSlice("grant-types")
+	allowedScopes, _ := cmd.Flags().GetStringSlice("scope")
+	callbacks, _ := cmd.Flags().GetStringSlice("callbacks")
+	name, _ := cmd.Flags().GetString("name")
+	//secret, _ := cmd.Flags().GetString("secret")
+	id, _ := cmd.Flags().GetString("id")
+	tokenEndpointAuthMethod, _ := cmd.Flags().GetString("token-endpoint-auth-method")
+	//jwksUri, _ := cmd.Flags().GetString("jwks-uri")
+	tosUri, _ := cmd.Flags().GetString("tos-uri")
+	policyUri, _ := cmd.Flags().GetString("policy-uri")
+	logoUri, _ := cmd.Flags().GetString("logo-uri")
+	clientUri, _ := cmd.Flags().GetString("client-uri")
+	subjectType, _ := cmd.Flags().GetString("subject-type")
+	contacts, _ := cmd.Flags().GetStringSlice("contacts")
+	softwareId, _ := cmd.Flags().GetString("software-id")
+	softwareVersion, _ := cmd.Flags().GetString("software-version")
+	resourceSets, _ := cmd.Flags().GetStringSlice("resource-sets")
+	jwksJSON, _ := cmd.Flags().GetString("jwks")
+	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
 	idTokenSignedResponseAlg, _ := cmd.Flags().GetString("id-token-signed-response-alg")
 	requestObjectSigningAlg, _ := cmd.Flags().GetString("request-object-signing-alg")
 
-	// Options for confidential client
-	tokenEndpointAuthMethod, _ := cmd.Flags().GetString("token-endpoint-auth-method")
+	/*
+	var echoSecret bool
+
+	if secret == "" {
+		var secretb []byte
+		secretb, err = pkg.GenerateSecret(26)
+		pkg.Must(err, "Could not generate OAuth 2.0 Client Secret: %s", err)
+		secret = string(secretb)
+
+		echoSecret = true
+	} else {
+		fmt.Println("You should not provide secrets using command line flags. The secret might leak to bash history and similar systems.")
+	}
+	*/
 
 	cc := hydra.OAuth2Client{
 		ClientId:                 id,
-		ClientName:               name,
+		ResponseTypes:            responseTypes,
 		GrantTypes:               grantTypes,
+		RedirectUris:             callbacks,
+		Scope:                    strings.Join(allowedScopes, " "),
+		//ClientSecret:             secret,
+		ClientName:               name,
+		TokenEndpointAuthMethod:  tokenEndpointAuthMethod,
+		//JwksUri:                  jwksUri,
+		TosUri:                   tosUri,
+		PolicyUri:                policyUri,
+		LogoUri:                  logoUri,
 		ClientUri:                clientUri,
+		SubjectType:              subjectType,
 		Contacts:				  contacts,
 		SoftwareId:               softwareId,
 		SoftwareVersion:          softwareVersion,
 		ResourceSets:             resourceSets,
-		RedirectUris:             callbacks,
-		ResponseTypes:            responseTypes,
 		IdTokenSignedResponseAlg: idTokenSignedResponseAlg,
 		RequestObjectSigningAlg:  requestObjectSigningAlg,
-		TokenEndpointAuthMethod:  tokenEndpointAuthMethod,
 	}
 
 	if jwksJSON != "" {
@@ -198,6 +187,16 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	checkResponse(response, err, http.StatusCreated)
 
 	fmt.Printf("OAuth 2.0 Signed Client ID: %s\n", result.SignedClientId)
+
+	/*
+	if result.ClientSecret == "" {
+		fmt.Println("This OAuth 2.0 Client has no secret.")
+	} else {
+		if echoSecret {
+			fmt.Printf("OAuth 2.0 Client Secret: %s\n", result.ClientSecret)
+		}
+	}
+	*/
 }
 
 func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {

@@ -275,7 +275,6 @@ func sqlDataFromClient(d *Client) (*sqlData, error) {
 		SubjectType:                   d.SubjectType,
 		SectorIdentifierURI:           d.SectorIdentifierURI,
 		AllowedCORSOrigins:            strings.Join(d.AllowedCORSOrigins, "|"),
-		/*
 		Scope:                         d.Scope,
 		Owner:                         d.Owner,
 		PolicyURI:                     d.PolicyURI,
@@ -283,7 +282,6 @@ func sqlDataFromClient(d *Client) (*sqlData, error) {
 		ClientURI:                     d.ClientURI,
 		LogoURI:                       d.LogoURI,
 		SecretExpiresAt:               d.SecretExpiresAt,
-		*/
 	}, nil
 }
 
@@ -303,7 +301,6 @@ func (d *sqlData) ToClient() (*Client, error) {
 		SubjectType:                   d.SubjectType,
 		SectorIdentifierURI:           d.SectorIdentifierURI,
 		AllowedCORSOrigins:            stringsx.Splitx(d.AllowedCORSOrigins, "|"),
-		/*
 		Scope:                         d.Scope,
 		Owner:                         d.Owner,
 		PolicyURI:                     d.PolicyURI,
@@ -312,7 +309,6 @@ func (d *sqlData) ToClient() (*Client, error) {
 		LogoURI:                       d.LogoURI,
 		SecretExpiresAt:               d.SecretExpiresAt,
 		UserinfoSignedResponseAlg:     d.UserinfoSignedResponseAlg,
-		 */
 	}
 
 	if d.JSONWebKeys != "" {
