@@ -136,21 +136,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	// TODO: 待建立 AD 登入驗證 Endpoint 時, 再將儲存動作移至該 Endpoint 中
-	if !c.IsPublic() {
-		if len(c.Secret) == 0 {
-			secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
-			if err != nil {
-				h.H.WriteError(w, r, errors.WithStack(err))
-				return
-			}
-			c.Secret = string(secret)
-		}
-
-		if err := h.Manager.CreateClient(r.Context(), &c); err != nil {
-			h.H.WriteError(w, r, err)
+	// TODO: 待建立 AD 登入驗證 Endpoint 時, 再將儲存動作移至該 Endpoint 中 (Confidential client only)
+	if len(c.Secret) == 0 {
+		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
+		if err != nil {
+			h.H.WriteError(w, r, errors.WithStack(err))
 			return
 		}
+		c.Secret = string(secret)
+	}
+
+	if err := h.Manager.CreateClient(r.Context(), &c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
 	}
 
 	// Save client metadata to session
