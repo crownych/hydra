@@ -97,7 +97,7 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       500: genericError
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Get software_statement from payload
-	swStatement, err := getSoftewareStatement(r)
+	swStatement, err := getSoftwareStatement(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -320,7 +320,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func getSoftewareStatement(r *http.Request) ([]byte, error) {
+func getSoftwareStatement(r *http.Request) ([]byte, error) {
 	var body map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
