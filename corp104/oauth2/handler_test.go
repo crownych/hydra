@@ -155,7 +155,6 @@ func TestUserinfo(t *testing.T) {
 		H:                 herodot.NewJSONWriter(logrus.New()),
 		OpenIDJWTStrategy: jwtStrategy,
 	}
-
 	router := httprouter.New()
 	h.SetRoutes(router, router, func(h http.Handler) http.Handler {
 		return h

@@ -46,7 +46,6 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-
 func _TestClientCredentials(t *testing.T) {
 	for _, tc := range []struct {
 		d                 string
