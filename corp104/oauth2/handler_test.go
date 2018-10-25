@@ -22,7 +22,7 @@ package oauth2_test
 
 import (
 	"context"
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -145,16 +145,17 @@ func TestUserinfo(t *testing.T) {
 	defer ctrl.Finish()
 
 	jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
-	keys, err := (&jwk.RS256Generator{}).Generate("signing", "sig")
+	keys, err := (&jwk.ECDSA256Generator{}).Generate("signing", "sig")
 	require.NoError(t, err)
 	require.NoError(t, jm.AddKeySet(context.TODO(), oauth2.OpenIDConnectKeyName, keys))
-	jwtStrategy, err := jwk.NewRS256JWTStrategy(jm, oauth2.OpenIDConnectKeyName)
+	jwtStrategy, err := jwk.NewES256JWTStrategy(jm, oauth2.OpenIDConnectKeyName)
 
 	h := &oauth2.Handler{
 		OAuth2:            op,
 		H:                 herodot.NewJSONWriter(logrus.New()),
 		OpenIDJWTStrategy: jwtStrategy,
 	}
+
 	router := httprouter.New()
 	h.SetRoutes(router, router, func(h http.Handler) http.Handler {
 		return h
@@ -323,7 +324,7 @@ func TestUserinfo(t *testing.T) {
 						return fosite.AccessToken, &fosite.AccessRequest{
 							Request: fosite.Request{
 								Client: &client.Client{
-									UserinfoSignedResponseAlg: "RS256",
+									UserinfoSignedResponseAlg: "ES256",
 								},
 								Session: session,
 							},
@@ -333,7 +334,7 @@ func TestUserinfo(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 			check: func(t *testing.T, body []byte) {
 				claims, err := jwt2.Parse(string(body), func(token *jwt2.Token) (interface{}, error) {
-					return keys.Key("public:signing")[0].Key.(*rsa.PublicKey), nil
+					return keys.Key("public:signing")[0].Key.(*ecdsa.PublicKey), nil
 				})
 				require.NoError(t, err)
 				assert.EqualValues(t, "alice", claims.Claims.(jwt2.MapClaims)["sub"])

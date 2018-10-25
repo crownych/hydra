@@ -11,10 +11,21 @@
 package swagger
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/lestrrat-go/jwx/jws"
+	"github.com/patrickmn/go-cache"
 	"net/url"
 	"strings"
+)
+
+const (
+	CacheOAuthServerMetadata = "auth-server.metadata"
+	CacheOAuthServerJWKS     = "auth-server.jwks"
 )
 
 type OAuth2Api struct {
@@ -170,9 +181,10 @@ func (a OAuth2Api) AcceptLoginRequest(challenge string, body AcceptLoginRequest)
  * Create a new OAuth 2.0 client If you pass &#x60;client_secret&#x60; the secret will be used, otherwise a random secret will be generated. The secret will be returned in the response and you will not be able to retrieve it later on. Write the secret down and keep it somwhere safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
  * @param body
+ * @param signingJwk
  * @return *OAuth2Client
  */
-func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client) (*OAuth2Client, *APIResponse, error) {
+func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey) (*RegistrationResponse, *APIResponse, error) {
 
 	var localVarHttpMethod = strings.ToUpper("Post")
 	// create path and map variables
@@ -207,9 +219,70 @@ func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client) (*OAuth2Client, *APIRes
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+
+	// set Cookie header
+	localVarHttpHeaderCookies := make(map[string]string)
+	//localVarHttpHeaderCookies["web_sid"] = "MTU0MDM2MDk5OXxEdi1CQkFFQ180SUFBUkFCRUFBQV9nSzJfNElBQVFaemRISnBibWNNRVFBUFkyeHBaVzUwWDIxbGRHRmtZWFJoQm5OMGNtbHVad3otQW8wQV9nS0pleUpqYkdsbGJuUmZhV1FpT2lKbVlUTXdNekJrTWkwNVpURTJMVFJpTjJRdFlqSTNaaTB6T0RGbE9EUXdNVGMxWTJJaUxDSmpiR2xsYm5SZmJtRnRaU0k2SW0xNUxXRndjQ0lzSW1keVlXNTBYM1I1Y0dWeklqcGJJblZ5YmpwcFpYUm1PbkJoY21GdGN6cHZZWFYwYURwbmNtRnVkQzEwZVhCbE9uUnZhMlZ1TFdWNFkyaGhibWRsSWwwc0ltTnNhV1Z1ZEY5MWNta2lPaUpvZEhSd09pOHZiWGxoY0hBdVkyOXRJaXdpWTI5dWRHRmpkSE1pT2xzaVlXUnRhVzVBYlhsaGNIQXVZMjl0SWwwc0luTnZablIzWVhKbFgybGtJam9pTkdRMU1UVXlPV010TXpkalpDMDBNalJqTFdKaE1Ua3RZMkpoTnpReVpEWXdPVEF6SWl3aWMyOW1kSGRoY21WZmRtVnljMmx2YmlJNklqQXVNQzR4SWl3aWNtVnpiM1Z5WTJWZmMyVjBjeUk2VzEwc0ltbGtYM1J2YTJWdVgzTnBaMjVsWkY5eVpYTndiMjV6WlY5aGJHY2lPaUpGVXpJMU5pSXNJbkpsY1hWbGMzUmZiMkpxWldOMFgzTnBaMjVwYm1kZllXeG5Jam9pUlZNeU5UWWlMQ0pxZDJ0eklqcDdJbXRsZVhNaU9sdDdJbUZzWnlJNklrVlRNalUySWl3aVkzSjJJam9pVUMweU5UWWlMQ0pyYVdRaU9pSndkV0pzYVdNNk9EbGlPVFF3WlRndFlURTJaaTAwT0dObExXRXlNemd0WWpVeVpEZGxNalV5TmpNMElpd2lhM1I1SWpvaVJVTWlMQ0oxYzJVaU9pSnphV2NpTENKNElqb2lObmxwTUZZd1kzbDRSMVpqTldaRmFYVXlWVEpRZFZweU5GUjRZWFpVWjNWalkyUmpZMjh4V0hsMVFTSXNJbmtpT2lKcldGOWlhWGN3YUZsSWVYUXhjV0ZXVURSRllsQTNWMU5qU1hVNVVYbFFTekJCYWpObVdIQkNVa05uSW4xZGZTd2lkRzlyWlc1ZlpXNWtjRzlwYm5SZllYVjBhRjl0WlhSb2IyUWlPaUp3Y21sMllYUmxYMnRsZVY5cWQzUWlmUT09fC7gFjPmlq4hCFvtO2SOuCJifsxFvaAFclU9RTYIExBo"
+
+	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
+	if localVarHttpHeaderCookie != "" {
+		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
+	}
+
 	// body params
-	localVarPostBody = &body
-	var successPayload = new(OAuth2Client)
+	// Get OAuth Server's Public key
+	serverJWKS, _, err := a.WellKnown()
+	if err != nil {
+		return nil, nil, errors.New("Unable to get JWKS for OAuth Authorization Server: " + err.Error())
+	} else if serverJWKS == nil || len(serverJWKS.Keys) == 0 {
+		return nil, nil, errors.New("Unable to get JWKS for OAuth Authorization Server")
+	}
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(&serverJWKS.Keys[0], true)
+
+	// Create and sign JWS of client's software statement
+	jwsHeaders := &jws.StandardHeaders{}
+	jwsHeaders.Set("typ", "client-metadata+jwt")
+	jwxJwk, _, err := convertToJwxJWK(signingJwk, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	jwsHeaders.Set("jwk", jwxJwk)
+	claims, err := json.Marshal(&body)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, signingKey, err := convertToJwxJWK(signingJwk, false)
+	jwsSigned, err := jws.Sign(claims, jwa.ES256, signingKey, jws.WithHeaders(jwsHeaders))
+	if err != nil {
+		return nil, nil, errors.New("Failed to sign JWS" + err.Error())
+	}
+
+	// Create JWE using server's public key
+	contentcrypt, err := jwe.NewAesCrypt(jwa.A256GCM)
+	if err != nil {
+		return nil, nil, errors.New(`Failed to create AES encrypter: ` + err.Error())
+	}
+	keyenc, err := jwe.NewEcdhesKeyWrapEncrypt(jwa.ECDH_ES_A256KW, serverPubKey.(*ecdsa.PublicKey))
+	if err != nil {
+		return nil, nil, errors.New("Failed to create ECDHS key wrap encrypter: " + err.Error())
+	}
+	keyenc.KeyID = serverPubJwk.KeyID()
+	enc := jwe.NewMultiEncrypt(contentcrypt, jwe.NewRandomKeyGenerate(32), keyenc)
+	jweEncryptedBytes, err := enc.Encrypt(jwsSigned)
+	if err != nil {
+		return nil, nil, errors.New("Failed to encrypt payload: " + err.Error())
+	}
+	jweEncrypted, err := jwe.CompactSerialize{}.Serialize(jweEncryptedBytes)
+	if err != nil {
+		return nil, nil, errors.New("Failed to serialize JWE: " + err.Error())
+	}
+
+	// Create software_statement payload
+	postPayload := make(map[string]interface{})
+	postPayload["software_statement"] = string(jweEncrypted)
+
+	localVarPostBody = &postPayload
+	var successPayload = new(RegistrationResponse)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
 	var localVarURL, _ = url.Parse(localVarPath)
@@ -536,6 +609,12 @@ func (a OAuth2Api) GetOAuth2Client(id string) (*OAuth2Client, *APIResponse, erro
  * @return *WellKnown
  */
 func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
+	if authServerMetadata, found := a.Configuration.Cache.Get(CacheOAuthServerMetadata); found {
+		fmt.Println("Auth server metadata found, get from cache...")
+		return authServerMetadata.(*WellKnown), nil, nil
+	} else {
+		fmt.Println("Auth server metadata not found, get from server...")
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -584,7 +663,35 @@ func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
 	if err != nil {
 		return successPayload, localVarAPIResponse, err
 	}
-	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+
+	// 驗證 JWS 及取得 OAuth Authorization Metadata 內容
+	var payloadMap map[string]string
+	err = json.Unmarshal(localVarHttpResponse.Body(), &payloadMap)
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	signedMetadata := payloadMap["signed_metadata"]
+	keyId, err := extractKeyIdFromHeader(signedMetadata)
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	jsonWebKey := a.WellKnownByKeyId(keyId)
+	if jsonWebKey == nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	srvJwk, _, err := convertToJwxJWK(jsonWebKey, true)
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	metadata, err := jws.VerifyWithJWK([]byte(signedMetadata), srvJwk)
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+
+	err = json.Unmarshal(metadata, &successPayload)
+	if err == nil {
+		a.Configuration.Cache.Set(CacheOAuthServerMetadata, successPayload, cache.DefaultExpiration)
+	}
 	return successPayload, localVarAPIResponse, err
 }
 
@@ -1479,6 +1586,9 @@ func (a OAuth2Api) Userinfo() (*UserinfoResponse, *APIResponse, error) {
  * @return *JsonWebKeySet
  */
 func (a OAuth2Api) WellKnown() (*JsonWebKeySet, *APIResponse, error) {
+	if authServerJwks, found := a.Configuration.Cache.Get(CacheOAuthServerJWKS); found {
+		return authServerJwks.(*JsonWebKeySet), nil, nil
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -1528,5 +1638,22 @@ func (a OAuth2Api) WellKnown() (*JsonWebKeySet, *APIResponse, error) {
 		return successPayload, localVarAPIResponse, err
 	}
 	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+	if err == nil {
+		a.Configuration.Cache.Set(CacheOAuthServerJWKS, successPayload, cache.DefaultExpiration)
+	}
 	return successPayload, localVarAPIResponse, err
+}
+
+// 依據 `kid` 取得 Authorization Server 的 Public Key
+func (a OAuth2Api) WellKnownByKeyId(kid string) *JsonWebKey {
+	serverJWKs, _, err := a.WellKnown()
+	if err != nil {
+		return nil
+	}
+	for _, serverJwk := range serverJWKs.Keys {
+		if serverJwk.Kid == kid {
+			return &serverJwk
+		}
+	}
+	return nil
 }

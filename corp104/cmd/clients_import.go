@@ -40,11 +40,12 @@ The format for the JSON file is:
 Please be aware that this command does not update existing clients. If the client exists already, this command will fail.
 
 Example:
-	hydra clients import client-1.json
+	hydra clients import client-1.json --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}'
 `,
 	Run: cmdHandler.Clients.ImportClients,
 }
 
 func init() {
 	clientsCmd.AddCommand(clientsImportCmd)
+	clientsImportCmd.Flags().String("signing-jwk", "", "REQUIRED. Client's JSON Web Key document representing the client's private key used to sign the software statement")
 }

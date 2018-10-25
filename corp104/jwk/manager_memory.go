@@ -138,3 +138,19 @@ func (m *MemoryManager) alloc() {
 		m.Keys = make(map[string]*jose.JSONWebKeySet)
 	}
 }
+
+func (m *MemoryManager) GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error) {
+	m.RLock()
+	defer m.RUnlock()
+
+	m.alloc()
+	setKeys := make(map[string][]jose.JSONWebKey)
+	for set, jwks := range m.Keys {
+		keys := jwks.Key(kid)
+		if len(keys) > 0 {
+			setKeys[set] = keys
+		}
+	}
+
+	return setKeys, nil
+}

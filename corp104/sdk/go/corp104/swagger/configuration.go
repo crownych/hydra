@@ -32,6 +32,7 @@ package swagger
 
 import (
 	"encoding/base64"
+	"github.com/patrickmn/go-cache"
 	"net/http"
 	"time"
 )
@@ -53,6 +54,8 @@ type Configuration struct {
 	APIClient     *APIClient
 	Transport     http.RoundTripper
 	Timeout       *time.Duration `json:"timeout,omitempty"`
+
+	Cache         *cache.Cache
 }
 
 func NewConfiguration() *Configuration {
@@ -63,6 +66,7 @@ func NewConfiguration() *Configuration {
 		APIKeyPrefix:  make(map[string]string),
 		UserAgent:     "Swagger-Codegen/1.0.0/go",
 		APIClient:     &APIClient{},
+		Cache:         cache.New(5*time.Minute, 10*time.Minute),
 	}
 
 	cfg.APIClient.config = cfg

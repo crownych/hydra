@@ -21,12 +21,20 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/goincremental/negroni-sessions"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/lestrrat-go/jwx/jws"
+	"github.com/ory/hydra/corp104/jwk"
+	"github.com/ory/hydra/rand/sequence"
+	"gopkg.in/square/go-jose.v2"
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/herodot"
-	"github.com/ory/hydra/rand/sequence"
 	"github.com/ory/pagination"
 	"github.com/pkg/errors"
 )
@@ -35,6 +43,7 @@ type Handler struct {
 	Manager   Manager
 	H         herodot.Writer
 	Validator *Validator
+	KeyManager jwk.Manager
 }
 
 const (
@@ -46,11 +55,13 @@ func NewHandler(
 	h herodot.Writer,
 	defaultClientScopes []string,
 	subjectTypes []string,
+	keyManager jwk.Manager,
 ) *Handler {
 	return &Handler{
 		Manager:   manager,
 		H:         h,
 		Validator: NewValidator(defaultClientScopes, subjectTypes),
+		KeyManager: keyManager,
 	}
 }
 
@@ -85,20 +96,39 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       403: genericError
 //       500: genericError
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var c Client
-
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	// Get software_statement from payload
+	swStatement, err := getSoftewareStatement(r)
+	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
 
-	if len(c.Secret) == 0 {
-		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
-		if err != nil {
-			h.H.WriteError(w, r, errors.WithStack(err))
-			return
-		}
-		c.Secret = string(secret)
+	// Extract kid from JWE header and get private key of oauth server
+	authSrvPrivKey, err := getOAuthServerPrivateKey(r.Context(), h.KeyManager, swStatement)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	// JWE decryption using private key of oauth server
+	decryptedMsg, err := jwe.Decrypt(swStatement, jwa.ECDH_ES_A256KW, authSrvPrivKey.Key)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	// JWS Verification using client's public key
+	verifiedMsg, err := verifySoftwareStatementJWS(decryptedMsg)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	var c Client
+
+	if err := json.Unmarshal(verifiedMsg, &c); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
 	}
 
 	if err := h.Validator.Validate(&c); err != nil {
@@ -106,17 +136,34 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	secret := c.Secret
-	if err := h.Manager.CreateClient(r.Context(), &c); err != nil {
+	// TODO: 待建立 AD 登入驗證 Endpoint 時, 再將儲存動作移至該 Endpoint 中
+	if !c.IsPublic() {
+		if len(c.Secret) == 0 {
+			secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
+			if err != nil {
+				h.H.WriteError(w, r, errors.WithStack(err))
+				return
+			}
+			c.Secret = string(secret)
+		}
+
+		if err := h.Manager.CreateClient(r.Context(), &c); err != nil {
+			h.H.WriteError(w, r, err)
+			return
+		}
+	}
+
+	// Save client metadata to session
+	saveClientMetadataToSession(r, string(verifiedMsg))
+
+	// Create registration response
+	registrationResponse, err := createRegistrationResponse(authSrvPrivKey, c.GetID())
+	if err := h.Validator.Validate(&c); err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
 
-	c.Secret = ""
-	if !c.IsPublic() {
-		c.Secret = secret
-	}
-	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), &c)
+	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
 }
 
 // swagger:route PUT /clients/{id} oAuth2 updateOAuth2Client
@@ -273,4 +320,116 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func getSoftewareStatement(r *http.Request) ([]byte, error) {
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil, err
+	}
+	swStatement := body["software_statement"]
+	if swStatement == "" {
+		return nil, errors.New("Empty \"software_statement\"")
+	}
+	return []byte(swStatement), nil
+}
+
+func getOAuthServerPrivateKey(ctx context.Context, keyManager jwk.Manager, swStatementJwe []byte) (*jose.JSONWebKey, error) {
+	jweMessage, err := jwe.Parse(swStatementJwe)
+	if err != nil {
+		return nil, err
+	}
+	if len(jweMessage.Recipients) < 1 {
+		return nil, errors.New("\"kid\" not found in JWE header")
+	}
+	serverKeyId := jweMessage.Recipients[0].Header.KeyID
+	if serverKeyId == "" {
+		return nil, errors.New("\"kid\" not found in JWE header")
+	}
+	serverKeyId = strings.Replace(serverKeyId, "public:", "private:",1)
+	setKeys, err := keyManager.GetKeysById(ctx, serverKeyId)
+	if err != nil {
+		return nil, err
+	}
+	for _, keys := range setKeys {
+		for _, key := range keys {
+			if key.KeyID == serverKeyId && !key.IsPublic() {
+				return &key, nil
+			}
+		}
+	}
+	return nil, errors.New("JSONWebKey not found for kid: " + serverKeyId)
+}
+
+func verifySoftwareStatementJWS(compactJws []byte) ([]byte, error) {
+	// get jwk from JOSE header
+	headers, err := getHeadersFromJws(string(compactJws))
+	if err != nil {
+		return nil, err
+	}
+
+	// validate `typ` should be `client-metadata+jwt` or `application/client-metadata+jwt`
+	typ, found := headers["typ"]
+	if !found {
+		return nil, errors.New("`typ` not found in JOSE header")
+	}
+	if typ, ok := typ.(string); ok {
+		if !strings.HasPrefix(typ, "application/") {
+			typ = "application/" + typ
+		}
+		if typ != "application/client-metadata+jwt" {
+			return nil, errors.New("`typ` should be \"application/client-metadata+jwt\"")
+		}
+	} else {
+		return nil, errors.New("Invalid `typ` declaration")
+	}
+
+	pubJwkHeader, found := headers["jwk"]
+	if !found {
+		return nil, errors.New("`jwk` not found in JOSE header")
+	}
+	pubJwsJson, err := json.Marshal(&pubJwkHeader)
+	if err != nil {
+		return nil, err
+	}
+	pubJwk := &jose.JSONWebKey{}
+	err = pubJwk.UnmarshalJSON(pubJwsJson)
+	if err != nil {
+		return nil, err
+	}
+
+	verifiedMsg, err := jws.Verify(compactJws, jwa.ES256, pubJwk.Key)
+	if err != nil {
+		return nil, err
+	}
+	return verifiedMsg, nil
+}
+
+func saveClientMetadataToSession(r *http.Request, metadata string) {
+	session := sessions.GetSession(r)
+	session.Set("client_metadata", metadata)
+}
+
+func createRegistrationResponse(authSrvPrivKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
+	headers := &jws.StandardHeaders{}
+	headers.Set("alg", authSrvPrivKey.Algorithm)
+	headers.Set("typ", "JWT")
+	headers.Set("kid", strings.Replace(authSrvPrivKey.KeyID, "private:", "public:", 1))
+
+	claims := make(map[string]string)
+	claims["client_id"] = clientId
+
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := jws.Sign(payload, jwa.ES256, authSrvPrivKey.Key, jws.WithHeaders(headers))
+	if err != nil {
+		return nil, err
+	}
+
+	return &RegistrationResponse{
+		SignedClientId: string(buf),
+	}, nil
 }

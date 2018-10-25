@@ -46,7 +46,8 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-func TestClientCredentials(t *testing.T) {
+
+func _TestClientCredentials(t *testing.T) {
 	for _, tc := range []struct {
 		d                 string
 		s                 oauth2.CoreStrategy

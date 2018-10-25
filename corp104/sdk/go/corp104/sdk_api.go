@@ -48,7 +48,7 @@ type OAuth2API interface {
 	GetLoginRequest(challenge string) (*swagger.LoginRequest, *swagger.APIResponse, error)
 	GetConsentRequest(challenge string) (*swagger.ConsentRequest, *swagger.APIResponse, error)
 
-	CreateOAuth2Client(body swagger.OAuth2Client) (*swagger.OAuth2Client, *swagger.APIResponse, error)
+	CreateOAuth2Client(body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey) (*swagger.RegistrationResponse, *swagger.APIResponse, error)
 	DeleteOAuth2Client(id string) (*swagger.APIResponse, error)
 	GetOAuth2Client(id string) (*swagger.OAuth2Client, *swagger.APIResponse, error)
 	GetWellKnown() (*swagger.WellKnown, *swagger.APIResponse, error)

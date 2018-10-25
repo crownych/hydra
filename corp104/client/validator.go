@@ -29,9 +29,8 @@ import (
 
 	"github.com/ory/fosite"
 	"github.com/ory/go-convenience/stringslice"
-	"github.com/ory/go-convenience/stringsx"
-	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
+	"gopkg.in/square/go-jose.v2"
 )
 
 type Validator struct {
@@ -60,49 +59,40 @@ func NewValidator(
 }
 
 func (v *Validator) Validate(c *Client) error {
-	id := uuid.New()
-	c.ClientID = stringsx.Coalesce(c.ClientID, id)
+	if err := checkRequired("client_id", c.ClientID); err != nil {
+		return err
+	}
 
-	if c.TokenEndpointAuthMethod == "" {
-		c.TokenEndpointAuthMethod = "client_secret_basic"
-	} else {
-		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil && c.TokenEndpointAuthMethod == "private_key_jwt" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
-		}
+	if err := checkRequired("client_name", c.Name); err != nil {
+		return err
+	}
+
+	if err := checkRequired("grant_types", c.GrantTypes); err != nil {
+		return err
+	}
+
+	if err := checkRequired("client_uri", c.ClientURI); err != nil {
+		return err
+	}
+
+	if err := checkRequired("contacts", c.Contacts); err != nil {
+		return err
+	}
+
+	if err := checkRequired("software_id", c.SoftwareId); err != nil {
+		return err
+	}
+
+	if err := checkRequired("software_version", c.SoftwareVersion); err != nil {
+		return err
 	}
 
 	if len(c.JSONWebKeysURI) > 0 && c.JSONWebKeys != nil {
 		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Fields jwks and jwks_uri can not both be set, you must choose one."))
 	}
 
-	if len(c.Secret) > 0 && len(c.Secret) < 6 {
-		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field client_secret must contain a secret that is at least 6 characters long."))
-	}
-
 	if len(c.Scope) == 0 {
 		c.Scope = strings.Join(v.DefaultClientScopes, " ")
-	}
-
-	for k, origin := range c.AllowedCORSOrigins {
-		u, err := url.Parse(origin)
-		if err != nil {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Origin URL %s from allowed_cors_origins could not be parsed: %s", origin, err)))
-		}
-
-		if u.Scheme != "https" && u.Scheme != "http" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Origin URL %s must use https:// or http:// as HTTP scheme.", origin)))
-		}
-
-		if u.User != nil && len(u.User.String()) > 0 {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Origin URL %s has HTTP user and/or password set which is not allowed.", origin)))
-		}
-
-		u.Path = strings.TrimRight(u.Path, "/")
-		if len(u.Path)+len(u.RawQuery)+len(u.Fragment) > 0 {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Origin URL %s must have an empty path, query, and fragment but one of the parts is not empty.", origin)))
-		}
-
-		c.AllowedCORSOrigins[k] = u.String()
 	}
 
 	// has to be 0 because it is not supposed to be set
@@ -118,8 +108,8 @@ func (v *Validator) Validate(c *Client) error {
 		c.UserinfoSignedResponseAlg = "none"
 	}
 
-	if c.UserinfoSignedResponseAlg != "none" && c.UserinfoSignedResponseAlg != "RS256" {
-		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field userinfo_signed_response_alg can either be \"none\" or \"RS256\"."))
+	if c.UserinfoSignedResponseAlg != "none" && c.UserinfoSignedResponseAlg != "ES256" {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field userinfo_signed_response_alg can either be \"none\" \"ES256\" or \"RS256\"."))
 	}
 
 	for _, r := range c.RedirectURIs {
@@ -137,6 +127,59 @@ func (v *Validator) Validate(c *Client) error {
 			c.SubjectType = "public"
 		} else {
 			c.SubjectType = v.SubjectTypes[0]
+		}
+	}
+
+	if c.RedirectURIs != nil || c.ResponseTypes != nil {
+		if c.TokenEndpointAuthMethod == "" {
+			c.TokenEndpointAuthMethod = "none"
+		}
+	}
+
+	if c.IsPublic() {
+		if err := checkRequired("redirect_uris", c.RedirectURIs); err != nil {
+			return err
+		}
+
+		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "implicit" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" only."))
+		}
+
+		if err := checkRequired("response_types", c.ResponseTypes); err != nil {
+			return err
+		}
+		if !(len(c.ResponseTypes) == 2 && containsStrings(c.ResponseTypes, "token", "id_token")) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field response_types should be \"token\" and \"id_token\"."))
+		}
+
+		if c.IdTokenSignedResponseAlgorithm == "" {
+			c.IdTokenSignedResponseAlgorithm = "ES256"
+		}
+		if c.IdTokenSignedResponseAlgorithm != "ES256" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field id_token_signed_response_alg should be \"ES256\"."))
+		}
+
+		if c.RequestObjectSigningAlgorithm == "" {
+			c.IdTokenSignedResponseAlgorithm = "ES256"
+		}
+		if c.RequestObjectSigningAlgorithm != "ES256" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field request_object_signing_alg should be \"ES256\"."))
+		}
+	} else {
+		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil {
+			return errors.New("Field jwks or jwks_uri must be set.")
+		}
+
+		if err := checkRequired("token_endpoint_auth_method", c.TokenEndpointAuthMethod); err != nil {
+			return err
+		}
+
+		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil && c.TokenEndpointAuthMethod == "private_key_jwt" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
+		}
+
+		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:token-exchange" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"urn:ietf:params:oauth:grant-type:token-exchange\" only."))
 		}
 	}
 
@@ -175,4 +218,28 @@ func (v *Validator) validateSectorIdentifierURL(location string, redirectURIs []
 	}
 
 	return nil
+}
+
+func checkRequired(field string, fieldValue interface{}) error {
+	pass := false
+	switch fv := fieldValue.(type) {
+	case string:
+		if fv != "" {
+			pass = true
+		}
+	case []string:
+		if len(fv) > 0 {
+			pass = true
+		}
+	case *jose.JSONWebKeySet:
+		if fv != nil && len(fv.Keys) > 0 {
+			pass = true
+		}
+	}
+
+	if pass {
+		return nil
+	}
+
+	return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field " + field + " must be set."))
 }
