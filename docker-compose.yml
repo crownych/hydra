@@ -60,7 +60,8 @@ services:
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
-      - BY_PASS_ROUTES=/register,/authorize
+      - BY_PASS_ROUTES=/register
+      - CORS_ENABLED=1
     restart: on-failure
 
   consent:
@@ -87,3 +88,13 @@ services:
 #    image: mysql:5.7
 #    environment:
 #      - MYSQL_ROOT_PASSWORD=secret
+
+  login-dep:
+    image: ekino/wiremock:latest
+    links:
+      - hydra
+    ports:
+      - 9999:8080
+    volumes:
+      - "./dep/login/__files:/wiremock/__files"
+      - "./dep/login/mappings:/wiremock/mappings"

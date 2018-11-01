@@ -18,9 +18,16 @@ package pkg
 
 import (
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/lestrrat-go/jwx/jws"
+	"net/http"
+	"strings"
 
 	"gopkg.in/square/go-jose.v2"
 )
@@ -99,4 +106,115 @@ func LoadPrivateKey(data []byte) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("square/go-jose: parse error, got '%s', '%s', '%s' and '%s'", err0, err1, err2, err3)
+}
+
+func GetJWTValueFromRequestBody(r *http.Request, filed string) ([]byte, error) {
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil, err
+	}
+	value := body[filed]
+	if value == "" {
+		return nil, errors.New("Empty \"" + filed + "\"")
+	}
+	return []byte(value), nil
+}
+
+func ExtractKidFromJWE(compactJwe []byte) (string, error) {
+	jweMessage, err := jwe.Parse(compactJwe)
+	if err != nil {
+		return "", err
+	}
+	if len(jweMessage.Recipients) < 1 {
+		return "", errors.New("\"kid\" not found in JWE header")
+	}
+	serverKeyId := jweMessage.Recipients[0].Header.KeyID
+	if serverKeyId == "" {
+		return "", errors.New("\"kid\" not found in JWE header")
+	}
+	serverKeyId = strings.Replace(serverKeyId, "public:", "private:", 1)
+
+	return serverKeyId, nil
+}
+
+func GetElementFromKeySet(setKeys map[string][]jose.JSONWebKey, kid string) (*jose.JSONWebKey, error) {
+	for _, keys := range setKeys {
+		for _, key := range keys {
+			if key.KeyID == kid && !key.IsPublic() {
+				return &key, nil
+			}
+		}
+	}
+	return nil, errors.New("JSONWebKey not found for kid: " + kid)
+}
+
+func GetHeadersFromJWS(compactJws string) (map[string]interface{}, error) {
+	compactHeader, _, _, err := jws.SplitCompact(strings.NewReader(compactJws))
+	if err != nil {
+		return nil, err
+	}
+	headerJson, err := base64.RawURLEncoding.DecodeString(string(compactHeader))
+	if err != nil {
+		return nil, err
+	}
+	headers := make(map[string]interface{})
+	err = json.Unmarshal(headerJson, &headers)
+	if err != nil {
+		return nil, err
+	}
+	return headers, nil
+}
+
+func VerifyJWS(compactJws []byte, moreCheck func(map[string]interface{}) (error)) ([]byte, error) {
+
+	headers, err := GetHeadersFromJWS(string(compactJws))
+	if err != nil {
+		return nil, err
+	}
+
+	moreCheck(headers)
+
+	pubJwkHeader, found := headers["jwk"]
+	if !found {
+		return nil, errors.New("`jwk` not found in JOSE header")
+	}
+	pubJwsJson, err := json.Marshal(&pubJwkHeader)
+	if err != nil {
+		return nil, err
+	}
+	pubJwk := &jose.JSONWebKey{}
+	err = pubJwk.UnmarshalJSON(pubJwsJson)
+	if err != nil {
+		return nil, err
+	}
+
+	verifiedMsg, err := jws.Verify(compactJws, jwa.ES256, pubJwk.Key)
+	if err != nil {
+		return nil, err
+	}
+	return verifiedMsg, nil
+}
+
+func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[string]string) (string, error) {
+	headers := &jws.StandardHeaders{}
+	headers.Set("alg", authSrvPrivateKey.Algorithm)
+	headers.Set("typ", "JWT")
+	headers.Set("kid", strings.Replace(authSrvPrivateKey.KeyID, "private:", "public:", 1))
+
+	claims := make(map[string]string)
+	for k, v := range keyValuePairs {
+		claims[k] = v
+	}
+
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+
+	buf, err := jws.Sign(payload, jwa.ES256, authSrvPrivateKey.Key, jws.WithHeaders(headers))
+	if err != nil {
+		return "", err
+	}
+
+	return string(buf), nil
 }
