@@ -31,6 +31,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/go-convenience/urlx"
 	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/pagination"
 	"github.com/pkg/errors"
 )
@@ -41,6 +42,7 @@ type Handler struct {
 	LogoutRedirectURL string
 	RequestMaxAge     time.Duration
 	CookieStore       sessions.Store
+	KeyManager        jwk.Manager
 }
 
 const (
@@ -54,12 +56,14 @@ func NewHandler(
 	m Manager,
 	c sessions.Store,
 	u string,
+	k jwk.Manager,
 ) *Handler {
 	return &Handler{
 		H:                 h,
 		M:                 m,
 		LogoutRedirectURL: u,
 		CookieStore:       c,
+		KeyManager:        k,
 	}
 }
 
