@@ -148,33 +148,48 @@ func GetElementFromKeySet(setKeys map[string][]jose.JSONWebKey, kid string) (*jo
 	return nil, errors.New("JSONWebKey not found for kid: " + kid)
 }
 
-func GetHeadersFromJWS(compactJws string) (map[string]interface{}, error) {
-	compactHeader, _, _, err := jws.SplitCompact(strings.NewReader(compactJws))
+func GetContentFromJWS(compactJws string) (map[string]interface{}, map[string]interface{}, error) {
+	compactHeader, compactPayload, _, err := jws.SplitCompact(strings.NewReader(compactJws))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	headerJson, err := base64.RawURLEncoding.DecodeString(string(compactHeader))
-	if err != nil {
-		return nil, err
+
+	header := make(map[string]interface{})
+	if err := unmarshalEncodedJsonString(string(compactHeader), header); err != nil {
+		return nil, nil, err
 	}
-	headers := make(map[string]interface{})
-	err = json.Unmarshal(headerJson, &headers)
-	if err != nil {
-		return nil, err
+
+	payload := make(map[string]interface{})
+	if err := unmarshalEncodedJsonString(string(compactPayload), payload); err != nil {
+		return nil, nil, err
 	}
-	return headers, nil
+
+	return header, payload, nil
 }
 
-func VerifyJWS(compactJws []byte, moreCheck func(map[string]interface{}) (error)) ([]byte, error) {
+func VerifyJWS(compactJws []byte,
+	headerChecker func(map[string]interface{}) (error),
+	payloadChecker func(map[string]interface{}) (error)) ([]byte, error) {
 
-	headers, err := GetHeadersFromJWS(string(compactJws))
+	jwsStr := strings.Replace(string(compactJws), `"`, "", -1)
+	header, payload, err := GetContentFromJWS(jwsStr)
 	if err != nil {
 		return nil, err
 	}
 
-	moreCheck(headers)
+	if headerChecker != nil {
+		if err := headerChecker(header); err != nil {
+			return nil, err
+		}
+	}
 
-	pubJwkHeader, found := headers["jwk"]
+	if payloadChecker != nil {
+		if err := payloadChecker(payload); err != nil {
+			return nil, err
+		}
+	}
+
+	pubJwkHeader, found := header["jwk"]
 	if !found {
 		return nil, errors.New("`jwk` not found in JOSE header")
 	}
@@ -187,8 +202,7 @@ func VerifyJWS(compactJws []byte, moreCheck func(map[string]interface{}) (error)
 	if err != nil {
 		return nil, err
 	}
-
-	verifiedMsg, err := jws.Verify(compactJws, jwa.ES256, pubJwk.Key)
+	verifiedMsg, err := jws.Verify([]byte(jwsStr), jwa.ES256, pubJwk.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -217,4 +231,16 @@ func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[s
 	}
 
 	return string(buf), nil
+}
+
+func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) (error) {
+	str, err := base64.RawURLEncoding.DecodeString(encodedStr)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(str, &buf)
+	if err != nil {
+		return err
+	}
+	return nil
 }

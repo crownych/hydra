@@ -129,7 +129,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(decryptedMsg, checkClientMetadata)
+	verifiedMsg, err := pkg.VerifyJWS(decryptedMsg, checkClientMetadata, nil)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return

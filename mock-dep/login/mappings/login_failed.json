@@ -9,7 +9,7 @@
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ 'loginid': 'foo@bar.com', 'password': 'foobar' }"
+        "equalToJson": "{ 'username': 'foo@bar.com', 'password': 'foo' }"
       }
     ]
   },
@@ -20,11 +20,8 @@
       "Cache-Control": "no-cache"
     },
     "jsonBody": {
-      "error": "",
-      "success": "true",
-      "data": {
-        "id": "123456"
-      }
+      "error": "Unable to login",
+      "id": ""
     }
   }
 }

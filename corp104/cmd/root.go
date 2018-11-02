@@ -224,6 +224,9 @@ func initConfig() {
 	viper.BindEnv("DISABLE_CONSENT_FLOW")
 	viper.SetDefault("DISABLE_CONSENT_FLOW", false)
 
+	viper.BindEnv("CORP_INTERNAL_API_URL")
+	viper.SetDefault("CORP_INTERNAL_API_URL", "")
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf(`Config file not found because "%s"`, err)
