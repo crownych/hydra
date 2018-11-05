@@ -41,7 +41,7 @@ func newConsentHandler(c *config.Config, frontend, backend *httprouter.Router) *
 	w.ErrorEnhancer = writerErrorEnhancer
 
 	expectDependency(c.GetLogger(), ctx.ConsentManager)
-	h := consent.NewHandler(w, ctx.ConsentManager, sessions.NewCookieStore(c.GetCookieSecret()), c.LogoutRedirectURL)
+	h := consent.NewHandler(w, ctx.ConsentManager, sessions.NewCookieStore(c.GetCookieSecret()), c.LogoutRedirectURL, c.Context().KeyManager)
 	h.SetRoutes(frontend, backend)
 	return h
 }
