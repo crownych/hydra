@@ -51,6 +51,7 @@ func init() {
 	os.Setenv("DATABASE_URL", "memory")
 	//os.Setenv("HYDRA_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
 	os.Setenv("OAUTH2_ISSUER_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
+	os.Setenv("AD_LOGIN_URL", "http://localhost:8080/ad/login")
 }
 
 func TestExecute(t *testing.T) {

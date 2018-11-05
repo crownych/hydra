@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"github.com/ory/go-convenience/stringslice"
 )
 
@@ -16,7 +17,11 @@ func hasStrings(s1 []string, s2... string) bool {
 	return true
 }
 
-func validateADUser(endpoint, id, pwd string) error {
+func validateADUser(adLoginURL, id, pwd string) error {
+	if adLoginURL == "" {
+		return errors.New("no AD login url")
+	}
 	// TODO: connect to AD server and validate credentials, return error if validation fail
+
 	return nil
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/pborman/uuid"
+	"github.com/spf13/viper"
 	"github.com/urfave/negroni"
 	"gopkg.in/square/go-jose.v2"
 	"net/http"
@@ -70,6 +71,7 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
+	viper.Set("AD_LOGIN_URL", "http://localhost:8080/ad/login")
 	webSessionName := "web_sid"
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
