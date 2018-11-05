@@ -21,6 +21,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/goincremental/negroni-sessions"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -29,6 +30,7 @@ import (
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/rand/sequence"
 	"gopkg.in/square/go-jose.v2"
+	"log"
 	"net/http"
 	"strings"
 
@@ -43,10 +45,17 @@ type Handler struct {
 	H         herodot.Writer
 	Validator *Validator
 	KeyManager jwk.Manager
+	WebSessionName string
 }
 
 const (
 	ClientsHandlerPath = "/register"
+
+	ClientMetadataSessionKey = "client_metadata"
+
+	// JSON fields
+	SoftwareStatementField = "software_statement"
+	SignedCredentialsField = "signed_credentials"
 )
 
 func NewHandler(
@@ -65,6 +74,7 @@ func NewHandler(
 }
 
 func (h *Handler) SetRoutes(r *httprouter.Router) {
+	//clientCredentialsMiddleware := newClientCredentialsMiddleware(h.Manager)
 	r.GET(ClientsHandlerPath, h.List)
 	r.POST(ClientsHandlerPath, h.Create)
 	r.GET(ClientsHandlerPath+"/:id", h.Get)
@@ -95,15 +105,35 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       403: genericError
 //       500: genericError
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// Get software_statement from payload
-	swStatement, err := pkg.GetJWTValueFromRequestBody(r, "software_statement")
+	bodyMap, err := pkg.GetJWTMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
 
+	isSignedCredentials := false
+
+	// Get payload
+	jwePayloadStr := ""
+	swStatement := bodyMap[SoftwareStatementField]
+	if swStatement != nil {
+		jwePayloadStr = swStatement.(string)
+	} else {
+		signedCredential := bodyMap[SignedCredentialsField]
+		if signedCredential != nil {
+			jwePayloadStr = signedCredential.(string)
+			isSignedCredentials = true
+		}
+	}
+	if jwePayloadStr == "" {
+		h.H.WriteError(w, r, errors.WithStack(errors.New("empty payload")))
+		return
+	}
+
+	jwePayload := []byte(jwePayloadStr)
+
 	// Extract kid from JWE header
-	kid, err := pkg.ExtractKidFromJWE(swStatement)
+	kid, err := pkg.ExtractKidFromJWE(jwePayload)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -122,14 +152,22 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 
 	// JWE decryption using private key of oauth server
-	decryptedMsg, err := jwe.Decrypt(swStatement, jwa.ECDH_ES_A256KW, authSrvPrivateKey.Key)
+	decryptedMsg, err := jwe.Decrypt(jwePayload, jwa.ECDH_ES_A256KW, authSrvPrivateKey.Key)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
 
+	if isSignedCredentials {
+		h.processSignedCredentials(w, r, decryptedMsg, authSrvPrivateKey)
+	} else {
+		h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
+	}
+}
+
+func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(decryptedMsg, checkClientMetadata)
+	verifiedMsg, err := pkg.VerifyJWS(swStatementJWS, h.checkClientMetadata)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -147,32 +185,98 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	// TODO: 待建立 AD 登入驗證 Endpoint 時, 再將儲存動作移至該 Endpoint 中 (Confidential client only)
-	if len(c.Secret) == 0 {
-		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
-		if err != nil {
-			h.H.WriteError(w, r, errors.WithStack(err))
+	if c.IsPublic() {
+		// save public client to DB
+		if err := h.createActualClient(r.Context(), &c); err != nil {
+			h.H.WriteError(w, r, err)
 			return
 		}
-		c.Secret = string(secret)
-	}
-
-	if err := h.Manager.CreateClient(r.Context(), &c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
 	}
 
 	// Save client metadata to session
-	saveClientMetadataToSession(r, string(verifiedMsg))
+	h.saveClientMetadataToSession(r, string(verifiedMsg))
 
-	// Create registration response
-	registrationResponse, err := createRegistrationResponse(authSrvPrivateKey, c.GetID())
+	// create registration response
+	registrationResponse, err := h.createRegistrationResponse(authSrvPrivateKey, c.GetID())
+
+	if c.IsPublic() {
+		h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
+	} else {
+		h.H.Write(w, r, registrationResponse)
+	}
+}
+
+func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+	// JWS Verification using client's public key
+	verifiedMsg, err := pkg.VerifyJWS(signedCredentialsJWS, h.checkSignedCredentials)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+	log.Println("verifiedMsg:", string(verifiedMsg))
+
+	// get client_metadata from session
+	clientMetadata := h.getClientMetadataFromSession(r)
+	log.Println("client_metadata:", clientMetadata)
+
+
+	if clientMetadata == "" {
+		h.H.WriteError(w, r, errors.New("client_metadata not found in session"))
+		return
+	}
+
+	var c Client
+
+	if err := json.Unmarshal([]byte(clientMetadata), &c); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
 	if err := h.Validator.Validate(&c); err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
 
-	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
+	if c.IsPublic() {
+		h.H.WriteError(w, r, errors.New("public client does not support this operation"))
+		return
+	}
+
+	// create actual client
+	if err := h.createActualClient(r.Context(), &c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	// remove client metadata from session
+	h.removeClientMetadataFromSession(r)
+
+	// create save registration response
+	saveRegistrationResponse, err := h.createSaveRegistrationResponse(authSrvPrivateKey, c.GetID(), c.Secret)
+	if err := h.Validator.Validate(&c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	log.Println("saveRegistrationResponse:", saveRegistrationResponse)
+
+	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
+}
+
+func (h *Handler) createActualClient(ctx context.Context, c *Client) error {
+	if len(c.Secret) == 0 {
+		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
+		if err != nil {
+			return err
+		}
+		c.Secret = string(secret)
+	}
+
+	if err := h.Manager.CreateClient(ctx, c); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // swagger:route PUT /clients/{id} oAuth2 updateOAuth2Client
@@ -331,7 +435,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func checkClientMetadata(json map[string]interface{}) error {
+func (h *Handler) checkClientMetadata(json map[string]interface{}) error {
 
 	// validate `typ` should be `client-metadata+jwt` or `application/client-metadata+jwt`
 	typ, found := json["typ"]
@@ -352,12 +456,30 @@ func checkClientMetadata(json map[string]interface{}) error {
 	return nil
 }
 
-func saveClientMetadataToSession(r *http.Request, metadata string) {
-	session := sessions.GetSession(r)
-	session.Set("client_metadata", metadata)
+func (h *Handler) checkSignedCredentials(json map[string]interface{}) error {
+	return nil
 }
 
-func createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
+func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {
+	session := sessions.GetSession(r)
+	session.Set(ClientMetadataSessionKey, metadata)
+}
+
+func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
+	session := sessions.GetSession(r)
+	data := session.Get(ClientMetadataSessionKey)
+	if data == nil {
+		return ""
+	}
+	return data.(string)
+}
+
+func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
+	session := sessions.GetSession(r)
+	session.Delete(ClientMetadataSessionKey)
+}
+
+func (h *Handler) createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
 	claims := make(map[string]string)
 	claims["client_id"] = clientId
 
@@ -367,4 +489,17 @@ func createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId str
 	}
 
 	return &RegistrationResponse{SignedClientId: responseJwt}, nil
+}
+
+func (h *Handler) createSaveRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string, clientSecret string) (*SaveRegistrationResponse, error) {
+	claims := make(map[string]string)
+	claims["client_id"] = clientId
+	claims["client_secret"] = clientSecret
+
+	responseJwt, err := pkg.GenerateResponseJWT(authSrvPrivateKey, claims)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SaveRegistrationResponse{SignedCredentials: responseJwt}, nil
 }

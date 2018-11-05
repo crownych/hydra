@@ -38,7 +38,7 @@ Example:
   
   # Public Client
   hydra clients create \
-     --endpoint "http://localhost:4445" \
+     --endpoint "http://localhost:4444" \
      --id "a3a89ca9-c54c-4731-8494-6c057a16a14c" \
      --name "my-app" \
      --grant-types "implicit" \
@@ -57,7 +57,7 @@ Example:
 
   # Confidential Client
   hydra clients create \
-     --endpoint "http://localhost:4445" \
+     --endpoint "http://localhost:4444" \
      --id "fa3030d2-9e16-4b7d-b27f-381e840175cb" \
      --name "my-app" \
      --grant-types "urn:ietf:params:oauth:grant-type:token-exchange" \

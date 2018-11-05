@@ -10,11 +10,7 @@ import (
 
 
 func _TestOAuth2API(t *testing.T) {
-	//var serverURL = ""
 	var serverURL = "http://localhost:4444"
-	if serverURL == "" {
-		return
-	}
 
 	oauth2Api := NewOAuth2ApiWithBasePath(serverURL)
 	timeout := 5 * time.Second
@@ -33,6 +29,5 @@ func _TestOAuth2API(t *testing.T) {
 		assert.NotNil(t, jwks)
 		fmt.Println("jwks: ", jwks)
 	})
-
 }
 
