@@ -97,7 +97,7 @@ func TestClientSDK(t *testing.T) {
 	}
 
 	manager := client.NewMemoryManager(nil)
-	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager, "/ad/login")
+	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager)
 
 	router := httprouter.New()
 	handler.SetRoutes(router)

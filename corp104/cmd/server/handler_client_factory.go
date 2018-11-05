@@ -45,7 +45,6 @@ func newClientHandler(c *config.Config, router *httprouter.Router, manager clien
 		strings.Split(c.DefaultClientScope, ","),
 		c.GetSubjectTypesSupported(),
 		c.Context().KeyManager,
-		c.GetADLoginURL(),
 	)
 	h.SetRoutes(router)
 	return h

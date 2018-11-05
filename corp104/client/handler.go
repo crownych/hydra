@@ -29,6 +29,7 @@ import (
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/rand/sequence"
+	"github.com/spf13/viper"
 	"gopkg.in/square/go-jose.v2"
 	"log"
 	"net/http"
@@ -45,8 +46,6 @@ type Handler struct {
 	H         herodot.Writer
 	Validator *Validator
 	KeyManager jwk.Manager
-	WebSessionName string
-	ADLoginURL string
 }
 
 const (
@@ -65,14 +64,12 @@ func NewHandler(
 	defaultClientScopes []string,
 	subjectTypes []string,
 	keyManager jwk.Manager,
-	adLoginURL string,
 ) *Handler {
 	return &Handler{
 		Manager:   manager,
 		H:         h,
 		Validator: NewValidator(defaultClientScopes, subjectTypes),
 		KeyManager: keyManager,
-		ADLoginURL: adLoginURL,
 	}
 }
 
@@ -113,7 +110,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	isSignedCredentials := false
+	isConfidential := false
 
 	// Get payload
 	jwePayloadStr := ""
@@ -124,7 +121,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		signedCredential := bodyMap[SignedCredentialsField]
 		if signedCredential != nil {
 			jwePayloadStr = signedCredential.(string)
-			isSignedCredentials = true
+			isConfidential = true
 		}
 	}
 	if jwePayloadStr == "" {
@@ -160,7 +157,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	if isSignedCredentials {
+	if isConfidential {
 		h.processSignedCredentials(w, r, decryptedMsg, authSrvPrivateKey)
 	} else {
 		h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
@@ -169,7 +166,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 
 func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(swStatementJWS, h.checkClientMetadata)
+	verifiedMsg, err := pkg.VerifyJWS(swStatementJWS, h.checkClientMetadata, nil)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -210,16 +207,9 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 
 func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(signedCredentialsJWS, func(json map[string]interface{}) error {return nil})
+	_, err := pkg.VerifyJWS(signedCredentialsJWS, nil, h.validateSignedCredentials)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	// validate signed credentials
-	err = h.validateSignedCredentials(verifiedMsg)
-	if err != nil {
-		h.H.WriteError(w, r, err)
 		return
 	}
 
@@ -462,13 +452,14 @@ func (h *Handler) checkClientMetadata(json map[string]interface{}) error {
 	return nil
 }
 
-func (h *Handler) validateSignedCredentials(verifiedJWS []byte) error {
-	credentialsMap, err := pkg.ConvertJWTToMap(string(verifiedJWS))
-	if err != nil {
+func (h *Handler) validateSignedCredentials(credentials map[string]interface{}) error {
+	user := credentials["user"]
+	pwd := credentials["pwd"]
+	if user == nil || pwd == nil {
 		return errors.New("invalid signed credentials")
 	}
-
-	return validateADUser(h.ADLoginURL, credentialsMap["user"].(string), credentialsMap["pwd"].(string))
+	adLoginURL := viper.GetString("AD_LOGIN_URL")
+	return validateADUser(adLoginURL, user.(string), pwd.(string))
 }
 
 func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {

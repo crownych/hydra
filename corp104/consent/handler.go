@@ -22,6 +22,11 @@ package consent
 
 import (
 	"encoding/json"
+	"github.com/go-resty/resty"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/ory/hydra/pkg"
+	"github.com/spf13/viper"
 	"net/http"
 	"net/url"
 	"time"
@@ -31,6 +36,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/go-convenience/urlx"
 	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/pagination"
 	"github.com/pkg/errors"
 )
@@ -41,12 +47,14 @@ type Handler struct {
 	LogoutRedirectURL string
 	RequestMaxAge     time.Duration
 	CookieStore       sessions.Store
+	KeyManager        jwk.Manager
 }
 
 const (
 	LoginPath    = "/oauth2/auth/requests/login"
 	ConsentPath  = "/oauth2/auth/requests/consent"
 	SessionsPath = "/oauth2/auth/sessions"
+	IdpPath      = "/login"
 )
 
 func NewHandler(
@@ -54,12 +62,14 @@ func NewHandler(
 	m Manager,
 	c sessions.Store,
 	u string,
+	k jwk.Manager,
 ) *Handler {
 	return &Handler{
 		H:                 h,
 		M:                 m,
 		LogoutRedirectURL: u,
 		CookieStore:       c,
+		KeyManager:        k,
 	}
 }
 
@@ -78,6 +88,8 @@ func (h *Handler) SetRoutes(frontend, backend *httprouter.Router) {
 	backend.DELETE(SessionsPath+"/consent/:user/:client", h.DeleteUserClientConsentSession)
 
 	frontend.GET(SessionsPath+"/login/revoke", h.LogoutUser)
+
+	frontend.POST(IdpPath, h.AuthUser)
 }
 
 // swagger:route DELETE /oauth2/auth/sessions/consent/{user} oAuth2 revokeAllUserConsentSessions
@@ -614,4 +626,110 @@ func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	http.Redirect(w, r, h.LogoutRedirectURL, 302)
+}
+
+func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	msg, err := h.verifyJWS(w, r, "signed_credentials", nil, checkPayload)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	claims := make(map[string]string)
+	if err := json.Unmarshal(msg, &claims); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	request, err := h.M.GetAuthenticationRequest(r.Context(), claims["challenge"])
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if request.Client.ClientID != claims["client_id"] {
+		h.H.WriteError(w, r, errors.WithStack(fosite.ErrInvalidRequest.WithDebug("Client id is wrong")))
+		return
+	}
+
+	apiBaseUrl := viper.GetString("CORP_INTERNAL_API_URL")
+	if apiBaseUrl == "" {
+		h.H.WriteError(w, r, errors.WithStack(fosite.ErrInvalidRequest.WithDebug("No corp internal api url")))
+		return
+	}
+	body := `{"username":"` + claims["username"] + `","password":"` + claims["password"] + `"}`
+
+	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Post(apiBaseUrl + "/login")
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	responseMap := make(map[string]string)
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	if responseMap["error"] == "" {
+		h.H.Write(w, r, `{"ok": true, "id":"` + responseMap["id"] + `"}`)
+	} else {
+		h.H.Write(w, r, `{"ok": false, "id":"` + responseMap["id"] + `"}`)
+	}
+}
+
+func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string, headerChecker func(map[string]interface{}) (error), payloadChecker func(map[string]interface{}) (error)) ([]byte, error) {
+
+	credential, err := pkg.GetJWTValueFromRequestBody(r, field)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+
+	// Extract kid from JWE header
+	kid, err := pkg.ExtractKidFromJWE(credential)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+	// Extract key set
+	keySet, err := h.KeyManager.GetKeysById(r.Context(), kid)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+	// Get private key of oauth server
+	authSrvPrivateKey, err := pkg.GetElementFromKeySet(keySet, kid)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+
+	// JWE decryption using private key of oauth server
+	decryptedMsg, err := jwe.Decrypt(credential, jwa.ECDH_ES_A256KW, authSrvPrivateKey.Key)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+
+	// JWS Verification using client's public key
+	verifiedMsg, err := pkg.VerifyJWS(decryptedMsg, headerChecker, payloadChecker)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return nil, err
+	}
+
+	return verifiedMsg, nil
+}
+
+func checkPayload(json map[string]interface{}) error {
+	required := []string{"challenge", "client_id", "username", "password"}
+	for _, v := range required {
+		if _, ok := json[v]; !ok {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithDebug(v + " is missing"))
+		}
+	}
+
+	return nil
 }
