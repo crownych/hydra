@@ -46,6 +46,7 @@ type Handler struct {
 	Validator *Validator
 	KeyManager jwk.Manager
 	WebSessionName string
+	ADLoginURL string
 }
 
 const (
@@ -64,17 +65,18 @@ func NewHandler(
 	defaultClientScopes []string,
 	subjectTypes []string,
 	keyManager jwk.Manager,
+	adLoginURL string,
 ) *Handler {
 	return &Handler{
 		Manager:   manager,
 		H:         h,
 		Validator: NewValidator(defaultClientScopes, subjectTypes),
 		KeyManager: keyManager,
+		ADLoginURL: adLoginURL,
 	}
 }
 
 func (h *Handler) SetRoutes(r *httprouter.Router) {
-	//clientCredentialsMiddleware := newClientCredentialsMiddleware(h.Manager)
 	r.GET(ClientsHandlerPath, h.List)
 	r.POST(ClientsHandlerPath, h.Create)
 	r.GET(ClientsHandlerPath+"/:id", h.Get)
@@ -208,17 +210,21 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 
 func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(signedCredentialsJWS, h.checkSignedCredentials)
+	verifiedMsg, err := pkg.VerifyJWS(signedCredentialsJWS, func(json map[string]interface{}) error {return nil})
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
-	log.Println("verifiedMsg:", string(verifiedMsg))
+
+	// validate signed credentials
+	err = h.validateSignedCredentials(verifiedMsg)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
 
 	// get client_metadata from session
 	clientMetadata := h.getClientMetadataFromSession(r)
-	log.Println("client_metadata:", clientMetadata)
-
 
 	if clientMetadata == "" {
 		h.H.WriteError(w, r, errors.New("client_metadata not found in session"))
@@ -456,8 +462,13 @@ func (h *Handler) checkClientMetadata(json map[string]interface{}) error {
 	return nil
 }
 
-func (h *Handler) checkSignedCredentials(json map[string]interface{}) error {
-	return nil
+func (h *Handler) validateSignedCredentials(verifiedJWS []byte) error {
+	credentialsMap, err := pkg.ConvertJWTToMap(string(verifiedJWS))
+	if err != nil {
+		return errors.New("invalid signed credentials")
+	}
+
+	return validateADUser(h.ADLoginURL, credentialsMap["user"].(string), credentialsMap["pwd"].(string))
 }
 
 func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {

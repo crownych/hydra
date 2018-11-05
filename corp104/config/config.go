@@ -99,6 +99,9 @@ type Config struct {
 	ByPassSessionCheckRoutes		 string  `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
 	DisableConsentFlow               bool    `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
 
+	// AD
+	ADLoginURL                       string  `mapstructure:"AD_LOGIN_URL" yaml:"-"`
+
 	BuildVersion string                     `yaml:"-"`
 	BuildHash    string                     `yaml:"-"`
 	BuildTime    string                     `yaml:"-"`
@@ -448,4 +451,20 @@ func (c *Config) GetByPassSessionCheckRoutes() []string {
 
 func (c *Config) ConsentFlow() bool {
 	return c.DisableConsentFlow
+}
+
+func (c *Config) GetADLoginURL() string {
+	if strings.HasPrefix(c.ADLoginURL, "http") {
+		return c.ADLoginURL
+	}
+	proto := "https"
+	if c.ForceHTTP {
+		proto = "http"
+	}
+	host := "localhost"
+	if c.FrontendBindHost != "" {
+		host = c.FrontendBindHost
+	}
+	path := strings.TrimPrefix(c.ADLoginURL, "/")
+	return fmt.Sprintf("%s://%s:%d/%s", proto, host, c.FrontendBindPort, path)
 }
