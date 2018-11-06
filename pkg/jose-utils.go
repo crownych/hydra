@@ -26,6 +26,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jws"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -108,14 +109,14 @@ func LoadPrivateKey(data []byte) (interface{}, error) {
 	return nil, fmt.Errorf("square/go-jose: parse error, got '%s', '%s', '%s' and '%s'", err0, err1, err2, err3)
 }
 
-func GetJWTValueFromRequestBody(r *http.Request, filed string) ([]byte, error) {
+func GetJWTValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
 	var body map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
 	}
-	value := body[filed]
+	value := body[field]
 	if value == "" {
-		return nil, errors.New("Empty \"" + filed + "\"")
+		return nil, errors.New("Empty \"" + field + "\"")
 	}
 	return []byte(value), nil
 }
@@ -243,4 +244,16 @@ func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) (
 		return err
 	}
 	return nil
+}
+
+func GetJWTMapFromRequestBody(r *http.Request) (map[string]interface{}, error) {
+	jwt, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	var jwtMap map[string]interface{}
+	if err := json.NewDecoder(strings.NewReader(string(jwt))).Decode(&jwtMap); err != nil {
+		return nil, err
+	}
+	return jwtMap, nil
 }

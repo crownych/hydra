@@ -32,6 +32,7 @@ import (
 	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/pborman/uuid"
+	"github.com/spf13/viper"
 	"github.com/urfave/negroni"
 	"gopkg.in/square/go-jose.v2"
 	"net/http"
@@ -70,6 +71,8 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
+	viper.Set("AD_LOGIN_URL", "http://localhost:8080/ad/login")
+	webSessionName := "web_sid"
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
 	require.NoError(t, err)
@@ -102,14 +105,14 @@ func TestClientSDK(t *testing.T) {
 	handler.SetRoutes(router)
 	mockOAuthServer(router, authSrvJwks)
 	n := negroni.New()
-	store := cookiestore.New()
+	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
 		Path:     "/",
 		MaxAge:   0,
 		Secure:   false,
 		HTTPOnly: true,
 	})
-	n.Use(sessions.Sessions("sid", store))
+	n.Use(sessions.Sessions(webSessionName, store))
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
@@ -255,11 +258,19 @@ func TestClientSDK(t *testing.T) {
 	t.Run("case=confidential client is created", func(t *testing.T) {
 		createClient := createTestConfidentialClient("", cPubJwk)
 
-		// returned client is correct on Create
+		// returned client is correct on Create (session only)
 		result, response, err := c.CreateOAuth2Client(createClient, cPrivJwk)
 		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
+		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
 		assert.NotEmpty(t, result)
+		respCookies := response.Cookies()
+		assert.NotEmpty(t, respCookies)
+
+		// returned client is correct on Save (persisted)
+		saveResult, response, err := c.SaveOAuth2Client(respCookies, "ad_user1", "secret", cPrivJwk)
+		require.NoError(t, err)
+		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
+		assert.NotEmpty(t, saveResult)
 	})
 }
 

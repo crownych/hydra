@@ -227,6 +227,9 @@ func initConfig() {
 	viper.BindEnv("CORP_INTERNAL_API_URL")
 	viper.SetDefault("CORP_INTERNAL_API_URL", "")
 
+	viper.BindEnv("AD_LOGIN_URL")
+	viper.SetDefault("AD_LOGIN_URL", "")
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf(`Config file not found because "%s"`, err)

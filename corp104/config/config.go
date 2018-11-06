@@ -100,6 +100,9 @@ type Config struct {
 	DisableConsentFlow               bool    `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
 	CorpInternalAPIUrl               string  `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
 
+	// AD
+	ADLoginURL                       string  `mapstructure:"AD_LOGIN_URL" yaml:"-"`
+
 	BuildVersion string                     `yaml:"-"`
 	BuildHash    string                     `yaml:"-"`
 	BuildTime    string                     `yaml:"-"`

@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
@@ -8,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"math/big"
@@ -211,6 +213,57 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 		jwkKey.Set(jwk.KeyTypeKey, key.Kty)
 		return jwkKey, pubKey, nil
 	default:
-		return nil, nil, errors.New("Key type not supported: " + key.Kty)
+		return nil, nil, errors.New("key type not supported: " + key.Kty)
 	}
+}
+
+func convertToJwxJwsHeaders(headers map[string]interface{}) jws.Headers {
+	if len(headers) == 0 {
+		return nil
+	}
+	jwsHeaders := &jws.StandardHeaders{}
+	for k, v := range headers {
+		jwsHeaders.Set(k, v)
+	}
+	return jwsHeaders
+}
+
+func jwsSign(headers map[string]interface{}, payload []byte, key crypto.PrivateKey) ([]byte, error) {
+	var buf []byte
+	var err error
+	jwsHeaders := convertToJwxJwsHeaders(headers)
+	if jwsHeaders != nil {
+		buf, err = jws.Sign(payload, jwa.ES256, key, jws.WithHeaders(jwsHeaders))
+	} else {
+		buf, err = jws.Sign(payload, jwa.ES256, key)
+	}
+	if err != nil {
+		return nil, errors.New("failed to sign JWS: " + err.Error())
+	}
+	return buf, nil
+}
+
+func jweEncrypt(content []byte, key crypto.PublicKey, keyId string) ([]byte, error) {
+	contentCrypt, err := jwe.NewAesCrypt(jwa.A256GCM)
+	if err != nil {
+		return nil, errors.New(`failed to create AES crypt: ` + err.Error())
+	}
+
+	keyenc, err := jwe.NewEcdhesKeyWrapEncrypt(jwa.ECDH_ES_A256KW, key.(*ecdsa.PublicKey))
+	if err != nil {
+		return nil, errors.New("failed to create ECDHS key wrap encrypt: " + err.Error())
+	}
+
+	keyenc.KeyID = keyId
+	enc := jwe.NewMultiEncrypt(contentCrypt, jwe.NewRandomKeyGenerate(32), keyenc)
+	encrypted, err := enc.Encrypt(content)
+	if err != nil {
+		return nil, errors.New("failed to encrypt payload: " + err.Error())
+	}
+
+	buf, err := jwe.CompactSerialize{}.Serialize(encrypted)
+	if err != nil {
+		return nil, errors.New("failed to serialize JWE: " + err.Error())
+	}
+	return buf, nil
 }

@@ -167,36 +167,37 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	}
 
 	if jwksJSON != "" {
-		var jwks []hydra.JsonWebKey
-		err = json.Unmarshal([]byte(jwksJSON), &jwks)
-		if err != nil {
-			fmt.Println("Invalid jwks:", err.Error())
-			return
-		}
-		cc.Jwks = &hydra.JsonWebKeySet{Keys: jwks}
+		cc.Jwks = &hydra.JsonWebKeySet{Keys: convertToSwaggerJsonWebKeys([]byte(jwksJSON))}
 	}
 
-	var signingJwk *hydra.JsonWebKey
-	err = json.Unmarshal([]byte(signingJwkJSON), &signingJwk)
-	if err != nil {
-		fmt.Println("Invalid signing jwk:", err.Error())
-		return
-	}
+	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
 
 	result, response, err := m.CreateOAuth2Client(cc, signingJwk)
-	checkResponse(response, err, http.StatusCreated)
 
 	fmt.Printf("OAuth 2.0 Signed Client ID: %s\n", result.SignedClientId)
 
-	/*
-	if result.ClientSecret == "" {
-		fmt.Println("This OAuth 2.0 Client has no secret.")
+	if cc.IsPublic() {
+		checkResponse(response, err, http.StatusCreated)
 	} else {
-		if echoSecret {
-			fmt.Printf("OAuth 2.0 Client Secret: %s\n", result.ClientSecret)
-		}
+		checkResponse(response, err, http.StatusOK)
+		storeCookies(id, response.Cookies(), getEndpointHostname(h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd)))
+		fmt.Printf("\nRun \"hydra clients save --id %s --user <AD_ACCOUNT> --pwd <AD_ACCOUNT_PASSWORD> --signing-jwks <JWKS>\" to complete client creation\n", id)
 	}
-	*/
+}
+
+func (h *ClientHandler) SaveClient(cmd *cobra.Command, args []string) {
+	var err error
+	m := h.newClientManager(cmd)
+	id, _ := cmd.Flags().GetString("id")
+	user, _ := cmd.Flags().GetString("user")
+	pwd, _ := cmd.Flags().GetString("pwd")
+	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
+
+	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
+	result, response, err := m.SaveOAuth2Client(getStoredCookies(id), user, pwd, signingJwk)
+	checkResponse(response, err, http.StatusCreated)
+
+	fmt.Printf("OAuth 2.0 Signed Client Credentials: %s\n", result.SignedCredentials)
 }
 
 func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {
