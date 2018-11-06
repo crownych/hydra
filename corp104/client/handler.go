@@ -51,7 +51,7 @@ type Handler struct {
 const (
 	ClientsHandlerPath = "/register"
 
-	ClientMetadataSessionKey = "client_metadata"
+	ClientsMetadataSessionKey = "client_metadata"
 
 	// JSON fields
 	SoftwareStatementField = "software_statement"
@@ -166,7 +166,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 
 func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(swStatementJWS, h.checkClientMetadata, nil)
+	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -207,7 +207,7 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 
 func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
 	// JWS Verification using client's public key
-	_, err := pkg.VerifyJWS(signedCredentialsJWS, nil, h.validateSignedCredentials)
+	_, err := pkg.VerifyJWSUsingEmbeddedKey(signedCredentialsJWS, nil, h.validateSignedCredentialsPayload)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -431,7 +431,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) checkClientMetadata(json map[string]interface{}) error {
+func (h *Handler) validateClientMetadataHeader(json map[string]interface{}) error {
 
 	// validate `typ` should be `client-metadata+jwt` or `application/client-metadata+jwt`
 	typ, found := json["typ"]
@@ -452,7 +452,7 @@ func (h *Handler) checkClientMetadata(json map[string]interface{}) error {
 	return nil
 }
 
-func (h *Handler) validateSignedCredentials(credentials map[string]interface{}) error {
+func (h *Handler) validateSignedCredentialsPayload(credentials map[string]interface{}) error {
 	user := credentials["user"]
 	pwd := credentials["pwd"]
 	if user == nil || pwd == nil {
@@ -464,12 +464,12 @@ func (h *Handler) validateSignedCredentials(credentials map[string]interface{}) 
 
 func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {
 	session := sessions.GetSession(r)
-	session.Set(ClientMetadataSessionKey, metadata)
+	session.Set(ClientsMetadataSessionKey, metadata)
 }
 
 func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
 	session := sessions.GetSession(r)
-	data := session.Get(ClientMetadataSessionKey)
+	data := session.Get(ClientsMetadataSessionKey)
 	if data == nil {
 		return ""
 	}
@@ -478,7 +478,7 @@ func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
 
 func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
 	session := sessions.GetSession(r)
-	session.Delete(ClientMetadataSessionKey)
+	session.Delete(ClientsMetadataSessionKey)
 }
 
 func (h *Handler) createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {

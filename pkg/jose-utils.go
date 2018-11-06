@@ -121,6 +121,18 @@ func GetJWTValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
 	return []byte(value), nil
 }
 
+func GetJWTMapFromRequestBody(r *http.Request) (map[string]interface{}, error) {
+	jwt, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	var jwtMap map[string]interface{}
+	if err := json.NewDecoder(strings.NewReader(string(jwt))).Decode(&jwtMap); err != nil {
+		return nil, err
+	}
+	return jwtMap, nil
+}
+
 func ExtractKidFromJWE(compactJwe []byte) (string, error) {
 	jweMessage, err := jwe.Parse(compactJwe)
 	if err != nil {
@@ -149,26 +161,7 @@ func GetElementFromKeySet(setKeys map[string][]jose.JSONWebKey, kid string) (*jo
 	return nil, errors.New("JSONWebKey not found for kid: " + kid)
 }
 
-func GetContentFromJWS(compactJws string) (map[string]interface{}, map[string]interface{}, error) {
-	compactHeader, compactPayload, _, err := jws.SplitCompact(strings.NewReader(compactJws))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	header := make(map[string]interface{})
-	if err := unmarshalEncodedJsonString(string(compactHeader), header); err != nil {
-		return nil, nil, err
-	}
-
-	payload := make(map[string]interface{})
-	if err := unmarshalEncodedJsonString(string(compactPayload), payload); err != nil {
-		return nil, nil, err
-	}
-
-	return header, payload, nil
-}
-
-func VerifyJWS(compactJws []byte,
+func VerifyJWSUsingEmbeddedKey(compactJws []byte,
 	headerChecker func(map[string]interface{}) (error),
 	payloadChecker func(map[string]interface{}) (error)) ([]byte, error) {
 
@@ -210,6 +203,25 @@ func VerifyJWS(compactJws []byte,
 	return verifiedMsg, nil
 }
 
+func GetContentFromJWS(compactJws string) (map[string]interface{}, map[string]interface{}, error) {
+	compactHeader, compactPayload, _, err := jws.SplitCompact(strings.NewReader(compactJws))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	header := make(map[string]interface{})
+	if err := unmarshalEncodedJsonString(string(compactHeader), header); err != nil {
+		return nil, nil, err
+	}
+
+	payload := make(map[string]interface{})
+	if err := unmarshalEncodedJsonString(string(compactPayload), payload); err != nil {
+		return nil, nil, err
+	}
+
+	return header, payload, nil
+}
+
 func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[string]string) (string, error) {
 	headers := &jws.StandardHeaders{}
 	headers.Set("alg", authSrvPrivateKey.Algorithm)
@@ -244,16 +256,4 @@ func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) (
 		return err
 	}
 	return nil
-}
-
-func GetJWTMapFromRequestBody(r *http.Request) (map[string]interface{}, error) {
-	jwt, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	var jwtMap map[string]interface{}
-	if err := json.NewDecoder(strings.NewReader(string(jwt))).Decode(&jwtMap); err != nil {
-		return nil, err
-	}
-	return jwtMap, nil
 }
