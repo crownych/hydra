@@ -51,7 +51,7 @@ type Handler struct {
 const (
 	ClientsHandlerPath = "/register"
 
-	ClientMetadataSessionKey = "client_metadata"
+	ClientsMetadataSessionKey = "client_metadata"
 
 	// JSON fields
 	SoftwareStatementField = "software_statement"
@@ -464,12 +464,12 @@ func (h *Handler) validateSignedCredentialsPayload(credentials map[string]interf
 
 func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {
 	session := sessions.GetSession(r)
-	session.Set(ClientMetadataSessionKey, metadata)
+	session.Set(ClientsMetadataSessionKey, metadata)
 }
 
 func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
 	session := sessions.GetSession(r)
-	data := session.Get(ClientMetadataSessionKey)
+	data := session.Get(ClientsMetadataSessionKey)
 	if data == nil {
 		return ""
 	}
@@ -478,7 +478,7 @@ func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
 
 func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
 	session := sessions.GetSession(r)
-	session.Delete(ClientMetadataSessionKey)
+	session.Delete(ClientsMetadataSessionKey)
 }
 
 func (h *Handler) createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
