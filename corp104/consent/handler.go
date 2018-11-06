@@ -714,7 +714,7 @@ func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string
 	}
 
 	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWS(decryptedMsg, headerChecker, payloadChecker)
+	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(decryptedMsg, headerChecker, payloadChecker)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return nil, err
