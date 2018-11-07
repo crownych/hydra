@@ -31,7 +31,6 @@ import (
 	"github.com/ory/hydra/rand/sequence"
 	"github.com/spf13/viper"
 	"gopkg.in/square/go-jose.v2"
-	"log"
 	"net/http"
 	"strings"
 
@@ -125,7 +124,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		}
 	}
 	if jwePayloadStr == "" {
-		h.H.WriteError(w, r, errors.WithStack(errors.New("empty payload")))
+		h.H.WriteError(w, r, pkg.NewBadRequestError("empty payload"))
 		return
 	}
 
@@ -217,7 +216,7 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 	clientMetadata := h.getClientMetadataFromSession(r)
 
 	if clientMetadata == "" {
-		h.H.WriteError(w, r, errors.New("client_metadata not found in session"))
+		h.H.WriteError(w, r, pkg.NewBadRequestError("client_metadata not found in session"))
 		return
 	}
 
@@ -234,7 +233,7 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 	}
 
 	if c.IsPublic() {
-		h.H.WriteError(w, r, errors.New("public client does not support this operation"))
+		h.H.WriteError(w, r, pkg.NewBadRequestError("public client does not support this operation"))
 		return
 	}
 
@@ -253,8 +252,6 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 		h.H.WriteError(w, r, err)
 		return
 	}
-
-	log.Println("saveRegistrationResponse:", saveRegistrationResponse)
 
 	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
 }

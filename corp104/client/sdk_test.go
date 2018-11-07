@@ -30,21 +30,21 @@ import (
 	"fmt"
 	"github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
+	"github.com/julienschmidt/httprouter"
+	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/jwk"
+	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/mock-dep"
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/negroni"
 	"gopkg.in/square/go-jose.v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/julienschmidt/httprouter"
-	"github.com/ory/herodot"
-	"github.com/ory/hydra/corp104/client"
-	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createTestClient(prefix string) hydra.OAuth2Client {
@@ -71,7 +71,6 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
-	viper.Set("AD_LOGIN_URL", "http://localhost:8080/ad/login")
 	webSessionName := "web_sid"
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
@@ -116,6 +115,12 @@ func TestClientSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
+
+	// start mock server
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
+	err = mock_dep.StartMockServer()
+	require.NoError(t, err)
+
 	/*
 	t.Run("case=client default scopes are set", func(t *testing.T) {
 		createClient := createTestClient("")
@@ -266,12 +271,23 @@ func TestClientSDK(t *testing.T) {
 		respCookies := response.Cookies()
 		assert.NotEmpty(t, respCookies)
 
-		// returned client is correct on Save (persisted)
-		saveResult, response, err := c.SaveOAuth2Client(respCookies, "ad_user1", "secret", cPrivJwk)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-		assert.NotEmpty(t, saveResult)
+		t.Run("case=persist confidential client with invalid credentials", func(t *testing.T) {
+			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "wrong", cPrivJwk)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+			assert.Empty(t, saveResult.SignedCredentials)
+		})
+
+		t.Run("case=persist confidential client with valid credentials", func(t *testing.T) {
+			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "secret", cPrivJwk)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusCreated, response.StatusCode)
+			assert.NotEmpty(t, saveResult.SignedCredentials)
+		})
 	})
+
+	// stop mock server
+	mock_dep.StopMockServer()
 }
 
 func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2Client {
