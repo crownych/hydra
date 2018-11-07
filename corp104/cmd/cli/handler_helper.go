@@ -71,13 +71,13 @@ func getEndpointHostname(endpointURL string) string {
 	return u.Hostname()
 }
 
-func convertToSwaggerJsonWebKeys(jwksJSON []byte) []hydra.JsonWebKey {
-	var jwks []hydra.JsonWebKey
+func convertToSwaggerJsonWebKeySet(jwksJSON []byte) *hydra.JsonWebKeySet {
+	var jwks hydra.JsonWebKeySet
 	err := json.Unmarshal(jwksJSON, &jwks)
 	if err != nil {
 		panic("Invalid jwks:" + err.Error())
 	}
-	return jwks
+	return &jwks
 }
 
 func convertToSwaggerJsonWebKey(signingJwkJSON []byte) *hydra.JsonWebKey {
