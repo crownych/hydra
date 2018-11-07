@@ -30,21 +30,21 @@ import (
 	"fmt"
 	"github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
+	"github.com/julienschmidt/httprouter"
+	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/jwk"
+	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/mock-dep"
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/negroni"
 	"gopkg.in/square/go-jose.v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/julienschmidt/httprouter"
-	"github.com/ory/herodot"
-	"github.com/ory/hydra/corp104/client"
-	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createTestClient(prefix string) hydra.OAuth2Client {
@@ -103,7 +103,6 @@ func TestClientSDK(t *testing.T) {
 	router := httprouter.New()
 	handler.SetRoutes(router)
 	mockOAuthServer(router, authSrvJwks)
-	mockADServer(router)
 	n := negroni.New()
 	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
@@ -116,7 +115,12 @@ func TestClientSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
-	viper.Set("AD_LOGIN_URL", server.URL + "/ad/login")
+
+	// start mock server
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
+	err = mock_dep.StartMockServer()
+	require.NoError(t, err)
+
 	/*
 	t.Run("case=client default scopes are set", func(t *testing.T) {
 		createClient := createTestClient("")
@@ -281,6 +285,9 @@ func TestClientSDK(t *testing.T) {
 			assert.NotEmpty(t, saveResult.SignedCredentials)
 		})
 	})
+
+	// stop mock server
+	mock_dep.StopMockServer()
 }
 
 func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2Client {
@@ -326,17 +333,5 @@ func mockOAuthServer(r *httprouter.Router, jwks *jose.JSONWebKeySet) {
 		buf, _ := json.Marshal(pubJwks)
 
 		fmt.Fprint(w, string(buf))
-	})
-}
-
-func mockADServer(r *httprouter.Router) {
-	r.POST("/ad/login", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-		r.ParseForm()
-		if r.Form.Get("id") == "foo.bar" && r.Form.Get("pwd") == "secret" {
-			fmt.Fprint(w, "@Foo")
-		} else {
-			fmt.Fprint(w, "\r\n")
-		}
 	})
 }

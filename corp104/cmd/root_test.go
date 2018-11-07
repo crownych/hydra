@@ -24,8 +24,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/mock-dep"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"os"
 	"testing"
@@ -51,10 +53,14 @@ func init() {
 	os.Setenv("DATABASE_URL", "memory")
 	//os.Setenv("HYDRA_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
 	os.Setenv("OAUTH2_ISSUER_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
-	os.Setenv("AD_LOGIN_URL", "http://localhost:8080/ad/login")
+	os.Setenv("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
 }
 
 func TestExecute(t *testing.T) {
+	// start mock server
+	err := mock_dep.StartMockServer()
+	require.NoError(t, err)
+
 	var osArgs = make([]string, len(os.Args))
 	copy(osArgs, os.Args)
 
@@ -144,4 +150,7 @@ func TestExecute(t *testing.T) {
 			}
 		})
 	}
+
+	// stop mock server
+	mock_dep.StopMockServer()
 }

@@ -165,3 +165,7 @@
 [[constraint]]
   name = "github.com/patrickmn/go-cache"
   version = "2.1.0"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  version = "1.13.1"
