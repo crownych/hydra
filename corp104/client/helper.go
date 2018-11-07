@@ -36,7 +36,6 @@ func validateADUser(adLoginURL, id, pwd string) error {
 		return err
 	}
 	body := string(resp.Body())
-	//log.Printf("status: %v, body(is_CR_LF: %v): %s\n", resp.StatusCode(), body == "\r\n", body)
 	if resp.StatusCode() != http.StatusOK || !strings.HasPrefix(body, "@") {
 		return pkg.ErrUnauthorized
 	}
