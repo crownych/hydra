@@ -21,6 +21,7 @@
 package pkg
 
 import (
+	"github.com/ory/herodot"
 	"net/http"
 	"reflect"
 
@@ -34,6 +35,11 @@ var (
 		Code:        http.StatusNotFound,
 		Name:        http.StatusText(http.StatusNotFound),
 		Description: "Unable to located the requested resource",
+	}
+	ErrUnauthorized = &herodot.DefaultError{
+		CodeField:   http.StatusUnauthorized,
+		StatusField: http.StatusText(http.StatusUnauthorized),
+		ErrorField:  "Unauthorized",
 	}
 )
 
@@ -64,5 +70,13 @@ func LogError(err error, logger log.FieldLogger) {
 		logger.Debugf("Stack trace: %+v", e.StackTrace())
 	} else {
 		logger.Debugf("Stack trace could not be recovered from error type %s", reflect.TypeOf(err))
+	}
+}
+
+func NewBadRequestError(err string) *herodot.DefaultError {
+	return &herodot.DefaultError{
+		CodeField:   http.StatusBadRequest,
+		StatusField: http.StatusText(http.StatusBadRequest),
+		ErrorField:  err,
 	}
 }

@@ -71,7 +71,6 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
-	viper.Set("AD_LOGIN_URL", "http://localhost:8080/ad/login")
 	webSessionName := "web_sid"
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
@@ -104,6 +103,7 @@ func TestClientSDK(t *testing.T) {
 	router := httprouter.New()
 	handler.SetRoutes(router)
 	mockOAuthServer(router, authSrvJwks)
+	mockADServer(router)
 	n := negroni.New()
 	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
@@ -116,6 +116,7 @@ func TestClientSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
+	viper.Set("AD_LOGIN_URL", server.URL + "/ad/login")
 	/*
 	t.Run("case=client default scopes are set", func(t *testing.T) {
 		createClient := createTestClient("")
@@ -266,11 +267,19 @@ func TestClientSDK(t *testing.T) {
 		respCookies := response.Cookies()
 		assert.NotEmpty(t, respCookies)
 
-		// returned client is correct on Save (persisted)
-		saveResult, response, err := c.SaveOAuth2Client(respCookies, "ad_user1", "secret", cPrivJwk)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-		assert.NotEmpty(t, saveResult)
+		t.Run("case=persist confidential client with invalid credentials", func(t *testing.T) {
+			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "wrong", cPrivJwk)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+			assert.Empty(t, saveResult.SignedCredentials)
+		})
+
+		t.Run("case=persist confidential client with valid credentials", func(t *testing.T) {
+			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "secret", cPrivJwk)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusCreated, response.StatusCode)
+			assert.NotEmpty(t, saveResult.SignedCredentials)
+		})
 	})
 }
 
@@ -317,5 +326,17 @@ func mockOAuthServer(r *httprouter.Router, jwks *jose.JSONWebKeySet) {
 		buf, _ := json.Marshal(pubJwks)
 
 		fmt.Fprint(w, string(buf))
+	})
+}
+
+func mockADServer(r *httprouter.Router) {
+	r.POST("/ad/login", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
+		r.ParseForm()
+		if r.Form.Get("id") == "foo.bar" && r.Form.Get("pwd") == "secret" {
+			fmt.Fprint(w, "@Foo")
+		} else {
+			fmt.Fprint(w, "\r\n")
+		}
 	})
 }

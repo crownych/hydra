@@ -2,7 +2,13 @@ package client
 
 import (
 	"errors"
+	"fmt"
+	"github.com/go-resty/resty"
 	"github.com/ory/go-convenience/stringslice"
+	"github.com/ory/hydra/pkg"
+	"log"
+	"net/http"
+	"strings"
 )
 
 func hasStrings(s1 []string, s2... string) bool {
@@ -21,7 +27,18 @@ func validateADUser(adLoginURL, id, pwd string) error {
 	if adLoginURL == "" {
 		return errors.New("no AD login url")
 	}
-	// TODO: connect to AD server and validate credentials, return error if validation fail
-
+	log.Println("AD_LOGIN_URL:", adLoginURL)
+	resp, err := resty.R().
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(fmt.Sprintf("id=%s&pwd=%s&nat=1", id, pwd)).
+		Post(adLoginURL)
+	if err != nil {
+		return err
+	}
+	body := string(resp.Body())
+	//log.Printf("status: %v, body(is_CR_LF: %v): %s\n", resp.StatusCode(), body == "\r\n", body)
+	if resp.StatusCode() != http.StatusOK || !strings.HasPrefix(body, "@") {
+		return pkg.ErrUnauthorized
+	}
 	return nil
 }
