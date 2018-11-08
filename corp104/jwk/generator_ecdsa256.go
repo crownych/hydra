@@ -46,12 +46,14 @@ func (g *ECDSA256Generator) Generate(id, use string) (*jose.JSONWebKeySet, error
 	return &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
 			{
+				Algorithm:    "ES256",
 				Key:          key,
 				Use:          use,
 				KeyID:        ider("private", id),
 				Certificates: []*x509.Certificate{},
 			},
 			{
+				Algorithm:    "ES256",
 				Key:          &key.PublicKey,
 				Use:          use,
 				KeyID:        ider("public", id),
