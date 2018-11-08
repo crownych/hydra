@@ -167,7 +167,7 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	}
 
 	if jwksJSON != "" {
-		cc.Jwks = &hydra.JsonWebKeySet{Keys: convertToSwaggerJsonWebKeys([]byte(jwksJSON))}
+		cc.Jwks = convertToSwaggerJsonWebKeySet([]byte(jwksJSON))
 	}
 
 	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))

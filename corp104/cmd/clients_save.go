@@ -14,7 +14,7 @@ Example:
   hydra clients save \
 	--endpoint "http://localhost:4444" \
 	--id ga3030d2-9e16-4b7d-b27f-381e840175cb \
-	--user user1 \
+	--user foo.bar \
 	--pwd secret \
 	--signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}'
 `,
