@@ -63,7 +63,7 @@ services:
       - DISABLE_CONSENT_FLOW=1
       - BY_PASS_ROUTES=/register
       - CORS_ENABLED=1
-      - CORP_INTERNAL_API_URL=http://login-dep:8080
+      - CORP_INTERNAL_API_URL=http://login-dep:8080/login
       - AD_LOGIN_URL=http://login-dep:8080/ad/login
     restart: on-failure
 

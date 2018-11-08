@@ -163,115 +163,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 }
 
-func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
-	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	var c Client
-
-	if err := json.Unmarshal(verifiedMsg, &c); err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	if err := h.Validator.Validate(&c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if c.IsPublic() {
-		// save public client to DB
-		if err := h.createActualClient(r.Context(), &c); err != nil {
-			h.H.WriteError(w, r, err)
-			return
-		}
-	}
-
-	// Save client metadata to session
-	h.saveClientMetadataToSession(r, string(verifiedMsg))
-
-	// create registration response
-	registrationResponse, err := h.createRegistrationResponse(authSrvPrivateKey, c.GetID())
-
-	if c.IsPublic() {
-		h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
-	} else {
-		h.H.Write(w, r, registrationResponse)
-	}
-}
-
-func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
-	// JWS Verification using client's public key
-	_, err := pkg.VerifyJWSUsingEmbeddedKey(signedCredentialsJWS, nil, h.validateSignedCredentialsPayload)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	// get client_metadata from session
-	clientMetadata := h.getClientMetadataFromSession(r)
-
-	if clientMetadata == "" {
-		h.H.WriteError(w, r, pkg.NewBadRequestError("client_metadata not found in session"))
-		return
-	}
-
-	var c Client
-
-	if err := json.Unmarshal([]byte(clientMetadata), &c); err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	if err := h.Validator.Validate(&c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if c.IsPublic() {
-		h.H.WriteError(w, r, pkg.NewBadRequestError("public client does not support this operation"))
-		return
-	}
-
-	// create actual client
-	if err := h.createActualClient(r.Context(), &c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	// remove client metadata from session
-	h.removeClientMetadataFromSession(r)
-
-	// create save registration response
-	saveRegistrationResponse, err := h.createSaveRegistrationResponse(authSrvPrivateKey, c.GetID(), c.Secret)
-	if err := h.Validator.Validate(&c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
-}
-
-func (h *Handler) createActualClient(ctx context.Context, c *Client) error {
-	if len(c.Secret) == 0 {
-		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
-		if err != nil {
-			return err
-		}
-		c.Secret = string(secret)
-	}
-
-	if err := h.Manager.CreateClient(ctx, c); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // swagger:route PUT /clients/{id} oAuth2 updateOAuth2Client
 //
 // Update an OAuth 2.0 Client
@@ -428,6 +319,115 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+	// JWS Verification using client's public key
+	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	var c Client
+
+	if err := json.Unmarshal(verifiedMsg, &c); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	if err := h.Validator.Validate(&c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if c.IsPublic() {
+		// save public client to DB
+		if err := h.createActualClient(r.Context(), &c); err != nil {
+			h.H.WriteError(w, r, err)
+			return
+		}
+	}
+
+	// Save client metadata to session
+	h.saveClientMetadataToSession(r, string(verifiedMsg))
+
+	// create registration response
+	registrationResponse, err := h.createPublicClientResponse(authSrvPrivateKey, c.GetID())
+
+	if c.IsPublic() {
+		h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
+	} else {
+		h.H.Write(w, r, registrationResponse)
+	}
+}
+
+func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+	// JWS Verification using client's public key
+	_, err := pkg.VerifyJWSUsingEmbeddedKey(signedCredentialsJWS, nil, h.validateSignedCredentialsPayload)
+	if err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	// get client_metadata from session
+	clientMetadata := h.getClientMetadataFromSession(r)
+
+	if clientMetadata == "" {
+		h.H.WriteError(w, r, pkg.NewBadRequestError("client_metadata not found in session"))
+		return
+	}
+
+	var c Client
+
+	if err := json.Unmarshal([]byte(clientMetadata), &c); err != nil {
+		h.H.WriteError(w, r, errors.WithStack(err))
+		return
+	}
+
+	if err := h.Validator.Validate(&c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if c.IsPublic() {
+		h.H.WriteError(w, r, pkg.NewBadRequestError("public client does not support this operation"))
+		return
+	}
+
+	// create actual client
+	if err := h.createActualClient(r.Context(), &c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	// remove client metadata from session
+	h.removeClientMetadataFromSession(r)
+
+	// create save registration response
+	saveRegistrationResponse, err := h.createConfidentialClientResponse(authSrvPrivateKey, c.GetID(), c.Secret)
+	if err := h.Validator.Validate(&c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
+}
+
+func (h *Handler) createActualClient(ctx context.Context, c *Client) error {
+	if len(c.Secret) == 0 {
+		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
+		if err != nil {
+			return err
+		}
+		c.Secret = string(secret)
+	}
+
+	if err := h.Manager.CreateClient(ctx, c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (h *Handler) validateClientMetadataHeader(json map[string]interface{}) error {
 
 	// validate `typ` should be `client-metadata+jwt` or `application/client-metadata+jwt`
@@ -478,7 +478,7 @@ func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
 	session.Delete(ClientsMetadataSessionKey)
 }
 
-func (h *Handler) createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
+func (h *Handler) createPublicClientResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
 	claims := make(map[string]string)
 	claims["client_id"] = clientId
 
@@ -490,7 +490,7 @@ func (h *Handler) createRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey,
 	return &RegistrationResponse{SignedClientId: responseJwt}, nil
 }
 
-func (h *Handler) createSaveRegistrationResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string, clientSecret string) (*SaveRegistrationResponse, error) {
+func (h *Handler) createConfidentialClientResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string, clientSecret string) (*SaveRegistrationResponse, error) {
 	claims := make(map[string]string)
 	claims["client_id"] = clientId
 	claims["client_secret"] = clientSecret

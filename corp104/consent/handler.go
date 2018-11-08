@@ -660,7 +660,7 @@ func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 	body := `{"username":"` + claims["username"] + `","password":"` + claims["password"] + `"}`
 
-	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Post(apiBaseUrl + "/login")
+	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Post(apiBaseUrl)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return

@@ -59,32 +59,12 @@ func NewValidator(
 }
 
 func (v *Validator) Validate(c *Client) error {
-	if err := checkRequired("client_id", c.ClientID); err != nil {
-		return err
-	}
 
-	if err := checkRequired("client_name", c.Name); err != nil {
-		return err
-	}
-
-	if err := checkRequired("grant_types", c.GrantTypes); err != nil {
-		return err
-	}
-
-	if err := checkRequired("client_uri", c.ClientURI); err != nil {
-		return err
-	}
-
-	if err := checkRequired("contacts", c.Contacts); err != nil {
-		return err
-	}
-
-	if err := checkRequired("software_id", c.SoftwareId); err != nil {
-		return err
-	}
-
-	if err := checkRequired("software_version", c.SoftwareVersion); err != nil {
-		return err
+	checkFields := []string{"client_id", "client_name", "client_uri", "grant_types", "contacts", "software_id", "software_version"}
+	for _, v := range checkFields {
+		if err := checkRequired(v, c.ClientID); err != nil {
+			return err
+		}
 	}
 
 	if len(c.JSONWebKeysURI) > 0 && c.JSONWebKeys != nil {
