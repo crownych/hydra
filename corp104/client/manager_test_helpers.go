@@ -95,8 +95,12 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 			TokenEndpointAuthMethod:       "none",
 			RequestURIs:                   []string{"foo", "bar"},
 			AllowedCORSOrigins:            []string{"foo", "bar"},
-			RequestObjectSigningAlgorithm: "rs256",
-			UserinfoSignedResponseAlg:     "RS256",
+			RequestObjectSigningAlgorithm: "ES256",
+			UserinfoSignedResponseAlg:     "ES256",
+			SoftwareId:                    "",
+			SoftwareVersion:               "0.0.1",
+			IdTokenSignedResponseAlgorithm: "ES256",
+			ResourceSets:                  []string{"KX3A-39WE"},
 		}
 
 		assert.NoError(t, m.CreateClient(ctx, c))
@@ -128,6 +132,12 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 		//test if SecretExpiresAt was set properly
 		assert.Equal(t, ds["1234"].SecretExpiresAt, 0)
 		assert.Equal(t, ds["2-1234"].SecretExpiresAt, 1)
+
+		//test if SoftwareId, SoftwareVersion, IdTokenSignedResponseAlgorithm, ResourceSets were set properly
+		assert.Equal(t, ds["1234"].SoftwareId, c.SoftwareId)
+		assert.Equal(t, ds["1234"].SoftwareVersion, c.SoftwareVersion)
+		assert.Equal(t, ds["1234"].IdTokenSignedResponseAlgorithm, c.IdTokenSignedResponseAlgorithm)
+		assert.Equal(t, ds["1234"].ResourceSets, c.ResourceSets)
 
 		ds, err = m.GetClients(ctx, 1, 0)
 		assert.NoError(t, err)
