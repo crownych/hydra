@@ -117,6 +117,21 @@ var sharedMigrations = []*migrate.Migration{
 			`ALTER TABLE hydra_client DROP COLUMN allowed_cors_origins`,
 		},
 	},
+	{
+		Id: "9",
+		Up: []string{
+			`ALTER TABLE hydra_client ADD software_id TEXT NOT NULL`,
+			`ALTER TABLE hydra_client ADD software_version TEXT NOT NULL`,
+			`ALTER TABLE hydra_client ADD id_token_signed_response_alg VARCHAR(10) NOT NULL DEFAULT ''`,
+			`ALTER TABLE hydra_client ADD resource_sets TEXT NOT NULL`,
+		},
+		Down: []string{
+			`ALTER TABLE hydra_client DROP COLUMN software_id`,
+			`ALTER TABLE hydra_client DROP COLUMN software_version`,
+			`ALTER TABLE hydra_client DROP COLUMN id_token_signed_response_alg`,
+			`ALTER TABLE hydra_client DROP COLUMN resource_sets`,
+		},
+	},
 }
 
 var Migrations = map[string]*migrate.MemoryMigrationSource{
@@ -153,6 +168,7 @@ var Migrations = map[string]*migrate.MemoryMigrationSource{
 				`ALTER TABLE hydra_client MODIFY allowed_cors_origins TEXT`,
 			},
 		},
+		sharedMigrations[6],
 	}},
 	"postgres": {Migrations: []*migrate.Migration{
 		sharedMigrations[0],
@@ -187,6 +203,7 @@ var Migrations = map[string]*migrate.MemoryMigrationSource{
 				`ALTER TABLE hydra_client ALTER COLUMN allowed_cors_origins DROP NOT NULL`,
 			},
 		},
+		sharedMigrations[6],
 	}},
 }
 
@@ -219,6 +236,10 @@ type sqlData struct {
 	RequestObjectSigningAlgorithm string `db:"request_object_signing_alg"`
 	UserinfoSignedResponseAlg     string `db:"userinfo_signed_response_alg"`
 	AllowedCORSOrigins            string `db:"allowed_cors_origins"`
+	SoftwareId            		  string `db:"software_id"`
+	SoftwareVersion               string `db:"software_version"`
+	IdTokenSignedResponseAlgorithm string `db:"id_token_signed_response_alg"`
+	ResourceSets                  string `db:"resource_sets"`
 }
 
 var sqlParams = []string{
@@ -245,6 +266,10 @@ var sqlParams = []string{
 	"request_object_signing_alg",
 	"userinfo_signed_response_alg",
 	"allowed_cors_origins",
+	"software_id",
+	"software_version",
+	"id_token_signed_response_alg",
+	"resource_sets",
 }
 
 func sqlDataFromClient(d *Client) (*sqlData, error) {
@@ -282,6 +307,10 @@ func sqlDataFromClient(d *Client) (*sqlData, error) {
 		ClientURI:                     d.ClientURI,
 		LogoURI:                       d.LogoURI,
 		SecretExpiresAt:               d.SecretExpiresAt,
+		SoftwareId:                    d.SoftwareId,
+		SoftwareVersion:               d.SoftwareVersion,
+		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
+		ResourceSets:                  strings.Join(d.ResourceSets, "|"),
 	}, nil
 }
 
@@ -309,6 +338,10 @@ func (d *sqlData) ToClient() (*Client, error) {
 		LogoURI:                       d.LogoURI,
 		SecretExpiresAt:               d.SecretExpiresAt,
 		UserinfoSignedResponseAlg:     d.UserinfoSignedResponseAlg,
+		SoftwareId:                    d.SoftwareId,
+		SoftwareVersion:               d.SoftwareVersion,
+		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
+		ResourceSets:                  stringsx.Splitx(d.ResourceSets, "|"),
 	}
 
 	if d.JSONWebKeys != "" {
