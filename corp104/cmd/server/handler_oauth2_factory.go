@@ -254,7 +254,9 @@ func initOAuthServerMetadataJWKSAndStrategy(c *config.Config) jwk.JWTStrategy {
 	pubY, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["y"])
 	derBytes, _ := x509.MarshalPKIXPublicKey(&ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(pubX), Y: new(big.Int).SetBytes(pubY)})
 	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
-	c.GetLogger().Infof("JSON Web Key used to verify oauth server metadata\n\n%s\n\n%s", mataPubKeyBytes, pemBytes)
+	c.GetLogger().Infoln("JSON Web Key used to verify oauth server metadata")
+	c.GetLogger().Infoln(strings.Replace(string(mataPubKeyBytes), `"`, `'`, -1))
+	c.GetLogger().Infoln(string(pemBytes))
 
 	// 建立 OAuth2 authorization server metadata strategy
 	metadataStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, oauth2.OAuthServerMetadataKeyName)
