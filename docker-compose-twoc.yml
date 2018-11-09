@@ -45,7 +45,7 @@ services:
       - LOG_LEVEL=debug
       - OAUTH2_ISSUER_URL=http://localhost:4444
       - OAUTH2_CONSENT_URL=http://localhost:3000/consent
-      - OAUTH2_LOGIN_URL=http://localhost:3000/login
+      - OAUTH2_LOGIN_URL=http://localhost:4200/login
       - DATABASE_URL=postgres://hydra:secret@postgresd:5432/hydra?sslmode=disable
 #     Uncomment the following line to use mysql instead.
 #      - DATABASE_URL=mysql://root:secret@tcp(mysqld:3306)/mysql?parseTime=true
@@ -77,7 +77,7 @@ services:
       - LOG_LEVEL=debug
       - OAUTH2_ISSUER_URL=http://localhost:4444
       - OAUTH2_CONSENT_URL=http://localhost:3000/consent
-      - OAUTH2_LOGIN_URL=http://localhost:3000/login
+      - OAUTH2_LOGIN_URL=http://localhost:4200/login
       - DATABASE_URL=postgres://hydra:secret@postgresd:5432/hydra?sslmode=disable
 #     Uncomment the following line to use mysql instead.
 #      - DATABASE_URL=mysql://root:secret@tcp(mysqld:3306)/mysql?parseTime=true

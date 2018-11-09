@@ -52,7 +52,7 @@ const (
 	LoginPath    = "/oauth2/auth/requests/login"
 	ConsentPath  = "/oauth2/auth/requests/consent"
 	SessionsPath = "/oauth2/auth/sessions"
-	IdpPath      = "/login"
+	IdpPath      = "/idp"
 )
 
 func NewHandler(
