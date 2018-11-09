@@ -23,8 +23,6 @@ package consent
 import (
 	"encoding/json"
 	"github.com/go-resty/resty"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/ory/hydra/pkg"
 	"github.com/spf13/viper"
 	"net/http"
@@ -707,7 +705,7 @@ func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string
 	}
 
 	// JWE decryption using private key of oauth server
-	decryptedMsg, err := jwe.Decrypt(credential, jwa.ECDH_ES_A256KW, authSrvPrivateKey.Key)
+	decryptedMsg, err := pkg.DecryptJWE(credential, authSrvPrivateKey.Key)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return nil, err

@@ -200,6 +200,13 @@ func (v *Validator) validateSectorIdentifierURL(location string, redirectURIs []
 	return nil
 }
 
+func validateClientSecret(secret string) error {
+	if len(secret) > 0 && len(secret) < 6 {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field client_secret must contain a secret that is at least 6 characters long."))
+	}
+	return nil
+}
+
 func checkRequired(field string, fieldValue interface{}) error {
 	pass := false
 	switch fv := fieldValue.(type) {

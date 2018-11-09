@@ -24,11 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/goincremental/negroni-sessions"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/pkg"
-	"github.com/ory/hydra/rand/sequence"
 	"github.com/spf13/viper"
 	"gopkg.in/square/go-jose.v2"
 	"net/http"
@@ -75,9 +72,9 @@ func NewHandler(
 func (h *Handler) SetRoutes(r *httprouter.Router) {
 	r.GET(ClientsHandlerPath, h.List)
 	r.POST(ClientsHandlerPath, h.Create)
-	r.GET(ClientsHandlerPath+"/:id", h.Get)
-	r.PUT(ClientsHandlerPath+"/:id", h.Update)
-	r.DELETE(ClientsHandlerPath+"/:id", h.Delete)
+	r.GET(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Get))
+	r.PUT(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Update))
+	r.DELETE(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Delete))
 }
 
 // swagger:route POST /clients oAuth2 createOAuth2Client
@@ -112,47 +109,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	isConfidential := false
 
 	// Get payload
-	jwePayloadStr := ""
+	jweToken := ""
 	swStatement := bodyMap[SoftwareStatementField]
 	if swStatement != nil {
-		jwePayloadStr = swStatement.(string)
+		jweToken = swStatement.(string)
 	} else {
 		signedCredential := bodyMap[SignedCredentialsField]
 		if signedCredential != nil {
-			jwePayloadStr = signedCredential.(string)
+			jweToken = signedCredential.(string)
 			isConfidential = true
 		}
 	}
-	if jwePayloadStr == "" {
-		h.H.WriteError(w, r, pkg.NewBadRequestError("empty payload"))
-		return
-	}
 
-	jwePayload := []byte(jwePayloadStr)
-
-	// Extract kid from JWE header
-	kid, err := pkg.ExtractKidFromJWE(jwePayload)
+	decryptedMsg, authSrvPrivateKey, err := h.decryptJWE(r.Context(), []byte(jweToken))
 	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-	// Extract key set
-	keySet, err := h.KeyManager.GetKeysById(r.Context(), kid)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-	// Get private key of oauth server
-	authSrvPrivateKey, err := pkg.GetElementFromKeySet(keySet, kid)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	// JWE decryption using private key of oauth server
-	decryptedMsg, err := jwe.Decrypt(jwePayload, jwa.ECDH_ES_A256KW, authSrvPrivateKey.Key)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
+		h.H.WriteError(w, r, err)
 		return
 	}
 
@@ -185,25 +156,41 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 //       403: genericError
 //       500: genericError
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var c Client
-
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	swStatement, err := pkg.GetJWTValueFromRequestBody(r, SoftwareStatementField)
+	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
 
-	var secret string
-	if len(c.Secret) > 0 {
-		secret = c.Secret
-	}
-
-	c.ClientID = ps.ByName("id")
-	if err := h.Validator.Validate(&c); err != nil {
+	decryptedMsg, _, err := h.decryptJWE(r.Context(), swStatement)
+	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
 
-	if err := h.Manager.UpdateClient(r.Context(), &c); err != nil {
+	c, _, err := h.validateSoftwareStatement(decryptedMsg)
+
+	var secret string
+	if len(c.Secret) > 0 {
+		err := validateClientSecret(c.Secret)
+		if err != nil {
+			h.H.WriteError(w, r, err)
+			return
+		}
+		secret = c.Secret
+	}
+
+	if c.ClientID != ps.ByName("id") {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if err := h.Validator.Validate(c); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if err := h.Manager.UpdateClient(r.Context(), c); err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
@@ -319,29 +306,35 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*Client, []byte, error) {
 	// JWS Verification using client's public key
 	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
 	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
+		return nil, nil, err
 	}
 
 	var c Client
 
 	if err := json.Unmarshal(verifiedMsg, &c); err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
+		return nil, verifiedMsg, err
 	}
 
 	if err := h.Validator.Validate(&c); err != nil {
+		return nil, verifiedMsg, err
+	}
+	return &c, verifiedMsg, nil
+}
+
+func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+	c, verifiedMsg, err := h.validateSoftwareStatement(swStatementJWS)
+	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
 
 	if c.IsPublic() {
-		// save public client to DB
-		if err := h.createActualClient(r.Context(), &c); err != nil {
+		// Save client to storage
+		if _, err := h.createActualClient(r.Context(), c); err != nil {
 			h.H.WriteError(w, r, err)
 			return
 		}
@@ -394,7 +387,8 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 	}
 
 	// create actual client
-	if err := h.createActualClient(r.Context(), &c); err != nil {
+	plainSecret, err := h.createActualClient(r.Context(), &c)
+	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
@@ -403,7 +397,7 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 	h.removeClientMetadataFromSession(r)
 
 	// create save registration response
-	saveRegistrationResponse, err := h.createConfidentialClientResponse(authSrvPrivateKey, c.GetID(), c.Secret)
+	saveRegistrationResponse, err := h.createConfidentialClientResponse(authSrvPrivateKey, c.GetID(), plainSecret)
 	if err := h.Validator.Validate(&c); err != nil {
 		h.H.WriteError(w, r, err)
 		return
@@ -412,20 +406,33 @@ func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Reques
 	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
 }
 
-func (h *Handler) createActualClient(ctx context.Context, c *Client) error {
+func (h *Handler) createActualClient(ctx context.Context, c *Client) (string, error) {
+	if c.IsPublic() {
+		c.Secret = ""
+	}
+
+	origSecret := c.Secret
 	if len(c.Secret) == 0 {
-		secret, err := sequence.RuneSequence(12, []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.~"))
+		secret, err := pkg.GenerateSecret(26)
 		if err != nil {
-			return err
+			return origSecret, err
 		}
 		c.Secret = string(secret)
 	}
 
+	err := validateClientSecret(c.Secret)
+	if err != nil {
+		c.Secret = origSecret
+		return origSecret, err
+	}
+	plainSecret := c.Secret
+
 	if err := h.Manager.CreateClient(ctx, c); err != nil {
-		return err
+		c.Secret = origSecret
+		return origSecret, err
 	}
 
-	return nil
+	return plainSecret, nil
 }
 
 func (h *Handler) validateClientMetadataHeader(json map[string]interface{}) error {
@@ -501,4 +508,55 @@ func (h *Handler) createConfidentialClientResponse(authSrvPrivateKey *jose.JSONW
 	}
 
 	return &SaveRegistrationResponse{SignedCredentials: responseJwt}, nil
+}
+
+func (h *Handler) checkClientCredentials(next httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		clientID, clientSecret, hasAuth := r.BasicAuth()
+
+		pass := false
+		if hasAuth {
+			_, err := h.Manager.Authenticate(r.Context(), clientID, []byte(clientSecret))
+			if err == nil {
+				pass = true
+			}
+		}
+
+		if pass {
+			next(w, r, ps)
+		} else {
+			// Request Basic Authentication otherwise
+			w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+			h.H.WriteError(w, r, pkg.ErrUnauthorized)
+		}
+	}
+}
+
+func (h *Handler) decryptJWE(ctx context.Context, compactJwe []byte) ([]byte, *jose.JSONWebKey, error) {
+	if compactJwe == nil || len(compactJwe) == 0 {
+		return nil, nil, pkg.NewBadRequestError("empty payload")
+	}
+
+	// Extract kid from JWE header
+	kid, err := pkg.ExtractKidFromJWE(compactJwe)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	// Extract key set
+	keySet, err := h.KeyManager.GetKeysById(ctx, kid)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	// Get private key of oauth server
+	authSrvPrivateKey, err := pkg.GetElementFromKeySet(keySet, kid)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+
+	// JWE decryption using private key of oauth server
+	decryptedMsg, err := pkg.DecryptJWE(compactJwe, authSrvPrivateKey.Key)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	return decryptedMsg, authSrvPrivateKey, nil
 }

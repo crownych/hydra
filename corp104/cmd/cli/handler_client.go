@@ -105,12 +105,95 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	var err error
 	m := h.newClientManager(cmd)
+	secret, _ := cmd.Flags().GetString("secret")
+
+	cc, signingJwk := getClientFromCreateOrUpdateCmd(cmd)
+	if secret != "" {
+		cc.ClientSecret = secret
+	}
+
+	result, response, err := m.CreateOAuth2Client(cc, signingJwk)
+
+	fmt.Printf("OAuth 2.0 Signed Client ID: %s\n", result.SignedClientId)
+
+	if cc.IsPublic() {
+		checkResponse(response, err, http.StatusCreated)
+	} else {
+		checkResponse(response, err, http.StatusOK)
+		storeCookies(cc.ClientId, response.Cookies(), getEndpointHostname(h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd)))
+		fmt.Printf("\nRun \"hydra clients save --id %s --user <AD_ACCOUNT> --pwd <AD_ACCOUNT_PASSWORD> --signing-jwks <JWKS>\" to complete client creation\n", cc.ClientId)
+	}
+}
+
+func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {
+	m := h.newClientManager(cmd)
+
+	if len(args) == 0 {
+		fmt.Print(cmd.UsageString())
+		return
+	}
+
+	clientSecret, _ := cmd.Flags().GetString("secret")
+
+	response, err := m.DeleteOAuth2Client(args[0], clientSecret)
+	checkResponse(response, err, http.StatusNoContent)
+	fmt.Println("OAuth2 client deleted.")
+}
+
+func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
+	m := h.newClientManager(cmd)
+
+	if len(args) == 0 {
+		fmt.Print(cmd.UsageString())
+		return
+	}
+
+	clientSecret, _ := cmd.Flags().GetString("secret")
+
+	cl, response, err := m.GetOAuth2Client(args[0], clientSecret)
+	checkResponse(response, err, http.StatusOK)
+	fmt.Printf("%s\n", formatResponse(cl))
+}
+
+func (h *ClientHandler) SaveClient(cmd *cobra.Command, args []string) {
+	var err error
+	m := h.newClientManager(cmd)
+	id, _ := cmd.Flags().GetString("id")
+	user, _ := cmd.Flags().GetString("user")
+	pwd, _ := cmd.Flags().GetString("pwd")
+	m.Configuration.Username = user
+	m.Configuration.Password = pwd
+	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
+
+	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
+	result, response, err := m.SaveOAuth2Client(getStoredCookies(id), signingJwk)
+	checkResponse(response, err, http.StatusCreated)
+
+	fmt.Printf("OAuth 2.0 Signed Client Credentials: %s\n", result.SignedCredentials)
+}
+
+func (h *ClientHandler) UpdateClient(cmd *cobra.Command, args []string) {
+	var err error
+	m := h.newClientManager(cmd)
+	secret, _ := cmd.Flags().GetString("secret")
+	newSecret, _ := cmd.Flags().GetString("new-secret")	// change secret request
+
+	cc, signingJwk := getClientFromCreateOrUpdateCmd(cmd)
+	if newSecret != "" {
+		cc.ClientSecret = newSecret
+	}
+
+	result, response, err := m.UpdateOAuth2Client(cc.ClientId, secret, cc, signingJwk)
+	checkResponse(response, err, http.StatusOK)
+	fmt.Printf("%s\n", formatResponse(result))
+}
+
+func getClientFromCreateOrUpdateCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
 	responseTypes, _ := cmd.Flags().GetStringSlice("response-types")
 	grantTypes, _ := cmd.Flags().GetStringSlice("grant-types")
 	allowedScopes, _ := cmd.Flags().GetStringSlice("scope")
 	callbacks, _ := cmd.Flags().GetStringSlice("callbacks")
 	name, _ := cmd.Flags().GetString("name")
-	//secret, _ := cmd.Flags().GetString("secret")
 	id, _ := cmd.Flags().GetString("id")
 	tokenEndpointAuthMethod, _ := cmd.Flags().GetString("token-endpoint-auth-method")
 	//jwksUri, _ := cmd.Flags().GetString("jwks-uri")
@@ -128,28 +211,12 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 	idTokenSignedResponseAlg, _ := cmd.Flags().GetString("id-token-signed-response-alg")
 	requestObjectSigningAlg, _ := cmd.Flags().GetString("request-object-signing-alg")
 
-	/*
-	var echoSecret bool
-
-	if secret == "" {
-		var secretb []byte
-		secretb, err = pkg.GenerateSecret(26)
-		pkg.Must(err, "Could not generate OAuth 2.0 Client Secret: %s", err)
-		secret = string(secretb)
-
-		echoSecret = true
-	} else {
-		fmt.Println("You should not provide secrets using command line flags. The secret might leak to bash history and similar systems.")
-	}
-	*/
-
 	cc := hydra.OAuth2Client{
 		ClientId:                 id,
 		ResponseTypes:            responseTypes,
 		GrantTypes:               grantTypes,
 		RedirectUris:             callbacks,
 		Scope:                    strings.Join(allowedScopes, " "),
-		//ClientSecret:             secret,
 		ClientName:               name,
 		TokenEndpointAuthMethod:  tokenEndpointAuthMethod,
 		//JwksUri:                  jwksUri,
@@ -172,59 +239,5 @@ func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
 
 	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
 
-	result, response, err := m.CreateOAuth2Client(cc, signingJwk)
-
-	fmt.Printf("OAuth 2.0 Signed Client ID: %s\n", result.SignedClientId)
-
-	if cc.IsPublic() {
-		checkResponse(response, err, http.StatusCreated)
-	} else {
-		checkResponse(response, err, http.StatusOK)
-		storeCookies(id, response.Cookies(), getEndpointHostname(h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd)))
-		fmt.Printf("\nRun \"hydra clients save --id %s --user <AD_ACCOUNT> --pwd <AD_ACCOUNT_PASSWORD> --signing-jwks <JWKS>\" to complete client creation\n", id)
-	}
-}
-
-func (h *ClientHandler) SaveClient(cmd *cobra.Command, args []string) {
-	var err error
-	m := h.newClientManager(cmd)
-	id, _ := cmd.Flags().GetString("id")
-	user, _ := cmd.Flags().GetString("user")
-	pwd, _ := cmd.Flags().GetString("pwd")
-	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
-
-	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
-	result, response, err := m.SaveOAuth2Client(getStoredCookies(id), user, pwd, signingJwk)
-	checkResponse(response, err, http.StatusCreated)
-
-	fmt.Printf("OAuth 2.0 Signed Client Credentials: %s\n", result.SignedCredentials)
-}
-
-func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {
-	m := h.newClientManager(cmd)
-
-	if len(args) == 0 {
-		fmt.Print(cmd.UsageString())
-		return
-	}
-
-	for _, c := range args {
-		response, err := m.DeleteOAuth2Client(c)
-		checkResponse(response, err, http.StatusNoContent)
-	}
-
-	fmt.Println("OAuth2 client(s) deleted.")
-}
-
-func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
-	m := h.newClientManager(cmd)
-
-	if len(args) == 0 {
-		fmt.Print(cmd.UsageString())
-		return
-	}
-
-	cl, response, err := m.GetOAuth2Client(args[0])
-	checkResponse(response, err, http.StatusOK)
-	fmt.Printf("%s\n", formatResponse(cl))
+	return cc, signingJwk
 }

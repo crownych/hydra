@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
+	"github.com/ory/hydra/pkg"
 	"github.com/patrickmn/go-cache"
 	"net/http"
 	"net/url"
@@ -228,40 +229,14 @@ func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey)
 		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
 	}
 
-	// get OAuth Server's Public key
-	serverPubJwk, serverPubKey, err := a.GetAuthServerPublicKey()
-
-	// client's public key
-	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
-	if err != nil {
-		return nil, nil, err
-	}
-	// client's private key
-	_, signingKey, err := convertToJwxJWK(signingJwk, false)
-
-	// create and sign JWS of client's software statement
-	jwsHeaders := make(map[string]interface{})
-	jwsHeaders["alg"] = pubJwk.Algorithm()
-	jwsHeaders["typ"] = "client-metadata+jwt"
-	jwsHeaders["jwk"] = pubJwk
-	payload, err := json.Marshal(&body)
-	if err != nil {
-		return nil, nil, err
-	}
-	jwsMsg, err := jwsSign(jwsHeaders, payload, signingKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// create JWE using server's public key
-	jweMsg, err := jweEncrypt(jwsMsg, serverPubKey, serverPubJwk.KeyID())
+	swStatement, err := a.createSoftwareStatement(body, signingJwk)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Create software_statement payload
 	postPayload := make(map[string]interface{})
-	postPayload["software_statement"] = string(jweMsg)
+	postPayload["software_statement"] = swStatement
 
 	// body params
 	localVarPostBody = &postPayload
@@ -288,9 +263,13 @@ func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey)
  * Delete an existing OAuth 2.0 Client by its ID.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
  * @param id The id of the OAuth 2.0 Client.
+ * @param secret The secret of the OAuth 2.0 Client.
  * @return void
  */
-func (a OAuth2Api) DeleteOAuth2Client(id string) (*APIResponse, error) {
+func (a OAuth2Api) DeleteOAuth2Client(id, secret string) (*APIResponse, error) {
+	if id == "" || secret == "" {
+		return nil, errors.New("require client credentials")
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Delete")
 	// create path and map variables
@@ -307,6 +286,9 @@ func (a OAuth2Api) DeleteOAuth2Client(id string) (*APIResponse, error) {
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
+
+	// set Authorization header
+	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -529,9 +511,13 @@ func (a OAuth2Api) GetLoginRequest(challenge string) (*LoginRequest, *APIRespons
  * Get an OAUth 2.0 client by its ID. This endpoint never returns passwords.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
  * @param id The id of the OAuth 2.0 Client.
+ * @param secret The secret of the OAuth 2.0 Client.
  * @return *OAuth2Client
  */
-func (a OAuth2Api) GetOAuth2Client(id string) (*OAuth2Client, *APIResponse, error) {
+func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIResponse, error) {
+	if id == "" || secret == "" {
+		return nil, nil, errors.New("require client credentials")
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -548,6 +534,9 @@ func (a OAuth2Api) GetOAuth2Client(id string) (*OAuth2Client, *APIResponse, erro
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
+
+	// set Authorization header
+	localVarHeaderParams["Authorization"] =  "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -1439,10 +1428,11 @@ func (a OAuth2Api) RevokeUserLoginCookie() (*APIResponse, error) {
  * Update an existing OAuth 2.0 Client. If you pass &#x60;client_secret&#x60; the secret will be updated and returned via the API. This is the only time you will be able to retrieve the client secret, so write it down and keep it safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
  * @param id
+ * @param secret
  * @param body
  * @return *OAuth2Client
  */
-func (a OAuth2Api) UpdateOAuth2Client(id string, body OAuth2Client) (*OAuth2Client, *APIResponse, error) {
+func (a OAuth2Api) UpdateOAuth2Client(id, secret string, body OAuth2Client, signingJwk *JsonWebKey) (*OAuth2Client, *APIResponse, error) {
 
 	var localVarHttpMethod = strings.ToUpper("Put")
 	// create path and map variables
@@ -1459,6 +1449,9 @@ func (a OAuth2Api) UpdateOAuth2Client(id string, body OAuth2Client) (*OAuth2Clie
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
+
+	// set Authorization header
+	localVarHeaderParams["Authorization"] =  "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -1478,8 +1471,18 @@ func (a OAuth2Api) UpdateOAuth2Client(id string, body OAuth2Client) (*OAuth2Clie
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+
+	swStatement, err := a.createSoftwareStatement(body, signingJwk)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create software_statement payload
+	postPayload := make(map[string]interface{})
+	postPayload["software_statement"] = swStatement
+
 	// body params
-	localVarPostBody = &body
+	localVarPostBody = &postPayload
 	var successPayload = new(OAuth2Client)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
@@ -1655,11 +1658,11 @@ func (a OAuth2Api) GetAuthServerPublicKey() (jwk.Key, crypto.PublicKey, error) {
  * Create an OAuth 2.0 client
  * Create a new OAuth 2.0 client If you pass &#x60;client_secret&#x60; the secret will be used, otherwise a random secret will be generated. The secret will be returned in the response and you will not be able to retrieve it later on. Write the secret down and keep it somwhere safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
- * @param body
+ * @param cookies session cookie
  * @param signingJwk
  * @return *RegistrationSavedResponse
  */
-func (a OAuth2Api) SaveOAuth2Client(cookies []*http.Cookie, user string, pwd string, signingJwk *JsonWebKey) (*SaveRegistrationResponse, *APIResponse, error) {
+func (a OAuth2Api) SaveOAuth2Client(cookies map[string]string, signingJwk *JsonWebKey) (*SaveRegistrationResponse, *APIResponse, error) {
 	if cookies == nil || len(cookies) == 0 {
 		return nil, nil, errors.New("empty session cookies")
 	}
@@ -1700,8 +1703,8 @@ func (a OAuth2Api) SaveOAuth2Client(cookies []*http.Cookie, user string, pwd str
 
 	// set Cookie header
 	localVarHttpHeaderCookies := make(map[string]string)
-	for _, cookie := range cookies {
-		localVarHttpHeaderCookies[cookie.Name] = cookie.Value
+	for cookieName, cookieValue := range cookies {
+		localVarHttpHeaderCookies[cookieName] = cookieValue
 	}
 
 	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
@@ -1726,9 +1729,13 @@ func (a OAuth2Api) SaveOAuth2Client(cookies []*http.Cookie, user string, pwd str
 	jwsHeaders["typ"] = "JWT"
 	jwsHeaders["jwk"] = pubJwk
 
+	if a.Configuration.Username == "" || a.Configuration.Password == "" {
+		return nil, nil, errors.New("invalid user credentials")
+	}
+
 	body := make(map[string]string)
-	body["user"] = user
-	body["pwd"] = pwd
+	body["user"] = a.Configuration.Username
+	body["pwd"] = a.Configuration.Password
 
 	payload, err := json.Marshal(&body)
 	if err != nil {
@@ -1768,4 +1775,38 @@ func (a OAuth2Api) SaveOAuth2Client(cookies []*http.Cookie, user string, pwd str
 	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
 
 	return successPayload, localVarAPIResponse, err
+}
+
+func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWebKey) (string, error) {
+	// get OAuth Server's Public key
+	serverPubJwk, serverPubKey, err := a.GetAuthServerPublicKey()
+
+	// client's public key
+	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
+	if err != nil {
+		return "", err
+	}
+	// client's private key
+	_, signingKey, err := convertToJwxJWK(signingJwk, false)
+
+	// create and sign JWS of client's software statement
+	jwsHeaders := make(map[string]interface{})
+	jwsHeaders["alg"] = pubJwk.Algorithm()
+	jwsHeaders["typ"] = "client-metadata+jwt"
+	jwsHeaders["jwk"] = pubJwk
+	payload, err := json.Marshal(&body)
+	if err != nil {
+		return "", err
+	}
+	jwsMsg, err := jwsSign(jwsHeaders, payload, signingKey)
+	if err != nil {
+		return "", err
+	}
+
+	// create JWE using server's public key
+	jweMsg, err := jweEncrypt(jwsMsg, serverPubKey, serverPubJwk.KeyID())
+	if err != nil {
+		return "", err
+	}
+	return string(jweMsg), nil
 }

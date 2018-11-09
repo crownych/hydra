@@ -257,3 +257,11 @@ func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) (
 	}
 	return nil
 }
+
+func DecryptJWE(compactJwe []byte, key interface{}) ([]byte, error) {
+	buf, err := jwe.Decrypt(compactJwe, jwa.ECDH_ES_A256KW, key)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
