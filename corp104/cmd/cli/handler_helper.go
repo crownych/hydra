@@ -128,14 +128,14 @@ func storeCookies(filename string, cookies []*http.Cookie, host string) {
 	}
 }
 
-func getStoredCookies(filename string) []*http.Cookie {
+func getStoredCookies(filename string) map[string]string {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
 
-	var cookies []*http.Cookie
+	cookies := make(map[string]string)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -156,7 +156,7 @@ func getStoredCookies(filename string) []*http.Cookie {
 					panic("Cookie has expired")
 				}
 			}
-			cookies = append(cookies, cookie)
+			cookies[cookie.Name] = cookie.Value
 		}
 	}
 	if err := scanner.Err(); err != nil {

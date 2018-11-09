@@ -22,19 +22,22 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // clientsDeleteCmd represents the delete command
 var clientsDeleteCmd = &cobra.Command{
-	Use:   "delete <id> [<id>...]",
+	Use:   "delete <id>",
 	Short: "Delete an OAuth 2.0 Client",
 	Long: `This command deletes one or more OAuth 2.0 Clients by their respective IDs.
 
 Example:
-  hydra clients delete client-1 client-2 client-3`,
+  hydra clients delete client-1 --secret secret`,
 	Run: cmdHandler.Clients.DeleteClient,
 }
 
 func init() {
 	clientsCmd.AddCommand(clientsDeleteCmd)
+	clientsDeleteCmd.Flags().String("secret", os.Getenv("OAUTH2_CLIENT_SECRET"), "Use the provided OAuth 2.0 Client Secret, defaults to environment variable OAUTH2_CLIENT_SECRET")
+	clientsDeleteCmd.MarkFlagRequired("secret")
 }

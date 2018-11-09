@@ -946,7 +946,11 @@
   analyzer-version = 1
   input-imports = [
     "github.com/dgrijalva/jwt-go",
+    "github.com/docker/docker/api/types",
+    "github.com/docker/docker/api/types/container",
+    "github.com/docker/docker/api/types/mount",
     "github.com/docker/docker/client",
+    "github.com/docker/go-connections/nat",
     "github.com/go-resty/resty",
     "github.com/go-sql-driver/mysql",
     "github.com/goincremental/negroni-sessions",

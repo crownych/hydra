@@ -36,7 +36,9 @@ import (
 	"github.com/ory/hydra/corp104/jwk"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
 	"github.com/ory/hydra/mock-dep"
+	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -271,18 +273,73 @@ func TestClientSDK(t *testing.T) {
 		respCookies := response.Cookies()
 		assert.NotEmpty(t, respCookies)
 
+		sessionCookie := map[string]string{}
+		for _, respCookie := range respCookies {
+			sessionCookie[respCookie.Name] = respCookie.Value
+		}
+
 		t.Run("case=persist confidential client with invalid credentials", func(t *testing.T) {
-			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "wrong", cPrivJwk)
+			c.Configuration.Username = "foo.bar"
+			c.Configuration.Password = "wrong"
+			saveResult, response, err := c.SaveOAuth2Client(sessionCookie, cPrivJwk)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-			assert.Empty(t, saveResult.SignedCredentials)
+			require.Empty(t, saveResult.SignedCredentials)
 		})
 
 		t.Run("case=persist confidential client with valid credentials", func(t *testing.T) {
-			saveResult, response, err := c.SaveOAuth2Client(respCookies, "foo.bar", "secret", cPrivJwk)
+			c.Configuration.Username = "foo.bar"
+			c.Configuration.Password = "secret"
+			saveResult, response, err := c.SaveOAuth2Client(sessionCookie, cPrivJwk)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusCreated, response.StatusCode)
-			assert.NotEmpty(t, saveResult.SignedCredentials)
+			require.NotEmpty(t, saveResult.SignedCredentials)
+			clientSecret, err := getClientSecretFromSignedCredentials(saveResult.SignedCredentials)
+			require.NoError(t, err)
+
+			t.Run("case=get client with invalid client credentials", func(t *testing.T) {
+				_, response, err := c.GetOAuth2Client(createClient.ClientId, "wrong")
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+			})
+
+			t.Run("case=get client with valid client credentials", func(t *testing.T) {
+				result, response, err := c.GetOAuth2Client(createClient.ClientId, clientSecret)
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusOK, response.StatusCode)
+				require.EqualValues(t, createClient.ClientId, result.ClientId)
+				require.EqualValues(t, createClient.SoftwareId, result.SoftwareId)
+				require.EqualValues(t, createClient.SoftwareVersion, result.SoftwareVersion)
+			})
+
+			// update client fields
+			updateClient := createClient
+			updateClient.SoftwareVersion = "0.0.2"
+
+			t.Run("case=update client with invalid client credentials", func(t *testing.T) {
+				_, response, err := c.UpdateOAuth2Client(createClient.ClientId, "wrong", updateClient, cPrivJwk)
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+			})
+
+			t.Run("case=update client with valid client credentials", func(t *testing.T) {
+				result, response, err := c.UpdateOAuth2Client(createClient.ClientId, clientSecret, updateClient, cPrivJwk)
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusOK, response.StatusCode)
+				require.EqualValues(t, updateClient.SoftwareVersion, result.SoftwareVersion)
+			})
+
+			t.Run("case=delete client with invalid client credentials", func(t *testing.T) {
+				response, err := c.DeleteOAuth2Client(createClient.ClientId, "wrong")
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+			})
+
+			t.Run("case=delete client with valid client credentials", func(t *testing.T) {
+				response, err := c.DeleteOAuth2Client(createClient.ClientId, clientSecret)
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusNoContent, response.StatusCode)
+			})
 		})
 	})
 
@@ -334,4 +391,16 @@ func mockOAuthServer(r *httprouter.Router, jwks *jose.JSONWebKeySet) {
 
 		fmt.Fprint(w, string(buf))
 	})
+}
+
+func getClientSecretFromSignedCredentials(signedCredentials string) (string, error) {
+	_, payload, err  := pkg.GetContentFromJWS(signedCredentials)
+	if err != nil {
+		return "", nil
+	}
+	clientSecret := payload["client_secret"]
+	if clientSecret == "" {
+		return "", errors.New("empty client secret")
+	}
+	return clientSecret.(string), nil
 }

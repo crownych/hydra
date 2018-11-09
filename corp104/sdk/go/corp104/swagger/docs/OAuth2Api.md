@@ -28,6 +28,7 @@ Method | HTTP request | Description
 [**UpdateOAuth2Client**](OAuth2Api.md#UpdateOAuth2Client) | **Put** /register/{id} | Update an OAuth 2.0 Client
 [**Userinfo**](OAuth2Api.md#Userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 [**WellKnown**](OAuth2Api.md#WellKnown) | **Get** /jwks.json | Get Well-Known JSON Web Keys
+[**SaveOAuth2Client**](OAuth2Api.md#SaveOAuth2Client) | **Post** /register | Save an OAuth 2.0 Client to storage
 
 
 # **AcceptConsentRequest**
@@ -102,7 +103,8 @@ OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usuall
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**OAuth2Client**](OAuth2Client.md)|  | 
+ **body** | [**OAuth2Client**](OAuth2Client.md)|  |
+ **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement | 
 
 ### Return type
 
@@ -132,6 +134,7 @@ Delete an existing OAuth 2.0 Client by its ID.  OAuth 2.0 clients are used to pe
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **string**| The id of the OAuth 2.0 Client. | 
+ **secret** | **string**| The secret of the OAuth 2.0 Client. |
 
 ### Return type
 
@@ -139,7 +142,7 @@ void (empty response body)
 
 ### Authorization
 
-No authorization required
+Require client credentials
 
 ### HTTP request headers
 
@@ -248,6 +251,7 @@ Get an OAUth 2.0 client by its ID. This endpoint never returns passwords.  OAuth
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **string**| The id of the OAuth 2.0 Client. | 
+ **secret** | **string**| The secret of the OAuth 2.0 Client. |
 
 ### Return type
 
@@ -255,7 +259,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+Require client credentials
 
 ### HTTP request headers
 
@@ -647,7 +651,9 @@ Update an existing OAuth 2.0 Client. If you pass `client_secret` the secret will
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **string**|  | 
- **body** | [**OAuth2Client**](SoftwareStatement.md)|  | 
+ **secret** | **string**| The secret of the OAuth 2.0 Client. |
+ **body** | [**OAuth2Client**](OAuth2Client.md)|  | 
+ **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement | 
 
 ### Return type
 
@@ -655,7 +661,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+Require client credentials
 
 ### HTTP request headers
 
@@ -708,6 +714,34 @@ This endpoint does not need any parameter.
 ### Authorization
 
 No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+# **SaveOAuth2Client**
+> SaveRegistrationResponse SaveOAuth2Client()
+
+Save an OAuth 2.0 Client to storage 
+
+Returns a JWS token containing the client_id and client_secret of this client signed by the oauth authorization server.
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cookies** | **map[string]string**| Session cookie of the client |
+ **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement |
+
+### Return type
+
+[**SaveRegistrationResponse**](SaveRegistrationResponse.md)
+
+### Authorization
+
+Require user credentials
 
 ### HTTP request headers
 

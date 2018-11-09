@@ -22,6 +22,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var clientsGetCmd = &cobra.Command{
@@ -30,10 +31,12 @@ var clientsGetCmd = &cobra.Command{
 	Long: `This command retrieves an OAuth 2.0 Clients by its ID.
 
 Example:
-  hydra clients get client-1`,
+  hydra clients get client-1 --secret secret`,
 	Run: cmdHandler.Clients.GetClient,
 }
 
 func init() {
 	clientsCmd.AddCommand(clientsGetCmd)
+	clientsGetCmd.Flags().String("secret", os.Getenv("OAUTH2_CLIENT_SECRET"), "Use the provided OAuth 2.0 Client Secret, defaults to environment variable OAUTH2_CLIENT_SECRET")
+	clientsGetCmd.MarkFlagRequired("secret")
 }
