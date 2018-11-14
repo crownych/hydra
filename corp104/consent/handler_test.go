@@ -32,18 +32,26 @@ import (
 
 	"context"
 
+	nSession "github.com/goincremental/negroni-sessions"
+	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/gorilla/sessions"
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/herodot"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/negroni"
 )
 
 func TestLogout(t *testing.T) {
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	cs := sessions.NewCookieStore([]byte("secret"))
 	r := httprouter.New()
+
+	n := negroni.New()
+	n.Use(nSession.Sessions("web_sid", cookiestore.New([]byte("secret"))))
+	n.UseHandler(r)
+
 	h := NewHandler(
 		herodot.NewJSONWriter(nil),
 		NewMemoryManager(nil),
@@ -72,7 +80,7 @@ func TestLogout(t *testing.T) {
 	})
 
 	h.SetRoutes(r, r)
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(n)
 	defer ts.Close()
 
 	h.LogoutRedirectURL = ts.URL + "/logout"
@@ -92,6 +100,6 @@ func TestLogout(t *testing.T) {
 	resp, err = c.Get(ts.URL + "/oauth2/auth/sessions/login/revoke")
 	require.NoError(t, err)
 	require.EqualValues(t, http.StatusOK, resp.StatusCode)
-	assert.Len(t, cj.Cookies(u), 0)
+	assert.Len(t, cj.Cookies(u), 1)
 	assert.EqualValues(t, ts.URL+"/logout", resp.Request.URL.String())
 }
