@@ -169,6 +169,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 
 	c, _, err := h.validateSoftwareStatement(decryptedMsg)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
 
 	var secret string
 	if len(c.Secret) > 0 {
