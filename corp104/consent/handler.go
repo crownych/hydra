@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"time"
 
+	nSession "github.com/goincremental/negroni-sessions"
 	"github.com/gorilla/sessions"
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/fosite"
@@ -53,6 +54,8 @@ const (
 	ConsentPath  = "/oauth2/auth/requests/consent"
 	SessionsPath = "/oauth2/auth/sessions"
 	IdpPath      = "/idp"
+
+	ClientsMetadataSessionKey = "client_metadata"
 )
 
 func NewHandler(
@@ -623,6 +626,9 @@ func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request, ps httprout
 		}
 	}
 
+	// remove client metadata from session
+	h.removeClientMetadataFromSession(r)
+
 	http.Redirect(w, r, h.LogoutRedirectURL, 302)
 }
 
@@ -719,6 +725,11 @@ func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string
 	}
 
 	return verifiedMsg, nil
+}
+
+func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
+	session := nSession.GetSession(r)
+	session.Delete(ClientsMetadataSessionKey)
 }
 
 func checkPayload(json map[string]interface{}) error {
