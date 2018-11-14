@@ -393,7 +393,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		RegistrationEndpoint:              				 strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
 		RevocationEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.RevocationPath,
 		CheckSessionIFrame:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.CheckSessionPath,
-		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.DefaultLogoutPath,
+		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.EndSessionPath,
 		ScopesSupported:                   				 []string{"openid"},
 		ResponseTypes:                     				 []string{"id_token", "token"},
 		GrantTypesSupported:               				 []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},

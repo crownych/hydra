@@ -62,6 +62,8 @@ const (
 	CheckSessionPath = "/check-session"
 	ResourceSetPath  = "/resource-set"
 
+	EndSessionPath = "/oauth2/auth/sessions/login/revoke"
+
 	OAuthServerMetadataKeyName = "oauth.server-metadata"
 )
 
@@ -250,7 +252,7 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 		RegistrationEndpoint: strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
 		RevocationEndpoint:   strings.TrimRight(h.IssuerURL, "/") + RevocationPath,
 		CheckSessionIFrame:   strings.TrimRight(h.IssuerURL, "/") + CheckSessionPath,
-		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + DefaultLogoutPath,
+		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + EndSessionPath,
 		ScopesSupported:                   				 scopesSupported,
 		ResponseTypes:                     				 []string{"id_token", "token"},
 		GrantTypesSupported:               				 []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
