@@ -322,6 +322,14 @@ func TestClientSDK(t *testing.T) {
 				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
 			})
 
+			t.Run("case=update client with valid client credentials and invalid client_metadata", func(t *testing.T) {
+				updateClient.JwksUri = "http://jwk.url"
+				_, response, err := c.UpdateOAuth2Client(createClient.ClientId, clientSecret, updateClient, cPrivJwk)
+				require.NoError(t, err)
+				require.EqualValues(t, http.StatusBadRequest, response.StatusCode)
+				updateClient.JwksUri = ""
+			})
+
 			t.Run("case=update client with valid client credentials", func(t *testing.T) {
 				result, response, err := c.UpdateOAuth2Client(createClient.ClientId, clientSecret, updateClient, cPrivJwk)
 				require.NoError(t, err)
