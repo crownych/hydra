@@ -273,7 +273,7 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 	h.Keys = newJWKHandler(c, frontend, backend)
 	h.Consent = newConsentHandler(c, frontend, backend)
 	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager)
-	_ = newHealthHandler(c, backend)
+	_ = newHealthHandler(c, frontend)
 }
 
 func (h *Handler) RejectInsecureRequests(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
