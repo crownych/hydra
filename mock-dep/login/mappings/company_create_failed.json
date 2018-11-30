@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/company",
+    "headers": {
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": "{ 'companyName': 'Bad Company', 'companyId': '123456789' }"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "Unable to create company",
+      "companyId": ""
+    }
+  }
+}
