@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/login",
+    "headers": {
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": "{ 'username': 'foo3@bar.com', 'password': 'foobar' }"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "id": "123456"
+    }
+  }
+}

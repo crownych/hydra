@@ -9,7 +9,7 @@
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ 'username': 'foo@bar.com', 'password': 'foobar' }"
+        "equalToJson": "{ 'username': 'foo1@bar.com', 'password': 'foobar' }"
       }
     ]
   },
