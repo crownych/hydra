@@ -17,6 +17,24 @@ before_install:
   - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
   - chmod +x $GOPATH/bin/dep
   - docker pull ekino/wiremock
+  # Set master branch variables
+  - if [[ $TRAVIS_BRANCH == "master" ]]; then
+    export AWS_ACCESS_KEY_ID=$DEV_AWS_ACCESS_KEY_ID;
+    export AWS_SECRET_ACCESS_KEY=$DEV_AWS_SECRET_ACCESS_KEY;
+    export AUTH_REPO_URI=$DEV_AUTH_REPO_URI;
+    fi
+  # Set staging branch variables
+  - if [[ $TRAVIS_BRANCH == "staging" ]]; then
+    export AWS_ACCESS_KEY_ID=$STAGING_AWS_ACCESS_KEY_ID;
+    export AWS_SECRET_ACCESS_KEY=$STAGING_AWS_SECRET_ACCESS_KEY;
+    export AUTH_REPO_URI=$STAGING_AUTH_REPO_URI;
+    fi
+  # Set production branch variables
+  - if [[ $TRAVIS_BRANCH == "production" ]]; then
+    export AWS_ACCESS_KEY_ID=$PRODUCTION_AWS_ACCESS_KEY_ID;
+    export AWS_SECRET_ACCESS_KEY=$PRODUCTION_AWS_SECRET_ACCESS_KEY;
+    export AUTH_REPO_URI=$PRODUCTION_AUTH_REPO_URI;
+    fi
 
 install:
   - dep ensure
@@ -29,3 +47,13 @@ script:
   - |
     go list ./... | grep -v /vendor | grep -v /internal | xargs -n1 -I{} sh -c 'go test -short -coverprofile=coverage.tmp -coverpkg $(go list ./... | grep -v /vendor | grep -v /internal | tr "\n" ",") {} && tail -n +2 coverage.tmp >> coverage.txt || exit 255' && rm coverage.tmp
   - goveralls -coverprofile="coverage.txt"
+
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: bash ${TRAVIS_BUILD_DIR}/scripts/deploy.sh
+    on:
+      branch:
+        - master
+        - staging
+        - production

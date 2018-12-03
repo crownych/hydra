@@ -87,7 +87,7 @@ func TestExecute(t *testing.T) {
 				for _, u := range []string{
 					//fmt.Sprintf("https://127.0.0.1:%d/.well-known/openid-configuration", frontendPort),
 					fmt.Sprintf("https://127.0.0.1:%d"+oauth2.WellKnownPath, frontendPort),
-					fmt.Sprintf("https://127.0.0.1:%d/health/status", backendPort),
+					fmt.Sprintf("https://127.0.0.1:%d/health/status", frontendPort),
 				} {
 					if resp, err := client.Get(u); err != nil {
 						t.Logf("HTTP request to %s failed: %s", u, err)
