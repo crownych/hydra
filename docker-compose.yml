@@ -62,7 +62,7 @@ services:
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
-      - BY_PASS_ROUTES=/register
+      - BY_PASS_ROUTES=/clients
       - CORS_ENABLED=1
       - CORP_INTERNAL_API_URL=http://mock-dep:8080
       - AD_LOGIN_URL=http://mock-dep:8080/ad/login

@@ -189,7 +189,7 @@ func (a OAuth2Api) CreateOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey)
 
 	var localVarHttpMethod = strings.ToUpper("Post")
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register"
+	localVarPath := a.Configuration.BasePath + "/clients"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -273,7 +273,7 @@ func (a OAuth2Api) DeleteOAuth2Client(id, secret string) (*APIResponse, error) {
 
 	var localVarHttpMethod = strings.ToUpper("Delete")
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register/{id}"
+	localVarPath := a.Configuration.BasePath + "/clients/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -521,7 +521,7 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register/{id}"
+	localVarPath := a.Configuration.BasePath + "/clients/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -536,7 +536,7 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
 	}
 
 	// set Authorization header
-	localVarHeaderParams["Authorization"] =  "Basic " + pkg.BasicAuth(id, secret)
+	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -752,7 +752,7 @@ func (a OAuth2Api) ListOAuth2Clients(limit int64, offset int64) ([]OAuth2Client,
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register"
+	localVarPath := a.Configuration.BasePath + "/clients"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -1436,7 +1436,7 @@ func (a OAuth2Api) UpdateOAuth2Client(id, secret string, body OAuth2Client, sign
 
 	var localVarHttpMethod = strings.ToUpper("Put")
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register/{id}"
+	localVarPath := a.Configuration.BasePath + "/clients/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1451,7 +1451,7 @@ func (a OAuth2Api) UpdateOAuth2Client(id, secret string, body OAuth2Client, sign
 	}
 
 	// set Authorization header
-	localVarHeaderParams["Authorization"] =  "Basic " + pkg.BasicAuth(id, secret)
+	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -1669,7 +1669,7 @@ func (a OAuth2Api) SaveOAuth2Client(cookies map[string]string, signingJwk *JsonW
 
 	var localVarHttpMethod = http.MethodPost
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/register"
+	localVarPath := a.Configuration.BasePath + "/clients"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
