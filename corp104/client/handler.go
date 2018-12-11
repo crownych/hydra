@@ -38,14 +38,14 @@ import (
 )
 
 type Handler struct {
-	Manager   Manager
-	H         herodot.Writer
-	Validator *Validator
+	Manager    Manager
+	H          herodot.Writer
+	Validator  *Validator
 	KeyManager jwk.Manager
 }
 
 const (
-	ClientsHandlerPath = "/register"
+	ClientsHandlerPath = "/clients"
 
 	ClientsMetadataSessionKey = "client_metadata"
 
@@ -62,9 +62,9 @@ func NewHandler(
 	keyManager jwk.Manager,
 ) *Handler {
 	return &Handler{
-		Manager:   manager,
-		H:         h,
-		Validator: NewValidator(defaultClientScopes, subjectTypes),
+		Manager:    manager,
+		H:          h,
+		Validator:  NewValidator(defaultClientScopes, subjectTypes),
 		KeyManager: keyManager,
 	}
 }

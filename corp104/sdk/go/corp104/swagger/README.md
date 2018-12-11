@@ -34,15 +34,15 @@ Class | Method | HTTP request | Description
 *MetricsApi* | [**GetPrometheusMetrics**](docs/MetricsApi.md#getprometheusmetrics) | **Get** /metrics/prometheus | Retrieve Prometheus metrics
 *OAuth2Api* | [**AcceptConsentRequest**](docs/OAuth2Api.md#acceptconsentrequest) | **Put** /oauth2/auth/requests/consent/{challenge}/accept | Accept an consent request
 *OAuth2Api* | [**AcceptLoginRequest**](docs/OAuth2Api.md#acceptloginrequest) | **Put** /oauth2/auth/requests/login/{challenge}/accept | Accept an login request
-*OAuth2Api* | [**CreateOAuth2Client**](docs/OAuth2Api.md#createoauth2client) | **Post** /register | Create an OAuth 2.0 client
-*OAuth2Api* | [**DeleteOAuth2Client**](docs/OAuth2Api.md#deleteoauth2client) | **Delete** /register/{id} | Deletes an OAuth 2.0 Client
+*OAuth2Api* | [**CreateOAuth2Client**](docs/OAuth2Api.md#createoauth2client) | **Post** /clients | Create an OAuth 2.0 client
+*OAuth2Api* | [**DeleteOAuth2Client**](docs/OAuth2Api.md#deleteoauth2client) | **Delete** /clients/{id} | Deletes an OAuth 2.0 Client
 *OAuth2Api* | [**FlushInactiveOAuth2Tokens**](docs/OAuth2Api.md#flushinactiveoauth2tokens) | **Post** /oauth2/flush | Flush Expired OAuth2 Access Tokens
 *OAuth2Api* | [**GetConsentRequest**](docs/OAuth2Api.md#getconsentrequest) | **Get** /oauth2/auth/requests/consent/{challenge} | Get consent request information
 *OAuth2Api* | [**GetLoginRequest**](docs/OAuth2Api.md#getloginrequest) | **Get** /oauth2/auth/requests/login/{challenge} | Get an login request
-*OAuth2Api* | [**GetOAuth2Client**](docs/OAuth2Api.md#getoauth2client) | **Get** /register/{id} | Get an OAuth 2.0 Client.
+*OAuth2Api* | [**GetOAuth2Client**](docs/OAuth2Api.md#getoauth2client) | **Get** /clients/{id} | Get an OAuth 2.0 Client.
 *OAuth2Api* | [**GetWellKnown**](docs/OAuth2Api.md#getwellknown) | **Get** /.well-known/oauth-authorization-server | Server well known configuration
 *OAuth2Api* | [**IntrospectOAuth2Token**](docs/OAuth2Api.md#introspectoauth2token) | **Post** /oauth2/introspect | Introspect OAuth2 tokens
-*OAuth2Api* | [**ListOAuth2Clients**](docs/OAuth2Api.md#listoauth2clients) | **Get** /register | List OAuth 2.0 Clients
+*OAuth2Api* | [**ListOAuth2Clients**](docs/OAuth2Api.md#listoauth2clients) | **Get** /clients | List OAuth 2.0 Clients
 *OAuth2Api* | [**ListUserConsentSessions**](docs/OAuth2Api.md#listuserconsentsessions) | **Get** /oauth2/auth/sessions/consent/{user} | Lists all consent sessions of a user
 *OAuth2Api* | [**OauthAuth**](docs/OAuth2Api.md#oauthauth) | **Get** /oauth2/auth | The OAuth 2.0 authorize endpoint
 *OAuth2Api* | [**OauthToken**](docs/OAuth2Api.md#oauthtoken) | **Post** /token | The OAuth 2.0 token endpoint
@@ -53,7 +53,7 @@ Class | Method | HTTP request | Description
 *OAuth2Api* | [**RevokeOAuth2Token**](docs/OAuth2Api.md#revokeoauth2token) | **Post** /revoke | Revoke OAuth2 tokens
 *OAuth2Api* | [**RevokeUserClientConsentSessions**](docs/OAuth2Api.md#revokeuserclientconsentsessions) | **Delete** /oauth2/auth/sessions/consent/{user}/{client} | Revokes consent sessions of a user for a specific OAuth 2.0 Client
 *OAuth2Api* | [**RevokeUserLoginCookie**](docs/OAuth2Api.md#revokeuserlogincookie) | **Get** /oauth2/auth/sessions/login/revoke | Logs user out by deleting the session cookie
-*OAuth2Api* | [**UpdateOAuth2Client**](docs/OAuth2Api.md#updateoauth2client) | **Put** /register/{id} | Update an OAuth 2.0 Client
+*OAuth2Api* | [**UpdateOAuth2Client**](docs/OAuth2Api.md#updateoauth2client) | **Put** /clients/{id} | Update an OAuth 2.0 Client
 *OAuth2Api* | [**Userinfo**](docs/OAuth2Api.md#userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 *OAuth2Api* | [**WellKnown**](docs/OAuth2Api.md#wellknown) | **Get** /.well-known/jwks.json | Get Well-Known JSON Web Keys
 *VersionApi* | [**GetVersion**](docs/VersionApi.md#getversion) | **Get** /version | Get the version of Hydra
