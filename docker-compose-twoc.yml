@@ -54,7 +54,7 @@ services:
       - OAUTH2_SHARE_ERROR_DEBUG=1
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
-      - BY_PASS_ROUTES=/register
+      - BY_PASS_ROUTES=/clients
       - CORS_ENABLED=1
       - CORP_INTERNAL_API_URL=http://login-dep:8080/login
       - AD_LOGIN_URL=http://login-dep:8080/ad/login
@@ -87,7 +87,7 @@ services:
       - OAUTH2_SHARE_ERROR_DEBUG=1
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
-      - BY_PASS_ROUTES=/register
+      - BY_PASS_ROUTES=/clients
       - CORS_ENABLED=1
       - CORP_INTERNAL_API_URL=http://login-dep:8080/login
       - AD_LOGIN_URL=http://login-dep:8080/ad/login
