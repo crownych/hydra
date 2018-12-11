@@ -664,7 +664,7 @@ func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 	body := `{"username":"` + claims["username"] + `","password":"` + claims["password"] + `"}`
 
-	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Post(apiBaseUrl)
+	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Post(apiBaseUrl + "/login")
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -683,7 +683,7 @@ func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 }
 
-func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string, headerChecker func(map[string]interface{}) (error), payloadChecker func(map[string]interface{}) (error)) ([]byte, error) {
+func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string, headerChecker func(map[string]interface{}) error, payloadChecker func(map[string]interface{}) error) ([]byte, error) {
 
 	credential, err := pkg.GetJWTValueFromRequestBody(r, field)
 	if err != nil {

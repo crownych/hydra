@@ -21,6 +21,9 @@
 package consent
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -29,7 +32,9 @@ import (
 	"time"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
+	"github.com/go-resty/resty"
 	"github.com/gorilla/sessions"
+	"github.com/machinebox/graphql"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -41,6 +46,7 @@ import (
 	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -588,6 +594,29 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 		session.Session.IDToken = map[string]interface{}{}
 	}
 
+	id, err := s.getIdBySubject(session.ConsentRequest.Subject)
+	if err != nil {
+		return nil, err
+	}
+	if id != "" {
+		session.Session.IDToken["urn:104v3:entity:pid"] = id
+		list, err := s.getCompanyList(id)
+		if err != nil {
+			return nil, err
+		}
+		if len(list) == 0 || len(list) > 1 {
+			session.Session.IDToken["urn:104v3:entity:company_id"] = ""
+			if len(list) == 0 {
+				session.Session.IDToken["urn:104v3:entity:company_list"] = []string{}
+			} else {
+				session.Session.IDToken["urn:104v3:entity:company_list"] = list
+			}
+		} else {
+			session.Session.IDToken["urn:104v3:entity:company_id"] = list[0]
+			session.Session.IDToken["urn:104v3:entity:company_list"] = list
+		}
+	}
+
 	session.ConsentRequest.SubjectIdentifier = pw
 	session.AuthenticatedAt = session.ConsentRequest.AuthenticatedAt
 	return session, nil
@@ -706,4 +735,75 @@ func (s *DefaultStrategy) handleConsentRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	return nil
+}
+
+func (s *DefaultStrategy) getIdBySubject(subject string) (string, error) {
+
+	apiBaseUrl := viper.GetString("CORP_INTERNAL_API_URL")
+	if apiBaseUrl == "" {
+		return "", errors.WithStack(errors.New("No corp internal api url"))
+	}
+
+	resp, err := resty.R().Get(apiBaseUrl + "/ac/getIdByMail/" + base64.URLEncoding.EncodeToString([]byte(subject)))
+	if err != nil {
+		return "", err
+	}
+
+	responseMap := make(map[string]interface{})
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		return "", err
+	}
+
+	if responseMap["error"].(string) == "" {
+		dataMap := responseMap["data"].(map[string]interface{})
+		if dataMap["id"].(string) != "" {
+			return dataMap["id"].(string), nil
+		}
+	}
+
+	return "", errors.New(responseMap["error"].(string))
+}
+
+func (s *DefaultStrategy) getCompanyList(id string) ([]string, error) {
+
+	apiUrl := viper.GetString("GRAPHQL_API_URL")
+	if apiUrl == "" {
+		return []string{""}, errors.WithStack(errors.New("No graphql api url"))
+	}
+
+	gqlClient := graphql.NewClient(apiUrl)
+	// make a request
+	req := graphql.NewRequest(`
+query CompanyList($userID: ID!) {
+  user(id: $userID) {
+    companies {
+      id
+    }
+  }
+}
+	`)
+	// set any variables
+	req.Var("userID", id)
+
+	// set header fields
+	req.Header.Set("Cache-Control", "no-cache")
+
+	// define a Context for the request
+	ctx := context.Background()
+
+	// run it and capture the response
+	responseMap := make(map[string]interface{})
+	if err := gqlClient.Run(ctx, req, &responseMap); err != nil {
+		return []string{""}, err
+	}
+	userMap := responseMap["user"].(map[string]interface{})
+	companiesMap := userMap["companies"].([]interface{})
+
+	var result []string
+	for _, v := range companiesMap {
+		c := v.(map[string]interface{})
+		result = append(result, c["id"].(string))
+	}
+
+	return result, nil
 }

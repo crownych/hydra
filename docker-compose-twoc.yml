@@ -56,8 +56,8 @@ services:
       - DISABLE_CONSENT_FLOW=1
       - BY_PASS_ROUTES=/register
       - CORS_ENABLED=1
-      - CORP_INTERNAL_API_URL=http://login-dep:8080/login
-      - AD_LOGIN_URL=http://login-dep:8080/ad/login
+      - CORP_INTERNAL_API_URL=http://mock-dep:8080
+      - AD_LOGIN_URL=http://mock-dep:8080/ad/login
     restart: on-failure
 
   hydra:
@@ -89,8 +89,9 @@ services:
       - DISABLE_CONSENT_FLOW=1
       - BY_PASS_ROUTES=/register
       - CORS_ENABLED=1
-      - CORP_INTERNAL_API_URL=http://login-dep:8080/login
-      - AD_LOGIN_URL=http://login-dep:8080/ad/login
+      - CORP_INTERNAL_API_URL=http://mock-dep:8080
+      - AD_LOGIN_URL=http://mock-dep:8080/ad/login
+      - GRAPHQL_API_URL=http://mbs:4000
     restart: on-failure
 
   consent:
@@ -117,3 +118,11 @@ services:
 #    image: mysql:5.7
 #    environment:
 #      - MYSQL_ROOT_PASSWORD=secret
+
+  mock-dep:
+    image: ekino/wiremock:latest
+    ports:
+      - 8080:8080
+    volumes:
+      - "./mock-dep/login/__files:/wiremock/__files"
+      - "./mock-dep/login/mappings:/wiremock/mappings"

@@ -230,6 +230,9 @@ func initConfig() {
 	viper.BindEnv("AD_LOGIN_URL")
 	viper.SetDefault("AD_LOGIN_URL", "")
 
+	viper.BindEnv("GRAPHQL_API_URL")
+	viper.SetDefault("GRAPHQL_API_URL", "")
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf(`Config file not found because "%s"`, err)

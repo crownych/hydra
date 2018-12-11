@@ -342,6 +342,14 @@
   revision = "b609790bd85edf8e9ab7e0f8912750a786177bcf"
 
 [[projects]]
+  digest = "1:953a3dedbd5d1c988528b0aa45b6fae0e449e342adec639ad398dd858804c5ca"
+  name = "github.com/machinebox/graphql"
+  packages = ["."]
+  pruneopts = ""
+  revision = "05b17f3157491bbfa5d6fc2006443a272d960d15"
+  version = "v0.2.2"
+
+[[projects]]
   digest = "1:1ce378ab2352c756c6d7a0172c22ecbd387659d32712a4ce3bc474273309a5dc"
   name = "github.com/magiconair/properties"
   packages = ["."]
@@ -969,6 +977,7 @@
     "github.com/lestrrat-go/jwx/jws",
     "github.com/lestrrat-go/jwx/jwt",
     "github.com/lib/pq",
+    "github.com/machinebox/graphql",
     "github.com/meatballhat/negroni-logrus",
     "github.com/mendsley/gojwk",
     "github.com/mohae/deepcopy",

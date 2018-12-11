@@ -33,7 +33,7 @@ services:
       dockerfile: Dockerfile
     links:
       - postgresd:postgresd
-      - login-dep
+      - mock-dep
 #     Uncomment the following line to use mysql instead.
 #      - mysqld:mysqld
     depends_on:
@@ -64,8 +64,9 @@ services:
       - DISABLE_CONSENT_FLOW=1
       - BY_PASS_ROUTES=/register
       - CORS_ENABLED=1
-      - CORP_INTERNAL_API_URL=http://login-dep:8080/login
-      - AD_LOGIN_URL=http://login-dep:8080/ad/login
+      - CORP_INTERNAL_API_URL=http://mock-dep:8080
+      - AD_LOGIN_URL=http://mock-dep:8080/ad/login
+      - GRAPHQL_API_URL=http://mbs:4000
     restart: on-failure
 
 #  consent:
@@ -93,7 +94,7 @@ services:
 #    environment:
 #      - MYSQL_ROOT_PASSWORD=secret
 
-  login-dep:
+  mock-dep:
     image: ekino/wiremock:latest
     ports:
       - 8080:8080

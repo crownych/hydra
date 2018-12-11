@@ -99,6 +99,7 @@ type Config struct {
 	ByPassSessionCheckRoutes		 string  `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
 	DisableConsentFlow               bool    `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
 	CorpInternalAPIUrl               string  `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
+	GraphQLAPIUrl                    string  `mapstructure:"GRAPHQL_API_URL" yaml:"-"`
 
 	// AD
 	ADLoginURL                       string  `mapstructure:"AD_LOGIN_URL" yaml:"-"`
