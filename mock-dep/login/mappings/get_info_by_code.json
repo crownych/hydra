@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ac/getInfoByCode/NjljNDJhZTEtNWYxNS00ZDU1LWFjOWEtZGIxM2ZmMmNiM2Yy"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "data": {
+        "email": "available-email@104.com.tw",
+        "id": "12345678"
+      },
+      "success": "true"
+    }
+  }
+}
