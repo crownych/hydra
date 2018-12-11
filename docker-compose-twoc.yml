@@ -124,5 +124,5 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - "./mock-dep/login/__files:/wiremock/__files"
-      - "./mock-dep/login/mappings:/wiremock/mappings"
+      - "./mock-dep/__files:/wiremock/__files"
+      - "./mock-dep/mappings:/wiremock/mappings"
