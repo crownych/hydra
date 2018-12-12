@@ -100,7 +100,7 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       403: genericError
 //       500: genericError
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	bodyMap, err := pkg.GetJWTMapFromRequestBody(r)
+	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -156,7 +156,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 //       403: genericError
 //       500: genericError
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	swStatement, err := pkg.GetJWTValueFromRequestBody(r, SoftwareStatementField)
+	swStatement, err := pkg.GetValueFromRequestBody(r, SoftwareStatementField)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return

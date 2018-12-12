@@ -12,8 +12,8 @@
     "jsonBody": {
       "error": "",
       "data": {
-        "email": "available-email@104.com.tw",
-        "id": "12345678"
+        "email": "alex.chang@104.com.tw",
+        "id": "10000"
       },
       "success": "true"
     }
