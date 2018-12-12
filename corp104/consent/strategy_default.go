@@ -594,26 +594,28 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 		session.Session.IDToken = map[string]interface{}{}
 	}
 
-	id, err := s.getIdBySubject(session.ConsentRequest.Subject)
-	if err != nil {
-		return nil, err
-	}
-	if id != "" {
-		session.Session.IDToken["urn:104v3:entity:pid"] = id
-		list, err := s.getCompanyList(id)
+	if s.DisableUserConsent {
+		id, err := s.getIdBySubject(session.ConsentRequest.Subject)
 		if err != nil {
 			return nil, err
 		}
-		if len(list) == 0 || len(list) > 1 {
-			session.Session.IDToken["urn:104v3:entity:company_id"] = ""
-			if len(list) == 0 {
-				session.Session.IDToken["urn:104v3:entity:company_list"] = []string{}
+		if id != "" {
+			session.Session.IDToken["urn:104v3:entity:pid"] = id
+			list, err := s.getCompanyList(id)
+			if err != nil {
+				return nil, err
+			}
+			if len(list) == 0 || len(list) > 1 {
+				session.Session.IDToken["urn:104v3:entity:company_id"] = ""
+				if len(list) == 0 {
+					session.Session.IDToken["urn:104v3:entity:company_list"] = []string{}
+				} else {
+					session.Session.IDToken["urn:104v3:entity:company_list"] = list
+				}
 			} else {
+				session.Session.IDToken["urn:104v3:entity:company_id"] = list[0]
 				session.Session.IDToken["urn:104v3:entity:company_list"] = list
 			}
-		} else {
-			session.Session.IDToken["urn:104v3:entity:company_id"] = list[0]
-			session.Session.IDToken["urn:104v3:entity:company_list"] = list
 		}
 	}
 

@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/ac/isEmailAvailable/bm90LWF2YWlsYWJsZS1lbWFpbEAxMDQuY29tLnR3"
+    "url": "/ac/isEmailAvailable/YWxleC5jaGFuZ0AxMDQuY29tLnR3"
   },
   "response": {
     "status": 200,
