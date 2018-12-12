@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ac/isEmailAvailable/YWxleC5jaGFuZ0AxMDQuY29tLnR3"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "data": {
+        "available": "false"
+      },
+      "success": "true"
+    }
+  }
+}

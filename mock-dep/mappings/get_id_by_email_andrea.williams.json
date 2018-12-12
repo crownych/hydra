@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ac/getIdByMail/YW5kcmVhLndpbGxpYW1zQDEwNC5jb20udHc="
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "data": {
+        "id": "40000"
+      },
+      "success": "true"
+    }
+  }
+}

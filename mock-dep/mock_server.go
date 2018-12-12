@@ -78,7 +78,7 @@ func pullImage() error {
 }
 
 func createContainer() error {
-	mockDir := os.Getenv("GOPATH") + "/src/github.com/ory/hydra/mock-dep/login"
+	mockDir := os.Getenv("GOPATH") + "/src/github.com/ory/hydra/mock-dep"
 
 	resp, err := cli.ContainerCreate(
 		ctx,

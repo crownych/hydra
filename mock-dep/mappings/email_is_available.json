@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/company/Zm9vMkBiYXIuY29t"
+    "url": "/ac/isEmailAvailable/YXZhaWxhYmxlLWVtYWlsQDEwNC5jb20udHc"
   },
   "response": {
     "status": 200,
@@ -11,7 +11,10 @@
     },
     "jsonBody": {
       "error": "",
-      "company": ["123"]
+      "data": {
+        "available": "true"
+      },
+      "success": "true"
     }
   }
 }
