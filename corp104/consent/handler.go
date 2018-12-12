@@ -21,6 +21,7 @@
 package consent
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"github.com/go-resty/resty"
 	"github.com/ory/hydra/pkg"
@@ -638,7 +639,7 @@ func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request, ps httprout
 
 func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-	msg, err := h.verifyJWS(w, r, "signed_credentials", nil, checkPayload)
+	msg, err := h.verifyJWS(w, r, "signed_credentials", nil, checkAuthUserPayload)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
@@ -681,23 +682,155 @@ func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	if responseMap["error"] == "" {
-		h.H.Write(w, r, `{"ok": true, "id":"` + responseMap["id"] + `"}`)
+		h.H.Write(w, r, map[string]interface{}{"ok": true, "id": responseMap["id"]})
 	} else {
-		h.H.Write(w, r, `{"ok": false, "id":"` + responseMap["id"] + `"}`)
+		h.H.Write(w, r, map[string]interface{}{"ok": false, "id": responseMap["id"]})
 	}
 }
 
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Not yet implemented
+
+	payload, err := pkg.GetValueFromRequestBody(r, "email")
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	email := string(payload)
+
+	apiBaseUrl := viper.GetString("CORP_INTERNAL_API_URL")
+	if apiBaseUrl == "" {
+		h.H.WriteError(w, r, errors.WithStack(fosite.ErrInvalidRequest.WithDebug("No corp internal api url")))
+		return
+	}
+
+	resp, err := resty.R().Get(apiBaseUrl + "/ac/getIdByMail/" + base64.URLEncoding.EncodeToString([]byte(email)))
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	responseMap := make(map[string]interface{})
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if responseMap["error"].(string) != "" {
+		h.H.WriteError(w, r, errors.New(responseMap["error"].(string)))
+		return
+	}
+
+	dataMap := responseMap["data"].(map[string]interface{})
+	if dataMap["id"].(string) == "" {
+		h.H.WriteError(w, r, errors.New("No this user"))
+		return
+	}
+	id := dataMap["id"].(string)
+	body := `{"id":"` + id + `","email":"` + email + `"}`
+
+	resp, err = resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Put(apiBaseUrl + "/ac/getPasswordMailCode")
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	responseMap = make(map[string]interface{})
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if responseMap["error"].(string) != "" {
+		h.H.WriteError(w, r, errors.New(responseMap["error"].(string)))
+		return
+	}
+
+	dataMap = responseMap["data"].(map[string]interface{})
+	code := dataMap["code"].(string)
+
+	// TODO: 抽成環境變數
+	result, err := pkg.SendTextMail(email, "忘記密碼", "http://localhost:4200/reset-password?code=" + code)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if result != true {
+		h.H.WriteError(w, r, errors.New("Unable to send email"))
+		return
+	}
+
+	h.H.Write(w, r, map[string]interface{}{"ok": true})
 }
 
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Not yet implemented
+	bodyMap, err := pkg.GetMapFromRequestBody(r)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	err = checkResetPasswordPayload(bodyMap)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	apiBaseUrl := viper.GetString("CORP_INTERNAL_API_URL")
+	if apiBaseUrl == "" {
+		h.H.WriteError(w, r, errors.WithStack(fosite.ErrInvalidRequest.WithDebug("No corp internal api url")))
+		return
+	}
+
+	code := bodyMap["code"].(string)
+	newPassword := bodyMap["newPassword"].(string)
+
+	resp, err := resty.R().Get(apiBaseUrl + "/ac/getInfoByCode/" + base64.URLEncoding.EncodeToString([]byte(code)))
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	responseMap := make(map[string]interface{})
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if responseMap["error"].(string) != "" {
+		h.H.WriteError(w, r, errors.New(responseMap["error"].(string)))
+		return
+	}
+
+	dataMap := responseMap["data"].(map[string]interface{})
+	id := dataMap["id"].(string)
+
+	body := `{"id":"` + id + `","code":"` + code + `","newPassword":"` + newPassword + `"}`
+
+	resp, err = resty.R().SetHeader("Content-Type", "application/json").SetBody(body).Put(apiBaseUrl + "/ac/resetPassword")
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	responseMap = make(map[string]interface{})
+	if err := json.Unmarshal(resp.Body(), &responseMap); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	if responseMap["error"].(string) != "" {
+		h.H.WriteError(w, r, errors.New(responseMap["error"].(string)))
+		return
+	}
+
+	h.H.Write(w, r, map[string]interface{}{"ok": true})
 }
 
 func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string, headerChecker func(map[string]interface{}) error, payloadChecker func(map[string]interface{}) error) ([]byte, error) {
 
-	credential, err := pkg.GetJWTValueFromRequestBody(r, field)
+	credential, err := pkg.GetValueFromRequestBody(r, field)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return nil, err
@@ -744,13 +877,21 @@ func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
 	session.Delete(ClientsMetadataSessionKey)
 }
 
-func checkPayload(json map[string]interface{}) error {
-	required := []string{"challenge", "client_id", "username", "password"}
-	for _, v := range required {
+func checkAuthUserPayload(json map[string]interface{}) error {
+	fields := []string{"challenge", "client_id", "username", "password"}
+	return checkRequired(fields, json)
+}
+
+func checkResetPasswordPayload(json map[string]interface{}) error {
+	fields := []string{"code", "newPassword"}
+	return checkRequired(fields, json)
+}
+
+func checkRequired(fields []string, json map[string]interface{}) error {
+	for _, v := range fields {
 		if _, ok := json[v]; !ok {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithDebug(v + " is missing"))
 		}
 	}
-
 	return nil
 }

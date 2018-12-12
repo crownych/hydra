@@ -109,7 +109,7 @@ func LoadPrivateKey(data []byte) (interface{}, error) {
 	return nil, fmt.Errorf("square/go-jose: parse error, got '%s', '%s', '%s' and '%s'", err0, err1, err2, err3)
 }
 
-func GetJWTValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
+func GetValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
 	var body map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
@@ -121,16 +121,16 @@ func GetJWTValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
 	return []byte(value), nil
 }
 
-func GetJWTMapFromRequestBody(r *http.Request) (map[string]interface{}, error) {
-	jwt, err := ioutil.ReadAll(r.Body)
+func GetMapFromRequestBody(r *http.Request) (map[string]interface{}, error) {
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	var jwtMap map[string]interface{}
-	if err := json.NewDecoder(strings.NewReader(string(jwt))).Decode(&jwtMap); err != nil {
+	var bodyMap map[string]interface{}
+	if err := json.NewDecoder(strings.NewReader(string(body))).Decode(&bodyMap); err != nil {
 		return nil, err
 	}
-	return jwtMap, nil
+	return bodyMap, nil
 }
 
 func ExtractKidFromJWE(compactJwe []byte) (string, error) {
@@ -162,8 +162,8 @@ func GetElementFromKeySet(setKeys map[string][]jose.JSONWebKey, kid string) (*jo
 }
 
 func VerifyJWSUsingEmbeddedKey(compactJws []byte,
-	headerChecker func(map[string]interface{}) (error),
-	payloadChecker func(map[string]interface{}) (error)) ([]byte, error) {
+	headerChecker func(map[string]interface{}) error,
+	payloadChecker func(map[string]interface{}) error) ([]byte, error) {
 
 	jwsStr := strings.Replace(string(compactJws), `"`, "", -1)
 	header, payload, err := GetContentFromJWS(jwsStr)
