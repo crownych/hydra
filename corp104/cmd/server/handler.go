@@ -21,10 +21,19 @@
 package server
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"github.com/pborman/uuid"
+	"math/big"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
@@ -268,6 +277,8 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 
 	oauth2Provider := newOAuth2Provider(c)
 
+	h.initOffineJWK()
+
 	// Set up handlers
 	h.Clients = newClientHandler(c, frontend, clientsManager)
 	h.Keys = newJWKHandler(c, frontend, backend)
@@ -296,7 +307,7 @@ func (h *Handler) CheckWebSession(rw http.ResponseWriter, r *http.Request, next 
 
 	path := r.URL.Path
 	// FIXME: Edge case 還沒有處理喔！
-	needle := path[0:strings.IndexAny(path[1:], "/")+1]
+	needle := path[0 : strings.IndexAny(path[1:], "/")+1]
 
 	if stringslice.Has(h.Config.GetByPassSessionCheckRoutes(), needle) {
 		h.Config.GetLogger().Println("bypass web session check")
@@ -328,4 +339,34 @@ func (h *Handler) check(session sessions.Session) bool {
 
 	return true
 	//return ok
+}
+
+func (h *Handler) initOffineJWK() {
+	c := h.Config
+
+	// 產生 JWKS
+	kid := uuid.New()
+	if _, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "private"); err != nil {
+		c.GetLogger().WithError(err).Fatalf(`Could not fetch offline private JWK`)
+	}
+	pubKey, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "public")
+	if err != nil {
+		c.GetLogger().WithError(err).Fatalf(`Could not fetch offline public JWK`)
+	}
+
+	// 輸出驗證 Metadata 用的 Public Key JWK 及 PEM
+	mataPubKeyBytes, _ := pubKey.MarshalJSON()
+	mataPubKeyStr := string(mataPubKeyBytes)
+	var pubKeyInfo map[string]string
+	json.Unmarshal(mataPubKeyBytes, &pubKeyInfo)
+	pubX, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["x"])
+	pubY, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["y"])
+	derBytes, _ := x509.MarshalPKIXPublicKey(&ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(pubX), Y: new(big.Int).SetBytes(pubY)})
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
+	c.GetLogger().Infoln("Public JSON Web Key (distributed offline)")
+	c.GetLogger().Infoln(strings.Replace(mataPubKeyStr, `"`, `'`, -1))
+	c.GetLogger().Infoln(string(pemBytes))
+	if viper.GetBool("TEST_MODE") {
+		os.Setenv("OFFLINE_PUBLIC_KEY", mataPubKeyStr)
+	}
 }

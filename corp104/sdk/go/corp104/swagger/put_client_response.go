@@ -1,5 +1,5 @@
 package swagger
 
-type RegistrationResponse struct {
+type PutClientResponse struct {
 	SignedClientId string `json:"signed_client_id"`
 }

@@ -361,16 +361,16 @@ func TestUserinfo(t *testing.T) {
 
 func TestHandlerWellKnown(t *testing.T) {
 	jwkManager := new(jwk.MemoryManager)
-	keySet := oauth2.OAuthServerMetadataKeyName
-	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-oauth-meta", "sig")
+	keySet := "jwk.offline"
+	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-offline-jks", "sig")
 	jwkManager.AddKeySet(context.TODO(), keySet, keys)
 	metadataStrategy, _ := jwk.NewES256JWTStrategy(jwkManager, keySet)
 
 	h := &oauth2.Handler{
-		H:             herodot.NewJSONWriter(nil),
-		ScopeStrategy: fosite.WildcardScopeStrategy,
-		IssuerURL:     "https://auth.v3.104.com.tw",
-		SubjectTypes:  []string{"public"},
+		H:                           herodot.NewJSONWriter(nil),
+		ScopeStrategy:               fosite.WildcardScopeStrategy,
+		IssuerURL:                   "https://auth.v3.104.com.tw",
+		SubjectTypes:                []string{"public"},
 		OAuthServerMetadataStrategy: metadataStrategy,
 	}
 
@@ -385,25 +385,25 @@ func TestHandlerWellKnown(t *testing.T) {
 	defer res.Body.Close()
 
 	trueConfig := (&oauth2.WellKnown{
-		Issuer:                            				 strings.TrimRight(h.IssuerURL, "/") + "/",
-		JWKsURI:                           				 strings.TrimRight(h.IssuerURL, "/") + oauth2.JWKPath,
-		ServiceDocumentation:							 oauth2.ServiceDocURL,
-		AuthURL:                           				 strings.TrimRight(h.IssuerURL, "/") + oauth2.AuthPath,
-		TokenURL:                          				 strings.TrimRight(h.IssuerURL, "/") + oauth2.TokenPath,
-		RegistrationEndpoint:              				 strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
-		RevocationEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.RevocationPath,
-		CheckSessionIFrame:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.CheckSessionPath,
-		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + oauth2.EndSessionPath,
-		ScopesSupported:                   				 []string{"openid"},
-		ResponseTypes:                     				 []string{"id_token", "token"},
-		GrantTypesSupported:               				 []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
-		TokenEndpointAuthMethodsSupported: 				 []string{"private_key_jwt"},
-		TokenEndpointAuthSigningAlgValuesSupported: 	 []string{"ES256"},
-		RevocationEndpointAuthMethodsSupported:			 []string{"private_key_jwt"},
+		Issuer:                            strings.TrimRight(h.IssuerURL, "/") + "/",
+		JWKsURI:                           strings.TrimRight(h.IssuerURL, "/") + oauth2.JWKPath,
+		ServiceDocumentation:              oauth2.ServiceDocURL,
+		AuthURL:                           strings.TrimRight(h.IssuerURL, "/") + oauth2.AuthPath,
+		TokenURL:                          strings.TrimRight(h.IssuerURL, "/") + oauth2.TokenPath,
+		RegistrationEndpoint:              strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
+		RevocationEndpoint:                strings.TrimRight(h.IssuerURL, "/") + oauth2.RevocationPath,
+		CheckSessionIFrame:                strings.TrimRight(h.IssuerURL, "/") + oauth2.CheckSessionPath,
+		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + oauth2.EndSessionPath,
+		ScopesSupported:                   []string{"openid"},
+		ResponseTypes:                     []string{"id_token", "token"},
+		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
+		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt"},
+		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
+		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},
 		RevocationEndpointAuthSigningAlgValuesSupported: []string{"ES256"},
-		IDTokenSigningAlgValuesSupported:  				 []string{"ES256"},
-		RequestParameterSupported:         				 true,
-		RequestObjectSigningAlgValuesSupported: 		 []string{"ES256"},
+		IDTokenSigningAlgValuesSupported:                []string{"ES256"},
+		RequestParameterSupported:                       true,
+		RequestObjectSigningAlgValuesSupported:          []string{"ES256"},
 	}).ToMap()
 
 	var signedMetadataResp oauth2.SignedMetadata

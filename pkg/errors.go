@@ -74,9 +74,13 @@ func LogError(err error, logger log.FieldLogger) {
 }
 
 func NewBadRequestError(err string) *herodot.DefaultError {
+	return NewError(http.StatusBadRequest, err)
+}
+
+func NewError(code int, err string) *herodot.DefaultError {
 	return &herodot.DefaultError{
-		CodeField:   http.StatusBadRequest,
-		StatusField: http.StatusText(http.StatusBadRequest),
+		CodeField:   code,
+		StatusField: http.StatusText(code),
 		ErrorField:  err,
 	}
 }

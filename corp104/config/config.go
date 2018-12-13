@@ -95,13 +95,16 @@ type Config struct {
 	ForceHTTP                        bool    `yaml:"-"`
 
 	// Cookie name of web session
-	WebSessionName                   string  `mapstructure:"WEB_SESSION_NAME" yaml:"-"`
-	ByPassSessionCheckRoutes		 string  `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
-	DisableConsentFlow               bool    `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
-	CorpInternalAPIUrl               string  `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
+	WebSessionName           string `mapstructure:"WEB_SESSION_NAME" yaml:"-"`
+	ByPassSessionCheckRoutes string `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
+	DisableConsentFlow       bool   `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
+	CorpInternalAPIUrl       string `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
 
 	// AD
-	ADLoginURL                       string  `mapstructure:"AD_LOGIN_URL" yaml:"-"`
+	ADLoginURL string `mapstructure:"AD_LOGIN_URL" yaml:"-"`
+
+	// 線下發佈的 JWK Set name
+	offlineJWKSName string `mapstructure:"OFFLINE_JWKS_NAME" yaml:"-"`
 
 	BuildVersion string                     `yaml:"-"`
 	BuildHash    string                     `yaml:"-"`
@@ -452,4 +455,12 @@ func (c *Config) GetByPassSessionCheckRoutes() []string {
 
 func (c *Config) ConsentFlow() bool {
 	return c.DisableConsentFlow
+}
+
+func (c *Config) GetOfflineJWKSName() string {
+	if c.offlineJWKSName != "" {
+		return c.offlineJWKSName
+	}
+	c.offlineJWKSName = "jwk.offline"
+	return c.offlineJWKSName
 }

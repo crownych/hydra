@@ -23,6 +23,7 @@ package cli
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ory/hydra/corp104/config"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
@@ -88,41 +89,67 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		err = json.NewDecoder(reader).Decode(&c)
 		pkg.Must(err, "Could not parse JSON: %s", err)
 
-		result, response, err := m.CreateOAuth2Client(c, signingJwk)
+		result, response, err := m.CreateOAuth2Client(c, signingJwk, getAuthServicePublicJWK(cmd))
 		checkResponse(response, err, http.StatusCreated)
 
 		/*
-		if c.ClientSecret == "" {
-			fmt.Printf("Imported OAuth 2.0 Client %s:%s from %s.\n", result.ClientId, result.ClientSecret, path)
-		} else {
-			fmt.Printf("Imported OAuth 2.0 Client %s from %s.\n", result.ClientId, path)
-		}
+			if c.ClientSecret == "" {
+				fmt.Printf("Imported OAuth 2.0 Client %s:%s from %s.\n", result.ClientId, result.ClientSecret, path)
+			} else {
+				fmt.Printf("Imported OAuth 2.0 Client %s from %s.\n", result.ClientId, path)
+			}
 		*/
 		fmt.Printf("Imported OAuth 2.0 Client %s from %s.\n", result.SignedClientId, path)
 	}
 }
 
-func (h *ClientHandler) CreateClient(cmd *cobra.Command, args []string) {
+func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 	var err error
 	m := h.newClientManager(cmd)
 	secret, _ := cmd.Flags().GetString("secret")
 
-	cc, signingJwk := getClientFromCreateOrUpdateCmd(cmd)
+	cc, signingJwk := getClientFromPutCmd(cmd)
 	if secret != "" {
 		cc.ClientSecret = secret
 	}
 
-	result, response, err := m.CreateOAuth2Client(cc, signingJwk)
+	if !cc.IsPublic() {
+		// authentication
+		user, _ := cmd.Flags().GetString("user")
+		pwd, _ := cmd.Flags().GetString("pwd")
+		if user == "" || pwd == "" {
+			err := errors.New("AD user credentials required")
+			pkg.Must(err, "Error: Required flag(s) \"user\" or \"pwd\" have/has not been set")
+		}
+		m.Configuration.Username = user
+		m.Configuration.Password = pwd
+	}
 
+	result, response, err := m.PutOAuth2Client(cc, signingJwk, getAuthServicePublicJWK(cmd))
+	if err != nil {
+		pkg.Must(err, "Error: "+err.Error())
+	}
 	fmt.Printf("OAuth 2.0 Signed Client ID: %s\n", result.SignedClientId)
 
 	if cc.IsPublic() {
 		checkResponse(response, err, http.StatusCreated)
 	} else {
-		checkResponse(response, err, http.StatusOK)
+		checkResponse(response, err, http.StatusAccepted)
 		storeCookies(cc.ClientId, response.Cookies(), getEndpointHostname(h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd)))
-		fmt.Printf("\nRun \"hydra clients save --id %s --user <AD_ACCOUNT> --pwd <AD_ACCOUNT_PASSWORD> --signing-jwks <JWKS>\" to complete client creation\n", cc.ClientId)
+		fmt.Printf("\nRun \"hydra clients commit --id %s --commit-code <COMMIT_CODE>\" to complete client creation\n", cc.ClientId)
 	}
+}
+
+func (h *ClientHandler) CommitClient(cmd *cobra.Command, args []string) {
+	var err error
+	m := h.newClientManager(cmd)
+	id, _ := cmd.Flags().GetString("id")
+	commitCode, _ := cmd.Flags().GetString("commit-code")
+	result, response, err := m.CommitOAuth2Client(getStoredCookies(id), commitCode)
+	checkResponse(response, err, http.StatusOK)
+
+	fmt.Printf("OAuth 2.0 Signed Client Credentials: %s\n", result.SignedClientCredentials)
+	deleteCookies(id)
 }
 
 func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {
@@ -155,40 +182,7 @@ func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
 	fmt.Printf("%s\n", formatResponse(cl))
 }
 
-func (h *ClientHandler) SaveClient(cmd *cobra.Command, args []string) {
-	var err error
-	m := h.newClientManager(cmd)
-	id, _ := cmd.Flags().GetString("id")
-	user, _ := cmd.Flags().GetString("user")
-	pwd, _ := cmd.Flags().GetString("pwd")
-	m.Configuration.Username = user
-	m.Configuration.Password = pwd
-	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
-
-	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
-	result, response, err := m.SaveOAuth2Client(getStoredCookies(id), signingJwk)
-	checkResponse(response, err, http.StatusCreated)
-
-	fmt.Printf("OAuth 2.0 Signed Client Credentials: %s\n", result.SignedCredentials)
-}
-
-func (h *ClientHandler) UpdateClient(cmd *cobra.Command, args []string) {
-	var err error
-	m := h.newClientManager(cmd)
-	secret, _ := cmd.Flags().GetString("secret")
-	newSecret, _ := cmd.Flags().GetString("new-secret")	// change secret request
-
-	cc, signingJwk := getClientFromCreateOrUpdateCmd(cmd)
-	if newSecret != "" {
-		cc.ClientSecret = newSecret
-	}
-
-	result, response, err := m.UpdateOAuth2Client(cc.ClientId, secret, cc, signingJwk)
-	checkResponse(response, err, http.StatusOK)
-	fmt.Printf("%s\n", formatResponse(result))
-}
-
-func getClientFromCreateOrUpdateCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
+func getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
 	responseTypes, _ := cmd.Flags().GetStringSlice("response-types")
 	grantTypes, _ := cmd.Flags().GetStringSlice("grant-types")
 	allowedScopes, _ := cmd.Flags().GetStringSlice("scope")
@@ -205,39 +199,42 @@ func getClientFromCreateOrUpdateCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hy
 	contacts, _ := cmd.Flags().GetStringSlice("contacts")
 	softwareId, _ := cmd.Flags().GetString("software-id")
 	softwareVersion, _ := cmd.Flags().GetString("software-version")
-	resourceSets, _ := cmd.Flags().GetStringSlice("resource-sets")
 	jwksJSON, _ := cmd.Flags().GetString("jwks")
 	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
 	idTokenSignedResponseAlg, _ := cmd.Flags().GetString("id-token-signed-response-alg")
 	requestObjectSigningAlg, _ := cmd.Flags().GetString("request-object-signing-alg")
 
 	cc := hydra.OAuth2Client{
-		ClientId:                 id,
-		ResponseTypes:            responseTypes,
-		GrantTypes:               grantTypes,
-		RedirectUris:             callbacks,
-		Scope:                    strings.Join(allowedScopes, " "),
-		ClientName:               name,
-		TokenEndpointAuthMethod:  tokenEndpointAuthMethod,
+		ClientId:                id,
+		ResponseTypes:           responseTypes,
+		GrantTypes:              grantTypes,
+		RedirectUris:            callbacks,
+		Scope:                   strings.Join(allowedScopes, " "),
+		ClientName:              name,
+		TokenEndpointAuthMethod: tokenEndpointAuthMethod,
 		//JwksUri:                  jwksUri,
 		TosUri:                   tosUri,
 		PolicyUri:                policyUri,
 		LogoUri:                  logoUri,
 		ClientUri:                clientUri,
 		SubjectType:              subjectType,
-		Contacts:				  contacts,
+		Contacts:                 contacts,
 		SoftwareId:               softwareId,
 		SoftwareVersion:          softwareVersion,
-		ResourceSets:             resourceSets,
 		IdTokenSignedResponseAlg: idTokenSignedResponseAlg,
 		RequestObjectSigningAlg:  requestObjectSigningAlg,
 	}
 
 	if jwksJSON != "" {
-		cc.Jwks = convertToSwaggerJsonWebKeySet([]byte(jwksJSON))
+		cc.Jwks = hydra.LoadJsonWebKeySet([]byte(jwksJSON))
 	}
 
-	signingJwk := convertToSwaggerJsonWebKey([]byte(signingJwkJSON))
+	signingJwk := hydra.LoadJsonWebKey([]byte(signingJwkJSON))
 
 	return cc, signingJwk
+}
+
+func getAuthServicePublicJWK(cmd *cobra.Command) *hydra.JsonWebKey {
+	authSrvPubKeyJSON, _ := cmd.Flags().GetString("auth-public-jwk")
+	return hydra.LoadJsonWebKey([]byte(authSrvPubKeyJSON))
 }

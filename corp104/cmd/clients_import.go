@@ -40,7 +40,9 @@ The format for the JSON file is:
 Please be aware that this command does not update existing clients. If the client exists already, this command will fail.
 
 Example:
-	hydra clients import client-1.json --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}'
+	hydra clients import client-1.json \
+    --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
+    --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}'
 `,
 	Run: cmdHandler.Clients.ImportClients,
 }
@@ -48,5 +50,7 @@ Example:
 func init() {
 	clientsCmd.AddCommand(clientsImportCmd)
 	clientsImportCmd.Flags().String("signing-jwk", "", "REQUIRED. Client's JSON Web Key document representing the client's private key used to sign the software statement")
+	clientsImportCmd.Flags().String("auth-public-jwk", "", "Give the public key of the Auth Service")
 	clientsImportCmd.MarkFlagRequired("signing-jwk")
+	clientsImportCmd.MarkFlagRequired("auth-public-jwk")
 }

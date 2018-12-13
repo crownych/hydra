@@ -87,9 +87,6 @@ type OAuth2Client struct {
 	// A version identifier string for the client software identified by “software_id”.
 	SoftwareVersion string `json:"software_version"`
 
-	// Resource Sets
-	ResourceSets []string `json:"resource_sets"`
-
 	// JWS alg algorithm [JWA] REQUIRED for signing the ID Token issued to this Client. The value none MUST NOT be used as the ID Token alg value unless the Client uses only Response Types that return no ID Token from the Authorization Endpoint (such as when only using the Authorization Code Flow).
 	IdTokenSignedResponseAlg string `json:"id_token_signed_response_alg,omitempty"`
 }

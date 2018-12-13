@@ -35,8 +35,6 @@ const (
 	IDTokenKeyName    = "openid.id-token"
 	KeyHandlerPath    = "/keys"
 	WellKnownKeysPath = "/jwks.json"
-
-	OAuthServerMetadataKeyName = "oauth.server-metadata"
 )
 
 type Handler struct {
@@ -56,7 +54,7 @@ func NewHandler(
 		Manager:       manager,
 		Generators:    generators,
 		H:             h,
-		WellKnownKeys: append(wellKnownKeys, IDTokenKeyName, OAuthServerMetadataKeyName),
+		WellKnownKeys: append(wellKnownKeys, IDTokenKeyName),
 	}
 }
 

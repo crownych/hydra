@@ -123,13 +123,11 @@ var sharedMigrations = []*migrate.Migration{
 			`ALTER TABLE hydra_client ADD software_id TEXT NOT NULL`,
 			`ALTER TABLE hydra_client ADD software_version TEXT NOT NULL`,
 			`ALTER TABLE hydra_client ADD id_token_signed_response_alg VARCHAR(10) NOT NULL DEFAULT ''`,
-			`ALTER TABLE hydra_client ADD resource_sets TEXT NOT NULL`,
 		},
 		Down: []string{
 			`ALTER TABLE hydra_client DROP COLUMN software_id`,
 			`ALTER TABLE hydra_client DROP COLUMN software_version`,
 			`ALTER TABLE hydra_client DROP COLUMN id_token_signed_response_alg`,
-			`ALTER TABLE hydra_client DROP COLUMN resource_sets`,
 		},
 	},
 }
@@ -213,33 +211,32 @@ type SQLManager struct {
 }
 
 type sqlData struct {
-	ID                            string `db:"id"`
-	Name                          string `db:"client_name"`
-	Secret                        string `db:"client_secret"`
-	RedirectURIs                  string `db:"redirect_uris"`
-	GrantTypes                    string `db:"grant_types"`
-	ResponseTypes                 string `db:"response_types"`
-	Scope                         string `db:"scope"`
-	Owner                         string `db:"owner"`
-	PolicyURI                     string `db:"policy_uri"`
-	TermsOfServiceURI             string `db:"tos_uri"`
-	ClientURI                     string `db:"client_uri"`
-	LogoURI                       string `db:"logo_uri"`
-	Contacts                      string `db:"contacts"`
-	SecretExpiresAt               int    `db:"client_secret_expires_at"`
-	SectorIdentifierURI           string `db:"sector_identifier_uri"`
-	JSONWebKeysURI                string `db:"jwks_uri"`
-	JSONWebKeys                   string `db:"jwks"`
-	TokenEndpointAuthMethod       string `db:"token_endpoint_auth_method"`
-	RequestURIs                   string `db:"request_uris"`
-	SubjectType                   string `db:"subject_type"`
-	RequestObjectSigningAlgorithm string `db:"request_object_signing_alg"`
-	UserinfoSignedResponseAlg     string `db:"userinfo_signed_response_alg"`
-	AllowedCORSOrigins            string `db:"allowed_cors_origins"`
-	SoftwareId            		  string `db:"software_id"`
-	SoftwareVersion               string `db:"software_version"`
+	ID                             string `db:"id"`
+	Name                           string `db:"client_name"`
+	Secret                         string `db:"client_secret"`
+	RedirectURIs                   string `db:"redirect_uris"`
+	GrantTypes                     string `db:"grant_types"`
+	ResponseTypes                  string `db:"response_types"`
+	Scope                          string `db:"scope"`
+	Owner                          string `db:"owner"`
+	PolicyURI                      string `db:"policy_uri"`
+	TermsOfServiceURI              string `db:"tos_uri"`
+	ClientURI                      string `db:"client_uri"`
+	LogoURI                        string `db:"logo_uri"`
+	Contacts                       string `db:"contacts"`
+	SecretExpiresAt                int    `db:"client_secret_expires_at"`
+	SectorIdentifierURI            string `db:"sector_identifier_uri"`
+	JSONWebKeysURI                 string `db:"jwks_uri"`
+	JSONWebKeys                    string `db:"jwks"`
+	TokenEndpointAuthMethod        string `db:"token_endpoint_auth_method"`
+	RequestURIs                    string `db:"request_uris"`
+	SubjectType                    string `db:"subject_type"`
+	RequestObjectSigningAlgorithm  string `db:"request_object_signing_alg"`
+	UserinfoSignedResponseAlg      string `db:"userinfo_signed_response_alg"`
+	AllowedCORSOrigins             string `db:"allowed_cors_origins"`
+	SoftwareId                     string `db:"software_id"`
+	SoftwareVersion                string `db:"software_version"`
 	IdTokenSignedResponseAlgorithm string `db:"id_token_signed_response_alg"`
-	ResourceSets                  string `db:"resource_sets"`
 }
 
 var sqlParams = []string{
@@ -269,7 +266,6 @@ var sqlParams = []string{
 	"software_id",
 	"software_version",
 	"id_token_signed_response_alg",
-	"resource_sets",
 }
 
 func sqlDataFromClient(d *Client) (*sqlData, error) {
@@ -284,64 +280,62 @@ func sqlDataFromClient(d *Client) (*sqlData, error) {
 	}
 
 	return &sqlData{
-		ID:                            d.GetID(),
-		Name:                          d.Name,
-		Secret:                        d.Secret,
-		RedirectURIs:                  strings.Join(d.RedirectURIs, "|"),
-		GrantTypes:                    strings.Join(d.GrantTypes, "|"),
-		ResponseTypes:                 strings.Join(d.ResponseTypes, "|"),
-		Contacts:                      strings.Join(d.Contacts, "|"),
-		JSONWebKeysURI:                d.JSONWebKeysURI,
-		JSONWebKeys:                   jwks,
-		TokenEndpointAuthMethod:       d.GetTokenEndpointAuthMethod(),
-		RequestObjectSigningAlgorithm: d.GetRequestObjectSigningAlgorithm(),
-		RequestURIs:                   strings.Join(d.RequestURIs, "|"),
-		UserinfoSignedResponseAlg:     d.UserinfoSignedResponseAlg,
-		SubjectType:                   d.SubjectType,
-		SectorIdentifierURI:           d.SectorIdentifierURI,
-		AllowedCORSOrigins:            strings.Join(d.AllowedCORSOrigins, "|"),
-		Scope:                         d.Scope,
-		Owner:                         d.Owner,
-		PolicyURI:                     d.PolicyURI,
-		TermsOfServiceURI:             d.TermsOfServiceURI,
-		ClientURI:                     d.ClientURI,
-		LogoURI:                       d.LogoURI,
-		SecretExpiresAt:               d.SecretExpiresAt,
-		SoftwareId:                    d.SoftwareId,
-		SoftwareVersion:               d.SoftwareVersion,
+		ID:                             d.GetID(),
+		Name:                           d.Name,
+		Secret:                         d.Secret,
+		RedirectURIs:                   strings.Join(d.RedirectURIs, "|"),
+		GrantTypes:                     strings.Join(d.GrantTypes, "|"),
+		ResponseTypes:                  strings.Join(d.ResponseTypes, "|"),
+		Contacts:                       strings.Join(d.Contacts, "|"),
+		JSONWebKeysURI:                 d.JSONWebKeysURI,
+		JSONWebKeys:                    jwks,
+		TokenEndpointAuthMethod:        d.GetTokenEndpointAuthMethod(),
+		RequestObjectSigningAlgorithm:  d.GetRequestObjectSigningAlgorithm(),
+		RequestURIs:                    strings.Join(d.RequestURIs, "|"),
+		UserinfoSignedResponseAlg:      d.UserinfoSignedResponseAlg,
+		SubjectType:                    d.SubjectType,
+		SectorIdentifierURI:            d.SectorIdentifierURI,
+		AllowedCORSOrigins:             strings.Join(d.AllowedCORSOrigins, "|"),
+		Scope:                          d.Scope,
+		Owner:                          d.Owner,
+		PolicyURI:                      d.PolicyURI,
+		TermsOfServiceURI:              d.TermsOfServiceURI,
+		ClientURI:                      d.ClientURI,
+		LogoURI:                        d.LogoURI,
+		SecretExpiresAt:                d.SecretExpiresAt,
+		SoftwareId:                     d.SoftwareId,
+		SoftwareVersion:                d.SoftwareVersion,
 		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
-		ResourceSets:                  strings.Join(d.ResourceSets, "|"),
 	}, nil
 }
 
 func (d *sqlData) ToClient() (*Client, error) {
 	c := &Client{
-		ClientID:                      d.ID,
-		Name:                          d.Name,
-		Secret:                        d.Secret,
-		RedirectURIs:                  stringsx.Splitx(d.RedirectURIs, "|"),
-		GrantTypes:                    stringsx.Splitx(d.GrantTypes, "|"),
-		ResponseTypes:                 stringsx.Splitx(d.ResponseTypes, "|"),
-		Contacts:                      stringsx.Splitx(d.Contacts, "|"),
-		JSONWebKeysURI:                d.JSONWebKeysURI,
-		TokenEndpointAuthMethod:       d.TokenEndpointAuthMethod,
-		RequestObjectSigningAlgorithm: d.RequestObjectSigningAlgorithm,
-		RequestURIs:                   stringsx.Splitx(d.RequestURIs, "|"),
-		SubjectType:                   d.SubjectType,
-		SectorIdentifierURI:           d.SectorIdentifierURI,
-		AllowedCORSOrigins:            stringsx.Splitx(d.AllowedCORSOrigins, "|"),
-		Scope:                         d.Scope,
-		Owner:                         d.Owner,
-		PolicyURI:                     d.PolicyURI,
-		TermsOfServiceURI:             d.TermsOfServiceURI,
-		ClientURI:                     d.ClientURI,
-		LogoURI:                       d.LogoURI,
-		SecretExpiresAt:               d.SecretExpiresAt,
-		UserinfoSignedResponseAlg:     d.UserinfoSignedResponseAlg,
-		SoftwareId:                    d.SoftwareId,
-		SoftwareVersion:               d.SoftwareVersion,
+		ClientID:                       d.ID,
+		Name:                           d.Name,
+		Secret:                         d.Secret,
+		RedirectURIs:                   stringsx.Splitx(d.RedirectURIs, "|"),
+		GrantTypes:                     stringsx.Splitx(d.GrantTypes, "|"),
+		ResponseTypes:                  stringsx.Splitx(d.ResponseTypes, "|"),
+		Contacts:                       stringsx.Splitx(d.Contacts, "|"),
+		JSONWebKeysURI:                 d.JSONWebKeysURI,
+		TokenEndpointAuthMethod:        d.TokenEndpointAuthMethod,
+		RequestObjectSigningAlgorithm:  d.RequestObjectSigningAlgorithm,
+		RequestURIs:                    stringsx.Splitx(d.RequestURIs, "|"),
+		SubjectType:                    d.SubjectType,
+		SectorIdentifierURI:            d.SectorIdentifierURI,
+		AllowedCORSOrigins:             stringsx.Splitx(d.AllowedCORSOrigins, "|"),
+		Scope:                          d.Scope,
+		Owner:                          d.Owner,
+		PolicyURI:                      d.PolicyURI,
+		TermsOfServiceURI:              d.TermsOfServiceURI,
+		ClientURI:                      d.ClientURI,
+		LogoURI:                        d.LogoURI,
+		SecretExpiresAt:                d.SecretExpiresAt,
+		UserinfoSignedResponseAlg:      d.UserinfoSignedResponseAlg,
+		SoftwareId:                     d.SoftwareId,
+		SoftwareVersion:                d.SoftwareVersion,
 		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
-		ResourceSets:                  stringsx.Splitx(d.ResourceSets, "|"),
 	}
 
 	if d.JSONWebKeys != "" {

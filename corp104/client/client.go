@@ -52,7 +52,6 @@ type Client struct {
 	// Confidential Client 必須是 [“urn:ietf:params:oauth:grant-type:token-exchange”].
 	GrantTypes []string `json:"grant_types"`
 
-
 	// ResponseTypes is an array of the OAuth 2.0 response type strings that the client can
 	// use at the authorization endpoint.
 	//
@@ -152,9 +151,6 @@ type Client struct {
 	// as a UTF-8 encoded JSON object using the application/json content-type.
 	UserinfoSignedResponseAlg string `json:"userinfo_signed_response_alg,omitempty"`
 
-	// Resource Sets
-	ResourceSets []string `json:"resource_sets"`
-
 	// A unique identifier string to identify the client software to be dynamically registered.
 	SoftwareId string `json:"software_id"`
 
@@ -211,7 +207,7 @@ func (c *Client) GetOwner() string {
 }
 
 func (c *Client) IsPublic() bool {
-	return c.TokenEndpointAuthMethod == "none"
+	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "session"
 }
 
 func (c *Client) GetJSONWebKeysURI() string {

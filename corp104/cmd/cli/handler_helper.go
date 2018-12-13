@@ -71,28 +71,11 @@ func getEndpointHostname(endpointURL string) string {
 	return u.Hostname()
 }
 
-func convertToSwaggerJsonWebKeySet(jwksJSON []byte) *hydra.JsonWebKeySet {
-	var jwks hydra.JsonWebKeySet
-	err := json.Unmarshal(jwksJSON, &jwks)
-	if err != nil {
-		panic("Invalid jwks:" + err.Error())
-	}
-	return &jwks
-}
-
-func convertToSwaggerJsonWebKey(signingJwkJSON []byte) *hydra.JsonWebKey {
-	var signingJwk *hydra.JsonWebKey
-	err := json.Unmarshal(signingJwkJSON, &signingJwk)
-	if err != nil {
-		panic("Invalid signing jwk:" + err.Error())
-	}
-	return signingJwk
-}
-
 func storeCookies(filename string, cookies []*http.Cookie, host string) {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	defer f.Close()
 
@@ -131,7 +114,8 @@ func storeCookies(filename string, cookies []*http.Cookie, host string) {
 func getStoredCookies(filename string) map[string]string {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	defer f.Close()
 
@@ -143,9 +127,9 @@ func getStoredCookies(filename string) map[string]string {
 			info := strings.Split(line, "\t")
 			cookie := &http.Cookie{
 				Domain: info[0],
-				Path: info[2],
-				Name: info[5],
-				Value: info[6],
+				Path:   info[2],
+				Name:   info[5],
+				Value:  info[6],
 			}
 			if info[3] == "TRUE" {
 				cookie.Secure = true
@@ -163,6 +147,10 @@ func getStoredCookies(filename string) map[string]string {
 		panic(err)
 	}
 	return cookies
+}
+
+func deleteCookies(filename string) {
+	os.Remove(filename)
 }
 
 func parseUnixTimestamp(unixTimestamp string) time.Time {
