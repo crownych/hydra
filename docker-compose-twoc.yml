@@ -93,6 +93,7 @@ services:
       - AD_LOGIN_URL=http://mock-dep:8080/ad/login
       - GRAPHQL_API_URL=http://mbs:4000
       - EMAIL_SERVICE_URL=http://mta:10025
+      - RESET_PASSWORD_ROUTE=http://localhost:4200/resetPassword
     restart: on-failure
 
   consent:

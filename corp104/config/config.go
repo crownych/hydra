@@ -101,6 +101,7 @@ type Config struct {
 	CorpInternalAPIUrl               string  `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
 	GraphQLAPIUrl                    string  `mapstructure:"GRAPHQL_API_URL" yaml:"-"`
 	EmailServiceUrl                  string  `mapstructure:"EMAIL_SERVICE_URL" yaml:"-"`
+	ResetPasswordRoute               string  `mapstructure:"RESET_PASSWORD_ROUTE" yaml:"-"`
 
 	// AD
 	ADLoginURL                       string  `mapstructure:"AD_LOGIN_URL" yaml:"-"`
