@@ -704,6 +704,12 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
+	resetPasswordRoute := viper.GetString("RESET_PASSWORD_ROUTE")
+	if resetPasswordRoute == "" {
+		h.H.WriteError(w, r, errors.WithStack(fosite.ErrInvalidRequest.WithDebug("No reset password route")))
+		return
+	}
+
 	resp, err := resty.R().Get(apiBaseUrl + "/ac/getIdByMail/" + base64.URLEncoding.EncodeToString([]byte(email)))
 	if err != nil {
 		h.H.WriteError(w, r, err)
@@ -749,8 +755,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps http
 	dataMap = responseMap["data"].(map[string]interface{})
 	code := dataMap["code"].(string)
 
-	// TODO: 抽成環境變數
-	result, err := pkg.SendTextMail(email, "忘記密碼", "http://localhost:4200/reset-password?code=" + code)
+	result, err := pkg.SendTextMail(email, "忘記密碼", resetPasswordRoute + "?code=" + code)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
