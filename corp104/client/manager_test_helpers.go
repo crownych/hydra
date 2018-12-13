@@ -75,32 +75,31 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 		assert.NotNil(t, err)
 
 		c := &Client{
-			ClientID:                      "1234",
-			Name:                          "name",
-			Secret:                        "secret",
-			RedirectURIs:                  []string{"http://redirect", "http://redirect1"},
-			GrantTypes:                    []string{"implicit", "refresh_token"},
-			ResponseTypes:                 []string{"code token", "token id_token", "code"},
-			Scope:                         "scope-a scope-b",
-			Owner:                         "aeneas",
-			PolicyURI:                     "http://policy",
-			TermsOfServiceURI:             "http://tos",
-			ClientURI:                     "http://client",
-			LogoURI:                       "http://logo",
-			Contacts:                      []string{"aeneas1", "aeneas2"},
-			SecretExpiresAt:               0,
-			SectorIdentifierURI:           "https://sector",
-			JSONWebKeys:                   &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{KeyID: "foo", Key: []byte("asdf"), Certificates: []*x509.Certificate{}}}},
-			JSONWebKeysURI:                "https://...",
-			TokenEndpointAuthMethod:       "none",
-			RequestURIs:                   []string{"foo", "bar"},
-			AllowedCORSOrigins:            []string{"foo", "bar"},
-			RequestObjectSigningAlgorithm: "ES256",
-			UserinfoSignedResponseAlg:     "ES256",
-			SoftwareId:                    "",
-			SoftwareVersion:               "0.0.1",
+			ClientID:                       "1234",
+			Name:                           "name",
+			Secret:                         "secret",
+			RedirectURIs:                   []string{"http://redirect", "http://redirect1"},
+			GrantTypes:                     []string{"implicit", "refresh_token"},
+			ResponseTypes:                  []string{"code token", "token id_token", "code"},
+			Scope:                          "scope-a scope-b",
+			Owner:                          "aeneas",
+			PolicyURI:                      "http://policy",
+			TermsOfServiceURI:              "http://tos",
+			ClientURI:                      "http://client",
+			LogoURI:                        "http://logo",
+			Contacts:                       []string{"aeneas1", "aeneas2"},
+			SecretExpiresAt:                0,
+			SectorIdentifierURI:            "https://sector",
+			JSONWebKeys:                    &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{KeyID: "foo", Key: []byte("asdf"), Certificates: []*x509.Certificate{}}}},
+			JSONWebKeysURI:                 "https://...",
+			TokenEndpointAuthMethod:        "none",
+			RequestURIs:                    []string{"foo", "bar"},
+			AllowedCORSOrigins:             []string{"foo", "bar"},
+			RequestObjectSigningAlgorithm:  "ES256",
+			UserinfoSignedResponseAlg:      "ES256",
+			SoftwareId:                     "",
+			SoftwareVersion:                "0.0.1",
 			IdTokenSignedResponseAlgorithm: "ES256",
-			ResourceSets:                  []string{"KX3A-39WE"},
 		}
 
 		assert.NoError(t, m.CreateClient(ctx, c))
@@ -137,7 +136,6 @@ func TestHelperCreateGetDeleteClient(k string, m Storage) func(t *testing.T) {
 		assert.Equal(t, ds["1234"].SoftwareId, c.SoftwareId)
 		assert.Equal(t, ds["1234"].SoftwareVersion, c.SoftwareVersion)
 		assert.Equal(t, ds["1234"].IdTokenSignedResponseAlgorithm, c.IdTokenSignedResponseAlgorithm)
-		assert.Equal(t, ds["1234"].ResourceSets, c.ResourceSets)
 
 		ds, err = m.GetClients(ctx, 1, 0)
 		assert.NoError(t, err)

@@ -1,4 +1,4 @@
-# RegistrationResponse
+# PutClientResponse
 
 ## Properties
 Name | Type | Description | Notes

@@ -48,7 +48,7 @@ type OAuth2API interface {
 	GetLoginRequest(challenge string) (*swagger.LoginRequest, *swagger.APIResponse, error)
 	GetConsentRequest(challenge string) (*swagger.ConsentRequest, *swagger.APIResponse, error)
 
-	CreateOAuth2Client(body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey) (*swagger.RegistrationResponse, *swagger.APIResponse, error)
+	PutOAuth2Client(body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey, authSrvPubJwk *swagger.JsonWebKey) (*swagger.PutClientResponse, *swagger.APIResponse, error)
 	DeleteOAuth2Client(id, secret string) (*swagger.APIResponse, error)
 	GetOAuth2Client(id, secret string) (*swagger.OAuth2Client, *swagger.APIResponse, error)
 	GetWellKnown() (*swagger.WellKnown, *swagger.APIResponse, error)
@@ -56,10 +56,9 @@ type OAuth2API interface {
 	ListOAuth2Clients(limit int64, offset int64) ([]swagger.OAuth2Client, *swagger.APIResponse, error)
 	RevokeOAuth2Token(token string) (*swagger.APIResponse, error)
 	RevokeAllUserConsentSessions(user string) (*swagger.APIResponse, error)
-	UpdateOAuth2Client(id, secret string, body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey) (*swagger.OAuth2Client, *swagger.APIResponse, error)
 	RevokeAuthenticationSession(user string) (*swagger.APIResponse, error)
 	RevokeUserClientConsentSessions(user string, client string) (*swagger.APIResponse, error)
-	SaveOAuth2Client(cookies map[string]string, signingJwk *swagger.JsonWebKey) (*swagger.SaveRegistrationResponse, *swagger.APIResponse, error)
+	CommitOAuth2Client(cookies map[string]string, commitCode string) (*swagger.CommitClientResponse, *swagger.APIResponse, error)
 
 	ListUserConsentSessions(user string) ([]swagger.PreviousConsentSession, *swagger.APIResponse, error)
 	FlushInactiveOAuth2Tokens(body swagger.FlushInactiveOAuth2TokensRequest) (*swagger.APIResponse, error)

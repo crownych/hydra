@@ -73,11 +73,23 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
+	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
+	viper.Set("TEST_MODE", true)
 	webSessionName := "web_sid"
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
 	require.NoError(t, err)
-	require.NoError(t, keyManager.AddKeySet(context.TODO(), "", authSrvJwks))
+	require.NoError(t, keyManager.AddKeySet(context.TODO(), "jwk.offline", authSrvJwks))
+	ecAuthSrvPubJwk := authSrvJwks.Keys[1].Key.(*ecdsa.PublicKey)
+	authSrvPubJwk := &hydra.JsonWebKey{
+		Kid: authSrvJwks.Keys[1].KeyID,
+		Alg: authSrvJwks.Keys[1].Algorithm,
+		Crv: ecAuthSrvPubJwk.Params().Name,
+		Use: authSrvJwks.Keys[1].Use,
+		Kty: "EC",
+		X:   base64.RawURLEncoding.EncodeToString(ecAuthSrvPubJwk.X.Bytes()),
+		Y:   base64.RawURLEncoding.EncodeToString(ecAuthSrvPubJwk.Y.Bytes()),
+	}
 
 	// client key pair
 	cPrivKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -86,25 +98,25 @@ func TestClientSDK(t *testing.T) {
 		Crv: "P-256",
 		Use: "sig",
 		Kty: "EC",
-		X: base64.RawURLEncoding.EncodeToString(cPrivKey.X.Bytes()),
-		Y: base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
-		D: base64.RawURLEncoding.EncodeToString(cPrivKey.D.Bytes()),
+		X:   base64.RawURLEncoding.EncodeToString(cPrivKey.X.Bytes()),
+		Y:   base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
+		D:   base64.RawURLEncoding.EncodeToString(cPrivKey.D.Bytes()),
 	}
 	cPubJwk := hydra.JsonWebKey{
 		Alg: "ES256",
 		Crv: "P-256",
 		Use: "sig",
 		Kty: "EC",
-		X: base64.RawURLEncoding.EncodeToString(cPrivKey.X.Bytes()),
-		Y: base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
+		X:   base64.RawURLEncoding.EncodeToString(cPrivKey.X.Bytes()),
+		Y:   base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
 	}
 
 	manager := client.NewMemoryManager(nil)
-	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager)
+	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager, "http://localhost:4444", "jwk.offline")
 
 	router := httprouter.New()
 	handler.SetRoutes(router)
-	mockOAuthServer(router, authSrvJwks)
+	//mockOAuthServer(router, authSrvJwks)
 	n := negroni.New()
 	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
@@ -123,140 +135,11 @@ func TestClientSDK(t *testing.T) {
 	err = mock_dep.StartMockServer()
 	require.NoError(t, err)
 
-	/*
-	t.Run("case=client default scopes are set", func(t *testing.T) {
-		createClient := createTestClient("")
-		result, response, err := c.CreateOAuth2Client(hydra.OAuth2Client{
-			ClientId: "scoped",
-		})
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode)
-		//assert.EqualValues(t, handler.Validator.DefaultClientScopes, strings.Split(result.Scope, " "))
-		assert.NotNil(result)
-
-		response, err = c.DeleteOAuth2Client("scoped")
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusNoContent, response.StatusCode)
-	})
-
-	t.Run("case=client is created and updated", func(t *testing.T) {
-		createClient := createTestClient("")
-		compareClient := createClient
-		createClient.ClientSecretExpiresAt = 10
-
-		// returned client is correct on Create
-		result, response, err := c.CreateOAuth2Client(createClient)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-		assert.EqualValues(t, compareClient, *result)
-
-		// secret is not returned on GetOAuth2Client
-		compareClient.ClientSecret = ""
-		result, response, err = c.GetOAuth2Client(createClient.ClientId)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.EqualValues(t, compareClient, *result)
-
-		// listing clients returns the only added one
-		results, response, err := c.ListOAuth2Clients(100, 0)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.Len(t, results, 1)
-		assert.EqualValues(t, compareClient, results[0])
-
-		// SecretExpiresAt gets overwritten with 0 on Update
-		compareClient.ClientSecret = createClient.ClientSecret
-		result, response, err = c.UpdateOAuth2Client(createClient.ClientId, createClient)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.EqualValues(t, compareClient, *result)
-
-		// create another client
-		updateClient := createTestClient("foo")
-		result, response, err = c.UpdateOAuth2Client(createClient.ClientId, updateClient)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.EqualValues(t, updateClient, *result)
-
-		// again, test if secret is not returned on Get
-		compareClient = updateClient
-		compareClient.ClientSecret = ""
-		result, response, err = c.GetOAuth2Client(updateClient.ClientId)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.EqualValues(t, compareClient, *result)
-
-		// client can not be found after being deleted
-		response, err = c.DeleteOAuth2Client(updateClient.ClientId)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusNoContent, response.StatusCode, "%s", response.Payload)
-
-		_, response, err = c.GetOAuth2Client(updateClient.ClientId)
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusNotFound, response.StatusCode)
-	})
-
-	t.Run("case=public client is transmitted without secret", func(t *testing.T) {
-		result, response, err := c.CreateOAuth2Client(hydra.OAuth2Client{
-			TokenEndpointAuthMethod: "none",
-		})
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-
-		assert.Equal(t, "", result.ClientSecret)
-
-		result, response, err = c.CreateOAuth2Client(createTestClient(""))
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-
-		assert.Equal(t, "secret", result.ClientSecret)
-	})
-
-	t.Run("case=id should be set properly", func(t *testing.T) {
-		for k, tc := range []struct {
-			client   hydra.OAuth2Client
-			expectID string
-		}{
-			{
-				client: hydra.OAuth2Client{},
-			},
-			{
-				client:   hydra.OAuth2Client{ClientId: "set-properly-1"},
-				expectID: "set-properly-1",
-			},
-			{
-				client:   hydra.OAuth2Client{ClientId: "set-properly-2"},
-				expectID: "set-properly-2",
-			},
-		} {
-			t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
-				result, response, err := c.CreateOAuth2Client(tc.client)
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
-
-				assert.NotEmpty(t, result.ClientId)
-
-				id := result.ClientId
-				if tc.expectID != "" {
-					assert.EqualValues(t, tc.expectID, result.ClientId)
-					id = tc.expectID
-				}
-
-				result, response, err = c.GetOAuth2Client(id)
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-
-				assert.EqualValues(t, id, result.ClientId)
-			})
-		}
-	})
-	*/
-
 	t.Run("case=public client is created", func(t *testing.T) {
 		createClient := createTestPublicClient("", cPubJwk)
 
 		// returned client is correct on Create
-		result, response, err := c.CreateOAuth2Client(createClient, cPrivJwk)
+		result, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
 		require.NoError(t, err)
 		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
 		assert.NotEmpty(t, result)
@@ -265,88 +148,77 @@ func TestClientSDK(t *testing.T) {
 	t.Run("case=confidential client is created", func(t *testing.T) {
 		createClient := createTestConfidentialClient("", cPubJwk)
 
-		// returned client is correct on Create (session only)
-		result, response, err := c.CreateOAuth2Client(createClient, cPrivJwk)
-		require.NoError(t, err)
-		require.EqualValues(t, http.StatusOK, response.StatusCode, "%s", response.Payload)
-		assert.NotEmpty(t, result)
-		respCookies := response.Cookies()
-		assert.NotEmpty(t, respCookies)
-
-		sessionCookie := map[string]string{}
-		for _, respCookie := range respCookies {
-			sessionCookie[respCookie.Name] = respCookie.Value
-		}
-
-		t.Run("case=persist confidential client with invalid credentials", func(t *testing.T) {
+		t.Run("case=create client with invalid user credentials", func(t *testing.T) {
 			c.Configuration.Username = "foo.bar"
 			c.Configuration.Password = "wrong"
-			saveResult, response, err := c.SaveOAuth2Client(sessionCookie, cPrivJwk)
+
+			_, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-			require.Empty(t, saveResult.SignedCredentials)
 		})
 
-		t.Run("case=persist confidential client with valid credentials", func(t *testing.T) {
+		t.Run("case=create client", func(t *testing.T) {
 			c.Configuration.Username = "foo.bar"
 			c.Configuration.Password = "secret"
-			saveResult, response, err := c.SaveOAuth2Client(sessionCookie, cPrivJwk)
-			require.NoError(t, err)
-			require.EqualValues(t, http.StatusCreated, response.StatusCode)
-			require.NotEmpty(t, saveResult.SignedCredentials)
-			clientSecret, err := getClientSecretFromSignedCredentials(saveResult.SignedCredentials)
-			require.NoError(t, err)
 
-			t.Run("case=get client with invalid client credentials", func(t *testing.T) {
-				_, response, err := c.GetOAuth2Client(createClient.ClientId, "wrong")
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-			})
+			// returned client is correct on Create (session only)
+			result, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
+			assert.NotEmpty(t, result)
+			sessionCookie := getCookieFromResponse(response)
+			assert.NotEmpty(t, sessionCookie)
 
-			t.Run("case=get client with valid client credentials", func(t *testing.T) {
-				result, response, err := c.GetOAuth2Client(createClient.ClientId, clientSecret)
+			t.Run("case=commit confidential client", func(t *testing.T) {
+				commitResult, response, err := c.CommitOAuth2Client(sessionCookie, viper.GetString("COMMIT_CODE"))
 				require.NoError(t, err)
 				require.EqualValues(t, http.StatusOK, response.StatusCode)
-				require.EqualValues(t, createClient.ClientId, result.ClientId)
-				require.EqualValues(t, createClient.SoftwareId, result.SoftwareId)
-				require.EqualValues(t, createClient.SoftwareVersion, result.SoftwareVersion)
-			})
-
-			// update client fields
-			updateClient := createClient
-			updateClient.SoftwareVersion = "0.0.2"
-
-			t.Run("case=update client with invalid client credentials", func(t *testing.T) {
-				_, response, err := c.UpdateOAuth2Client(createClient.ClientId, "wrong", updateClient, cPrivJwk)
+				require.NotEmpty(t, commitResult.SignedClientCredentials)
+				clientSecret, err := getClientSecretFromSignedCredentials(commitResult.SignedClientCredentials)
 				require.NoError(t, err)
-				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-			})
 
-			t.Run("case=update client with valid client credentials and invalid client_metadata", func(t *testing.T) {
-				updateClient.JwksUri = "http://jwk.url"
-				_, response, err := c.UpdateOAuth2Client(createClient.ClientId, clientSecret, updateClient, cPrivJwk)
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusBadRequest, response.StatusCode)
-				updateClient.JwksUri = ""
-			})
+				t.Run("case=get client with client credentials", func(t *testing.T) {
+					result, response, err := c.GetOAuth2Client(createClient.ClientId, clientSecret)
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusOK, response.StatusCode)
+					require.EqualValues(t, createClient.ClientId, result.ClientId)
+					require.EqualValues(t, createClient.SoftwareId, result.SoftwareId)
+					require.EqualValues(t, createClient.SoftwareVersion, result.SoftwareVersion)
+				})
 
-			t.Run("case=update client with valid client credentials", func(t *testing.T) {
-				result, response, err := c.UpdateOAuth2Client(createClient.ClientId, clientSecret, updateClient, cPrivJwk)
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusOK, response.StatusCode)
-				require.EqualValues(t, updateClient.SoftwareVersion, result.SoftwareVersion)
-			})
+				// update client fields
+				t.Run("case=update client", func(t *testing.T) {
+					updateClient := createClient
+					updateClient.SoftwareVersion = "0.0.2"
 
-			t.Run("case=delete client with invalid client credentials", func(t *testing.T) {
-				response, err := c.DeleteOAuth2Client(createClient.ClientId, "wrong")
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-			})
+					_, response, err := c.PutOAuth2Client(updateClient, cPrivJwk, authSrvPubJwk)
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 
-			t.Run("case=delete client with valid client credentials", func(t *testing.T) {
-				response, err := c.DeleteOAuth2Client(createClient.ClientId, clientSecret)
-				require.NoError(t, err)
-				require.EqualValues(t, http.StatusNoContent, response.StatusCode)
+					sessionCookie := getCookieFromResponse(response)
+					assert.NotEmpty(t, sessionCookie)
+
+					_, response, err = c.CommitOAuth2Client(sessionCookie, viper.GetString("COMMIT_CODE"))
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusOK, response.StatusCode)
+
+					c, response, err := c.GetOAuth2Client(updateClient.ClientId, clientSecret)
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusOK, response.StatusCode)
+					require.EqualValues(t, updateClient.SoftwareVersion, c.SoftwareVersion)
+				})
+
+				t.Run("case=delete client with invalid client credentials", func(t *testing.T) {
+					response, err := c.DeleteOAuth2Client(createClient.ClientId, "wrong")
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
+				})
+
+				t.Run("case=delete client with valid client credentials", func(t *testing.T) {
+					response, err := c.DeleteOAuth2Client(createClient.ClientId, clientSecret)
+					require.NoError(t, err)
+					require.EqualValues(t, http.StatusNoContent, response.StatusCode)
+				})
 			})
 		})
 	})
@@ -357,31 +229,31 @@ func TestClientSDK(t *testing.T) {
 
 func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2Client {
 	return hydra.OAuth2Client{
-		ClientId:                  "1234",
-		ClientName:                prefix + "name",
-		ClientUri:                 prefix + "uri",
-		Contacts:                  []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:                []string{"implicit"},
-		ResponseTypes:             []string{"token", "id_token"},
-		RedirectUris:              []string{prefix + "redirect-url", prefix + "redirect-uri"},
-		SoftwareId:				   prefix + "SPA",
-		SoftwareVersion: 		   prefix + "0.0.1",
-		IdTokenSignedResponseAlg:  "ES256",
-		RequestObjectSigningAlg:   "ES256",
+		ClientId:                 "1234",
+		ClientName:               prefix + "name",
+		ClientUri:                prefix + "uri",
+		Contacts:                 []string{prefix + "peter", prefix + "pan"},
+		GrantTypes:               []string{"implicit"},
+		ResponseTypes:            []string{"token", "id_token"},
+		RedirectUris:             []string{prefix + "redirect-url", prefix + "redirect-uri"},
+		SoftwareId:               prefix + "SPA",
+		SoftwareVersion:          prefix + "0.0.1",
+		IdTokenSignedResponseAlg: "ES256",
+		RequestObjectSigningAlg:  "ES256",
 	}
 }
 
 func createTestConfidentialClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2Client {
 	return hydra.OAuth2Client{
-		ClientId:                  "5678",
-		ClientName:                prefix + "name",
-		ClientUri:                 prefix + "uri",
-		Contacts:                  []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:                []string{"urn:ietf:params:oauth:grant-type:token-exchange"},
-		TokenEndpointAuthMethod:   "private_key_jwt",
-		SoftwareId:				   prefix + "client1",
-		SoftwareVersion: 		   prefix + "0.0.1",
-		Jwks:					   &hydra.JsonWebKeySet{Keys: []hydra.JsonWebKey{pubJwk}},
+		ClientId:                "5678",
+		ClientName:              prefix + "name",
+		ClientUri:               prefix + "uri",
+		Contacts:                []string{prefix + "peter", prefix + "pan"},
+		GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:token-exchange"},
+		TokenEndpointAuthMethod: "private_key_jwt",
+		SoftwareId:              prefix + "client1",
+		SoftwareVersion:         prefix + "0.0.1",
+		Jwks:                    &hydra.JsonWebKeySet{Keys: []hydra.JsonWebKey{pubJwk}},
 	}
 }
 
@@ -402,7 +274,7 @@ func mockOAuthServer(r *httprouter.Router, jwks *jose.JSONWebKeySet) {
 }
 
 func getClientSecretFromSignedCredentials(signedCredentials string) (string, error) {
-	_, payload, err  := pkg.GetContentFromJWS(signedCredentials)
+	_, payload, err := pkg.GetContentFromJWS(signedCredentials)
 	if err != nil {
 		return "", nil
 	}
@@ -411,4 +283,13 @@ func getClientSecretFromSignedCredentials(signedCredentials string) (string, err
 		return "", errors.New("empty client secret")
 	}
 	return clientSecret.(string), nil
+}
+
+func getCookieFromResponse(response *hydra.APIResponse) map[string]string {
+	respCookies := response.Cookies()
+	sessionCookie := map[string]string{}
+	for _, respCookie := range respCookies {
+		sessionCookie[respCookie.Name] = respCookie.Value
+	}
+	return sessionCookie
 }

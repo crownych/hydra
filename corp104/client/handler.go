@@ -23,11 +23,13 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"github.com/goincremental/negroni-sessions"
+	"fmt"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/pkg"
+	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
 	"gopkg.in/square/go-jose.v2"
+	"log"
 	"net/http"
 	"strings"
 
@@ -38,20 +40,19 @@ import (
 )
 
 type Handler struct {
-	Manager    Manager
-	H          herodot.Writer
-	Validator  *Validator
-	KeyManager jwk.Manager
+	Manager         Manager
+	H               herodot.Writer
+	Validator       *Validator
+	KeyManager      jwk.Manager
+	IssuerURL       string
+	offlineJWKSName string
 }
 
 const (
 	ClientsHandlerPath = "/clients"
 
-	ClientsMetadataSessionKey = "client_metadata"
-
-	// JSON fields
-	SoftwareStatementField = "software_statement"
-	SignedCredentialsField = "signed_credentials"
+	ClientsMetadataSessionKey   = "client_metadata"
+	ClientsCommitCodeSessionKey = "commit_code"
 )
 
 func NewHandler(
@@ -60,31 +61,34 @@ func NewHandler(
 	defaultClientScopes []string,
 	subjectTypes []string,
 	keyManager jwk.Manager,
+	issuerURL string,
+	offlineJWKSName string,
 ) *Handler {
 	return &Handler{
-		Manager:    manager,
-		H:          h,
-		Validator:  NewValidator(defaultClientScopes, subjectTypes),
-		KeyManager: keyManager,
+		Manager:         manager,
+		H:               h,
+		Validator:       NewValidator(defaultClientScopes, subjectTypes),
+		KeyManager:      keyManager,
+		IssuerURL:       issuerURL,
+		offlineJWKSName: offlineJWKSName,
 	}
 }
 
 func (h *Handler) SetRoutes(r *httprouter.Router) {
 	r.GET(ClientsHandlerPath, h.List)
-	r.POST(ClientsHandlerPath, h.Create)
+	r.PUT(ClientsHandlerPath, h.Put)
+	r.PUT(ClientsHandlerPath+"/commit", h.Commit)
 	r.GET(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Get))
-	r.PUT(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Update))
 	r.DELETE(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Delete))
 }
 
-// swagger:route POST /clients oAuth2 createOAuth2Client
+// swagger:route PUT /clients oAuth2 putOAuth2Client
 //
-// Create an OAuth 2.0 client
+// Create or update an OAuth 2.0 Client
 //
-// Create a new OAuth 2.0 client If you pass `client_secret` the secret will be used, otherwise a random secret will be generated. The secret will be returned in the response and you will not be able to retrieve it later on. Write the secret down and keep it somwhere safe.
+// Create or update an existing OAuth 2.0 Client.
 //
 // OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
-//
 //
 //     Consumes:
 //     - application/json
@@ -99,26 +103,18 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (h *Handler) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
 
-	isConfidential := false
-
 	// Get payload
 	jweToken := ""
-	swStatement := bodyMap[SoftwareStatementField]
+	swStatement := bodyMap["software_statement"]
 	if swStatement != nil {
 		jweToken = swStatement.(string)
-	} else {
-		signedCredential := bodyMap[SignedCredentialsField]
-		if signedCredential != nil {
-			jweToken = signedCredential.(string)
-			isConfidential = true
-		}
 	}
 
 	decryptedMsg, authSrvPrivateKey, err := h.decryptJWE(r.Context(), []byte(jweToken))
@@ -126,17 +122,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		h.H.WriteError(w, r, err)
 		return
 	}
-
-	if isConfidential {
-		h.processSignedCredentials(w, r, decryptedMsg, authSrvPrivateKey)
-	} else {
-		h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
-	}
+	h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
 }
 
-// swagger:route PUT /clients/{id} oAuth2 updateOAuth2Client
+// swagger:route PUT /clients oAuth2 commitOAuth2Client
 //
-// Update an OAuth 2.0 Client
+// Create or update an OAuth 2.0 Client
 //
 // Update an existing OAuth 2.0 Client. If you pass `client_secret` the secret will be updated and returned via the API. This is the only time you will be able to retrieve the client secret, so write it down and keep it safe.
 //
@@ -155,52 +146,62 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	swStatement, err := pkg.GetValueFromRequestBody(r, SoftwareStatementField)
+func (h *Handler) Commit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	bodyMap := convertJsonBodyToMap(r)
+	commitCode := bodyMap["commit_code"]
+	if commitCode == "" || commitCode != getSessionValue(r, ClientsCommitCodeSessionKey) {
+		h.H.WriteError(w, r, pkg.NewError(http.StatusUnauthorized, "invalid commit code"))
+		return
+	}
+
+	// get metadata from session and check client should not be public client
+	metadata := getSessionValue(r, ClientsMetadataSessionKey)
+	if metadata == "" {
+		h.H.WriteError(w, r, pkg.NewBadRequestError("metadata not found"))
+		return
+	}
+	var c Client
+	err := json.Unmarshal([]byte(metadata), &c)
+	if err != nil {
+		h.H.WriteError(w, r, pkg.NewBadRequestError("invalid metadata"))
+		return
+	}
+	if c.IsPublic() {
+		h.H.WriteError(w, r, pkg.NewBadRequestError("confidential client only"))
+		return
+	}
+	// commit client to database
+	oc, _ := h.Manager.GetConcreteClient(r.Context(), c.ClientID)
+	if oc != nil {
+		if err = h.Manager.UpdateClient(r.Context(), &c); err != nil {
+			h.H.WriteError(w, r, errors.New("failed to update metadata: "+err.Error()))
+			return
+		}
+	} else {
+		plainSecret, err := h.createActualClient(r.Context(), &c)
+		if err != nil {
+			h.H.WriteError(w, r, errors.New("failed to commit metadata: "+err.Error()))
+			return
+		}
+		c.Secret = plainSecret
+	}
+
+	// remove session values
+	removeSessionValue(r, ClientsMetadataSessionKey)
+	removeSessionValue(r, ClientsCommitCodeSessionKey)
+
+	// return location & signed_client_credentials
+	authSrvPrivateKey, err := h.getOfflinePrivateJWK(r.Context())
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
 	}
-
-	decryptedMsg, _, err := h.decryptJWE(r.Context(), swStatement)
+	resp, err := h.createCommitResponse(authSrvPrivateKey, &c)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
-
-	c, _, err := h.validateSoftwareStatement(decryptedMsg)
-	if err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	var secret string
-	if len(c.Secret) > 0 {
-		err := validateClientSecret(c.Secret)
-		if err != nil {
-			h.H.WriteError(w, r, err)
-			return
-		}
-		secret = c.Secret
-	}
-
-	if c.ClientID != ps.ByName("id") {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if err := h.Validator.Validate(c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if err := h.Manager.UpdateClient(r.Context(), c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	c.Secret = secret
-	h.H.Write(w, r, &c)
+	h.H.WriteCode(w, r, http.StatusOK, &resp)
 }
 
 // swagger:route GET /clients oAuth2 listOAuth2Clients
@@ -310,106 +311,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*Client, []byte, error) {
-	// JWS Verification using client's public key
-	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var c Client
-
-	if err := json.Unmarshal(verifiedMsg, &c); err != nil {
-		return nil, verifiedMsg, err
-	}
-
-	if err := h.Validator.Validate(&c); err != nil {
-		return nil, verifiedMsg, err
-	}
-	return &c, verifiedMsg, nil
-}
-
-func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
-	c, verifiedMsg, err := h.validateSoftwareStatement(swStatementJWS)
-	if err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if c.IsPublic() {
-		// Save client to storage
-		if _, err := h.createActualClient(r.Context(), c); err != nil {
-			h.H.WriteError(w, r, err)
-			return
-		}
-	}
-
-	// Save client metadata to session
-	h.saveClientMetadataToSession(r, string(verifiedMsg))
-
-	// create registration response
-	registrationResponse, err := h.createPublicClientResponse(authSrvPrivateKey, c.GetID())
-
-	if c.IsPublic() {
-		h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), registrationResponse)
-	} else {
-		h.H.Write(w, r, registrationResponse)
-	}
-}
-
-func (h *Handler) processSignedCredentials(w http.ResponseWriter, r *http.Request, signedCredentialsJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
-	// JWS Verification using client's public key
-	_, err := pkg.VerifyJWSUsingEmbeddedKey(signedCredentialsJWS, nil, h.validateSignedCredentialsPayload)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	// get client_metadata from session
-	clientMetadata := h.getClientMetadataFromSession(r)
-
-	if clientMetadata == "" {
-		h.H.WriteError(w, r, pkg.NewBadRequestError("client_metadata not found in session"))
-		return
-	}
-
-	var c Client
-
-	if err := json.Unmarshal([]byte(clientMetadata), &c); err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	if err := h.Validator.Validate(&c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if c.IsPublic() {
-		h.H.WriteError(w, r, pkg.NewBadRequestError("public client does not support this operation"))
-		return
-	}
-
-	// create actual client
-	plainSecret, err := h.createActualClient(r.Context(), &c)
-	if err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	// remove client metadata from session
-	h.removeClientMetadataFromSession(r)
-
-	// create save registration response
-	saveRegistrationResponse, err := h.createConfidentialClientResponse(authSrvPrivateKey, c.GetID(), plainSecret)
-	if err := h.Validator.Validate(&c); err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), saveRegistrationResponse)
-}
-
 func (h *Handler) createActualClient(ctx context.Context, c *Client) (string, error) {
 	if c.IsPublic() {
 		c.Secret = ""
@@ -439,6 +340,74 @@ func (h *Handler) createActualClient(ctx context.Context, c *Client) (string, er
 	return plainSecret, nil
 }
 
+func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
+	stmt, _, err := h.validateSoftwareStatement(swStatementJWS)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	c := &stmt.Client
+	if c.IsPublic() {
+		if _, err := h.createActualClient(r.Context(), c); err != nil {
+			h.H.WriteError(w, r, err)
+			return
+		}
+	}
+	cBuf, err := json.Marshal(&c)
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+	saveSessionValue(r, ClientsMetadataSessionKey, string(cBuf))
+
+	signedClientID, err := h.createSignedClientID(authSrvPrivateKey, c.GetID())
+	if err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+	resp := map[string]string{"signed_client_id": signedClientID}
+
+	if c.IsPublic() {
+		h.H.WriteCreated(w, r, ClientsHandlerPath+"/"+c.GetID(), &resp)
+	} else {
+		commitCode := uuid.New()
+		if viper.GetBool("TEST_MODE") {
+			viper.Set("COMMIT_CODE", commitCode)
+		}
+		saveSessionValue(r, ClientsCommitCodeSessionKey, commitCode)
+		// send email to user
+		h.sendCommitCode(stmt.Authentication.User+"@104.com.tw", commitCode)
+		h.H.WriteCode(w, r, http.StatusAccepted, &resp)
+	}
+}
+
+func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*SoftwareStatement, []byte, error) {
+	// JWS Verification using client's public key
+	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateClientMetadataHeader, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var stmt SoftwareStatement
+
+	if err := json.Unmarshal(verifiedMsg, &stmt); err != nil {
+		return nil, verifiedMsg, err
+	}
+
+	if err := h.Validator.Validate(&stmt.Client); err != nil {
+		return nil, verifiedMsg, err
+	}
+
+	if !stmt.Client.IsPublic() { // authentication required for confidential client
+		if err := h.Validator.validateAuthentication(stmt.Authentication); err != nil {
+			return nil, verifiedMsg, err
+		}
+	}
+
+	return &stmt, verifiedMsg, nil
+}
+
 func (h *Handler) validateClientMetadataHeader(json map[string]interface{}) error {
 
 	// validate `typ` should be `client-metadata+jwt` or `application/client-metadata+jwt`
@@ -460,58 +429,29 @@ func (h *Handler) validateClientMetadataHeader(json map[string]interface{}) erro
 	return nil
 }
 
-func (h *Handler) validateSignedCredentialsPayload(credentials map[string]interface{}) error {
-	user := credentials["user"]
-	pwd := credentials["pwd"]
-	if user == nil || pwd == nil {
-		return errors.New("invalid signed credentials")
-	}
-	adLoginURL := viper.GetString("AD_LOGIN_URL")
-	return validateADUser(adLoginURL, user.(string), pwd.(string))
-}
-
-func (h *Handler) saveClientMetadataToSession(r *http.Request, metadata string) {
-	session := sessions.GetSession(r)
-	session.Set(ClientsMetadataSessionKey, metadata)
-}
-
-func (h *Handler) getClientMetadataFromSession(r *http.Request) string {
-	session := sessions.GetSession(r)
-	data := session.Get(ClientsMetadataSessionKey)
-	if data == nil {
-		return ""
-	}
-	return data.(string)
-}
-
-func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
-	session := sessions.GetSession(r)
-	session.Delete(ClientsMetadataSessionKey)
-}
-
-func (h *Handler) createPublicClientResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string) (*RegistrationResponse, error) {
+func (h *Handler) createSignedClientID(authSrvPrivateKey *jose.JSONWebKey, clientId string) (string, error) {
 	claims := make(map[string]string)
 	claims["client_id"] = clientId
 
 	responseJwt, err := pkg.GenerateResponseJWT(authSrvPrivateKey, claims)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &RegistrationResponse{SignedClientId: responseJwt}, nil
+	return responseJwt, nil
 }
 
-func (h *Handler) createConfidentialClientResponse(authSrvPrivateKey *jose.JSONWebKey, clientId string, clientSecret string) (*SaveRegistrationResponse, error) {
+func (h *Handler) createCommitResponse(authSrvPrivateKey *jose.JSONWebKey, c *Client) (*CommitResponse, error) {
 	claims := make(map[string]string)
-	claims["client_id"] = clientId
-	claims["client_secret"] = clientSecret
+	claims["client_id"] = c.ClientID
+	claims["client_secret"] = c.Secret
 
 	responseJwt, err := pkg.GenerateResponseJWT(authSrvPrivateKey, claims)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("failed to create response: " + err.Error())
 	}
-
-	return &SaveRegistrationResponse{SignedCredentials: responseJwt}, nil
+	location := strings.TrimRight(h.IssuerURL, "/") + ClientsHandlerPath + "/" + c.ClientID
+	return &CommitResponse{Location: location, SignedClientCredentials: responseJwt}, nil
 }
 
 func (h *Handler) checkClientCredentials(next httprouter.Handle) httprouter.Handle {
@@ -546,21 +486,47 @@ func (h *Handler) decryptJWE(ctx context.Context, compactJwe []byte) ([]byte, *j
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	// Extract key set
-	keySet, err := h.KeyManager.GetKeysById(ctx, kid)
+	// Get offline JWKS
+	keySet, err := h.getOfflineJWKS(ctx)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	// Get private key of oauth server
-	authSrvPrivateKey, err := pkg.GetElementFromKeySet(keySet, kid)
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
+	// Get private key of oauth server (only offline keys are valid)
+	keys := keySet.Key(kid)
+	if keys == nil || len(keys) == 0 {
+		pubKeyId := strings.Replace(kid, "private", "public", 1)
+		return nil, nil, pkg.NewBadRequestError(fmt.Sprintf("invalid offline public key (%s)", pubKeyId))
 	}
-
+	authSrvPrivateKey := &keys[0]
 	// JWE decryption using private key of oauth server
 	decryptedMsg, err := pkg.DecryptJWE(compactJwe, authSrvPrivateKey.Key)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
 	return decryptedMsg, authSrvPrivateKey, nil
+}
+
+func (h *Handler) getOfflineJWKS(ctx context.Context) (*jose.JSONWebKeySet, error) {
+	return h.KeyManager.GetKeySet(ctx, h.offlineJWKSName)
+}
+
+func (h *Handler) getOfflinePrivateJWK(ctx context.Context) (*jose.JSONWebKey, error) {
+	jwks, err := h.getOfflineJWKS(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, k := range jwks.Keys {
+		if k.Use == "sig" && strings.HasPrefix(k.KeyID, "private:") {
+			return &k, nil
+		}
+	}
+	return nil, errors.New("offline private key not found")
+}
+
+func (h *Handler) sendCommitCode(recipient, commitCode string) {
+	recipient = "crown.yang@104.com.tw"
+	_, err := pkg.SendTextMail(recipient, "Client註冊確認碼", "commit_code: "+commitCode)
+	if err != nil {
+		log.Println(fmt.Sprintf(`send commit_code to %s failed`, recipient))
+	}
 }

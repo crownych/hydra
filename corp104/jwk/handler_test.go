@@ -38,7 +38,6 @@ import (
 
 var testServer *httptest.Server
 var IDKS *jose.JSONWebKeySet
-var OSMKS *jose.JSONWebKeySet
 
 func init() {
 	router := httprouter.New()
@@ -51,8 +50,8 @@ func init() {
 		[]string{},
 	)
 	h.Manager.AddKeySet(context.TODO(), IDTokenKeyName, IDKS)
-	OSMKS, _ = testGenerator.Generate("test-oauth-meta", "sig")
-	h.Manager.AddKeySet(context.TODO(), OAuthServerMetadataKeyName, OSMKS)
+	offlineKS, _ := testGenerator.Generate("test-offline-jwk", "sig")
+	h.Manager.AddKeySet(context.TODO(), "jwk.offline", offlineKS)
 	h.SetRoutes(router, router)
 	testServer = httptest.NewServer(router)
 }

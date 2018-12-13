@@ -120,11 +120,8 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 		}
 		pubKey := ecdsa.PublicKey{
 			Curve: curve,
-			X: new(big.Int).SetBytes(pX),
-			Y: new(big.Int).SetBytes(pY),
-		}
-		if err != nil {
-			return nil, nil, err
+			X:     new(big.Int).SetBytes(pX),
+			Y:     new(big.Int).SetBytes(pY),
 		}
 
 		if !publicKeyOnly && key.D != "" {
@@ -134,7 +131,7 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 			}
 			cryptoKey = &ecdsa.PrivateKey{
 				PublicKey: pubKey,
-				D: new(big.Int).SetBytes(pD),
+				D:         new(big.Int).SetBytes(pD),
 			}
 		} else {
 			cryptoKey = &pubKey
@@ -188,7 +185,7 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 			}
 			cryptoKey = &rsa.PrivateKey{
 				PublicKey: pubKey,
-				D: new(big.Int).SetBytes(pD),
+				D:         new(big.Int).SetBytes(pD),
 			}
 		} else {
 			cryptoKey = &pubKey
@@ -266,4 +263,22 @@ func jweEncrypt(content []byte, key crypto.PublicKey, keyId string) ([]byte, err
 		return nil, errors.New("failed to serialize JWE: " + err.Error())
 	}
 	return buf, nil
+}
+
+func LoadJsonWebKeySet(jwksJSON []byte) *JsonWebKeySet {
+	var jwks JsonWebKeySet
+	err := json.Unmarshal(jwksJSON, &jwks)
+	if err != nil {
+		panic("Invalid jwks:" + err.Error())
+	}
+	return &jwks
+}
+
+func LoadJsonWebKey(signingJwkJSON []byte) *JsonWebKey {
+	var signingJwk *JsonWebKey
+	err := json.Unmarshal(signingJwkJSON, &signingJwk)
+	if err != nil {
+		panic("Invalid signing jwk:" + err.Error())
+	}
+	return signingJwk
 }

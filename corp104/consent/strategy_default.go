@@ -673,7 +673,7 @@ func (s *DefaultStrategy) createConsentRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	consentSessions, err := s.M.FindPreviouslyGrantedConsentRequests(r.Context(), req.GetClient().GetID(), authSession.Subject)
-	if err != nil && errors.Cause(err) != ErrNoPreviousConsentFound{
+	if err != nil && errors.Cause(err) != ErrNoPreviousConsentFound {
 		return "", "", err
 	}
 

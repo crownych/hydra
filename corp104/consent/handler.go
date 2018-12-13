@@ -51,10 +51,10 @@ type Handler struct {
 }
 
 const (
-	LoginPath    = "/oauth2/auth/requests/login"
-	ConsentPath  = "/oauth2/auth/requests/consent"
-	SessionsPath = "/oauth2/auth/sessions"
-	IdpPath      = "/idp"
+	LoginPath          = "/oauth2/auth/requests/login"
+	ConsentPath        = "/oauth2/auth/requests/consent"
+	SessionsPath       = "/oauth2/auth/sessions"
+	IdpPath            = "/idp"
 	ForgotPasswordPath = "/forgot-password"
 	ResetPasswordPath  = "/reset-password"
 
@@ -755,7 +755,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps http
 	dataMap = responseMap["data"].(map[string]interface{})
 	code := dataMap["code"].(string)
 
-	result, err := pkg.SendTextMail(email, "忘記密碼", resetPasswordRoute + "?code=" + code)
+	result, err := pkg.SendTextMail(email, "忘記密碼", resetPasswordRoute+"?code="+code)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return

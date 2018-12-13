@@ -246,7 +246,7 @@ func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[s
 	return string(buf), nil
 }
 
-func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) (error) {
+func unmarshalEncodedJsonString(encodedStr string, buf map[string]interface{}) error {
 	str, err := base64.RawURLEncoding.DecodeString(encodedStr)
 	if err != nil {
 		return err

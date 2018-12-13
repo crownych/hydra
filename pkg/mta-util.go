@@ -23,7 +23,7 @@ func sendMail(recipient string, subject string, bodyType string, body string) (b
 		return false, errors.New("No email service url")
 	}
 
-	payload := `{"sender":"` + sender + `","recipient":"` + recipient + `","subject":"` + subject + `","body": {"` + bodyType + `":"` + body +`"}}`
+	payload := `{"sender":"` + sender + `","recipient":"` + recipient + `","subject":"` + subject + `","body": {"` + bodyType + `":"` + body + `"}}`
 
 	resp, err := resty.R().SetHeader("Content-Type", "application/json").SetBody(payload).Post(emailServiceUrl + "/sendEmail")
 	if err != nil {

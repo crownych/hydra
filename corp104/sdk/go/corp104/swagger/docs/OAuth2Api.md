@@ -6,7 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**AcceptConsentRequest**](OAuth2Api.md#AcceptConsentRequest) | **Put** /oauth2/auth/requests/consent/{challenge}/accept | Accept an consent request
 [**AcceptLoginRequest**](OAuth2Api.md#AcceptLoginRequest) | **Put** /oauth2/auth/requests/login/{challenge}/accept | Accept an login request
-[**CreateOAuth2Client**](OAuth2Api.md#CreateOAuth2Client) | **Post** /clients | Create an OAuth 2.0 client
+[**CommitOAuth2Client**](OAuth2Api.md#CommitOAuth2Client) | **Put** /clients/commit | Commit an OAuth 2.0 confidential client
 [**DeleteOAuth2Client**](OAuth2Api.md#DeleteOAuth2Client) | **Delete** /clients/{id} | Deletes an OAuth 2.0 Client
 [**FlushInactiveOAuth2Tokens**](OAuth2Api.md#FlushInactiveOAuth2Tokens) | **Post** /oauth2/flush | Flush Expired OAuth2 Access Tokens
 [**GetConsentRequest**](OAuth2Api.md#GetConsentRequest) | **Get** /oauth2/auth/requests/consent/{challenge} | Get consent request information
@@ -18,6 +18,7 @@ Method | HTTP request | Description
 [**ListUserConsentSessions**](OAuth2Api.md#ListUserConsentSessions) | **Get** /oauth2/auth/sessions/consent/{user} | Lists all consent sessions of a user
 [**OauthAuth**](OAuth2Api.md#OauthAuth) | **Get** /oauth2/auth | The OAuth 2.0 authorize endpoint
 [**OauthToken**](OAuth2Api.md#OauthToken) | **Post** /token | The OAuth 2.0 token endpoint
+[**PutOAuth2Client**](OAuth2Api.md#PutOAuth2Client) | **Put** /clients | Create or update an OAuth 2.0 client
 [**RejectConsentRequest**](OAuth2Api.md#RejectConsentRequest) | **Put** /oauth2/auth/requests/consent/{challenge}/reject | Reject an consent request
 [**RejectLoginRequest**](OAuth2Api.md#RejectLoginRequest) | **Put** /oauth2/auth/requests/login/{challenge}/reject | Reject a login request
 [**RevokeAllUserConsentSessions**](OAuth2Api.md#RevokeAllUserConsentSessions) | **Delete** /oauth2/auth/sessions/consent/{user} | Revokes all previous consent sessions of a user
@@ -25,10 +26,8 @@ Method | HTTP request | Description
 [**RevokeOAuth2Token**](OAuth2Api.md#RevokeOAuth2Token) | **Post** /revoke | Revoke OAuth2 tokens
 [**RevokeUserClientConsentSessions**](OAuth2Api.md#RevokeUserClientConsentSessions) | **Delete** /oauth2/auth/sessions/consent/{user}/{client} | Revokes consent sessions of a user for a specific OAuth 2.0 Client
 [**RevokeUserLoginCookie**](OAuth2Api.md#RevokeUserLoginCookie) | **Get** /oauth2/auth/sessions/login/revoke | Logs user out by deleting the session cookie
-[**UpdateOAuth2Client**](OAuth2Api.md#UpdateOAuth2Client) | **Put** /clients/{id} | Update an OAuth 2.0 Client
 [**Userinfo**](OAuth2Api.md#Userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 [**WellKnown**](OAuth2Api.md#WellKnown) | **Get** /jwks.json | Get Well-Known JSON Web Keys
-[**SaveOAuth2Client**](OAuth2Api.md#SaveOAuth2Client) | **Post** /clients | Save an OAuth 2.0 Client to storage
 
 
 # **AcceptConsentRequest**
@@ -91,24 +90,21 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **CreateOAuth2Client**
-> OAuth2Client CreateOAuth2Client($body)
+# **CommitOAuth2Client**
+> OAuth2Client CommitOAuth2Client($body)
 
-Create an OAuth 2.0 client
-
-OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
-
+Commit an OAuth 2.0 confidential client
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**OAuth2Client**](OAuth2Client.md)|  |
- **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement | 
+ **cookies** | **map[string]string** |  |
+ **commitCode** | **string** | Token to commit the OAuth 2.0 confidential client | 
 
 ### Return type
 
-[**RegistrationResponse**](RegistrationResponse.md)
+[**CommitClientResponse**](CommitClientResponse.md)
 
 ### Authorization
 
@@ -435,6 +431,37 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **PutOAuth2Client**
+> OAuth2Client PutOAuth2Client($body)
+
+Create or update an OAuth 2.0 client
+
+OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | [**OAuth2Client**](OAuth2Client.md)|  |
+ **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement |
+ **authSrvPubJwk** | [**JsonWebKey**](JsonWebKey.md)| Auth Service's public JWK | 
+
+### Return type
+
+[**PutClientResponse**](PutClientResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **RejectConsentRequest**
 > CompletedRequest RejectConsentRequest($challenge, $body)
 
@@ -638,38 +665,6 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **UpdateOAuth2Client**
-> OAuth2Client UpdateOAuth2Client($id, $body)
-
-Update an OAuth 2.0 Client
-
-Update an existing OAuth 2.0 Client. If you pass `client_secret` the secret will be updated and returned via the API. This is the only time you will be able to retrieve the client secret, so write it down and keep it safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
-
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **string**|  | 
- **secret** | **string**| The secret of the OAuth 2.0 Client. |
- **body** | [**OAuth2Client**](OAuth2Client.md)|  | 
- **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement | 
-
-### Return type
-
-[**OAuth2Client**](oAuth2Client.md)
-
-### Authorization
-
-Require client credentials
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **Userinfo**
 > UserinfoResponse Userinfo()
 
@@ -714,34 +709,6 @@ This endpoint does not need any parameter.
 ### Authorization
 
 No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-# **SaveOAuth2Client**
-> SaveRegistrationResponse SaveOAuth2Client()
-
-Save an OAuth 2.0 Client to storage 
-
-Returns a JWS token containing the client_id and client_secret of this client signed by the oauth authorization server.
-
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **cookies** | **map[string]string**| Session cookie of the client |
- **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement |
-
-### Return type
-
-[**SaveRegistrationResponse**](SaveRegistrationResponse.md)
-
-### Authorization
-
-Require user credentials
 
 ### HTTP request headers
 

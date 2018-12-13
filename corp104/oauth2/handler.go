@@ -60,11 +60,8 @@ const (
 
 	ServiceDocURL    = "https://github.com/104corp/vip3-auth"
 	CheckSessionPath = "/check-session"
-	ResourceSetPath  = "/resource-set"
 
 	EndSessionPath = "/oauth2/auth/sessions/login/revoke"
-
-	OAuthServerMetadataKeyName = "oauth.server-metadata"
 )
 
 type SignedMetadata struct {
@@ -244,25 +241,25 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 	}
 
 	claims := (&WellKnown{
-		Issuer:               strings.TrimRight(h.IssuerURL, "/") + "/",
-		JWKsURI:              strings.TrimRight(h.IssuerURL, "/") + JWKPath,
-		ServiceDocumentation: ServiceDocURL,
-		AuthURL:              strings.TrimRight(h.IssuerURL, "/") + AuthPath,
-		TokenURL:             strings.TrimRight(h.IssuerURL, "/") + TokenPath,
-		RegistrationEndpoint: strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
-		RevocationEndpoint:   strings.TrimRight(h.IssuerURL, "/") + RevocationPath,
-		CheckSessionIFrame:   strings.TrimRight(h.IssuerURL, "/") + CheckSessionPath,
-		EndSessionEndpoint:								 strings.TrimRight(h.IssuerURL, "/") + EndSessionPath,
-		ScopesSupported:                   				 scopesSupported,
-		ResponseTypes:                     				 []string{"id_token", "token"},
-		GrantTypesSupported:               				 []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
-		TokenEndpointAuthMethodsSupported: 				 []string{"private_key_jwt"},
-		TokenEndpointAuthSigningAlgValuesSupported: 	 []string{"ES256"},
-		RevocationEndpointAuthMethodsSupported:			 []string{"private_key_jwt"},
+		Issuer:                            strings.TrimRight(h.IssuerURL, "/") + "/",
+		JWKsURI:                           strings.TrimRight(h.IssuerURL, "/") + JWKPath,
+		ServiceDocumentation:              ServiceDocURL,
+		AuthURL:                           strings.TrimRight(h.IssuerURL, "/") + AuthPath,
+		TokenURL:                          strings.TrimRight(h.IssuerURL, "/") + TokenPath,
+		RegistrationEndpoint:              strings.TrimRight(h.IssuerURL, "/") + client.ClientsHandlerPath,
+		RevocationEndpoint:                strings.TrimRight(h.IssuerURL, "/") + RevocationPath,
+		CheckSessionIFrame:                strings.TrimRight(h.IssuerURL, "/") + CheckSessionPath,
+		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + EndSessionPath,
+		ScopesSupported:                   scopesSupported,
+		ResponseTypes:                     []string{"id_token", "token"},
+		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
+		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt"},
+		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
+		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},
 		RevocationEndpointAuthSigningAlgValuesSupported: []string{"ES256"},
-		IDTokenSigningAlgValuesSupported:  				 []string{"ES256"},
-		RequestParameterSupported:         				 true,
-		RequestObjectSigningAlgValuesSupported: 		 []string{"ES256"},
+		IDTokenSigningAlgValuesSupported:                []string{"ES256"},
+		RequestParameterSupported:                       true,
+		RequestObjectSigningAlgValuesSupported:          []string{"ES256"},
 	}).ToMapClaims()
 
 	metaStrategy := h.OAuthServerMetadataStrategy
