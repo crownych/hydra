@@ -130,7 +130,7 @@ services:
       - "./mock-dep/mappings:/wiremock/mappings"
 
   mta:
-    image: mta:latest
+    image: clifflu/ses-wrapper
     ports:
       - 10025:10025
     environment:
