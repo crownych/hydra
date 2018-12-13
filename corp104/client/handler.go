@@ -29,8 +29,8 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
 	"gopkg.in/square/go-jose.v2"
+	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -104,7 +104,7 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       403: genericError
 //       500: genericError
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	bodyMap, err := pkg.GetJWTMapFromRequestBody(r)
+	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -203,65 +203,6 @@ func (h *Handler) Commit(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 	h.H.WriteCode(w, r, http.StatusOK, &resp)
 }
-
-/*
-// swagger:route POST /clients oAuth2 createOAuth2Client
-//
-// Create an OAuth 2.0 client
-//
-// Create a new OAuth 2.0 client If you pass `client_secret` the secret will be used, otherwise a random secret will be generated. The secret will be returned in the response and you will not be able to retrieve it later on. Write the secret down and keep it somwhere safe.
-//
-// OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
-//
-//
-//     Consumes:
-//     - application/json
-//
-//     Produces:
-//     - application/json
-//
-//     Schemes: http, https
-//
-//     Responses:
-//       200: oAuth2Client
-//       401: genericError
-//       403: genericError
-//       500: genericError
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	bodyMap, err := pkg.GetJWTMapFromRequestBody(r)
-	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
-		return
-	}
-
-	isConfidential := false
-
-	// Get payload
-	jweToken := ""
-	swStatement := bodyMap[SoftwareStatementField]
-	if swStatement != nil {
-		jweToken = swStatement.(string)
-	} else {
-		signedCredential := bodyMap[SignedCredentialsField]
-		if signedCredential != nil {
-			jweToken = signedCredential.(string)
-			isConfidential = true
-		}
-	}
-
-	decryptedMsg, authSrvPrivateKey, err := h.decryptJWE(r.Context(), []byte(jweToken))
-	if err != nil {
-		h.H.WriteError(w, r, err)
-		return
-	}
-
-	if isConfidential {
-		h.processSignedCredentials(w, r, decryptedMsg, authSrvPrivateKey)
-	} else {
-		h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
-	}
-}
-*/
 
 // swagger:route GET /clients oAuth2 listOAuth2Clients
 //
@@ -432,11 +373,11 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 	} else {
 		commitCode := uuid.New()
 		if viper.GetBool("TEST_MODE") {
-			os.Setenv("COMMIT_CODE", commitCode)
+			viper.Set("COMMIT_CODE", commitCode)
 		}
 		saveSessionValue(r, ClientsCommitCodeSessionKey, commitCode)
-		//TODO: Send email to user
-
+		// send email to user
+		h.sendCommitCode(stmt.Authentication.User+"@104.com.tw", commitCode)
 		h.H.WriteCode(w, r, http.StatusAccepted, &resp)
 	}
 }
@@ -580,4 +521,12 @@ func (h *Handler) getOfflinePrivateJWK(ctx context.Context) (*jose.JSONWebKey, e
 		}
 	}
 	return nil, errors.New("offline private key not found")
+}
+
+func (h *Handler) sendCommitCode(recipient, commitCode string) {
+	recipient = "crown.yang@104.com.tw"
+	_, err := pkg.SendTextMail(recipient, "Client註冊確認碼", "commit_code: "+commitCode)
+	if err != nil {
+		log.Println(fmt.Sprintf(`send commit_code to %s failed`, recipient))
+	}
 }

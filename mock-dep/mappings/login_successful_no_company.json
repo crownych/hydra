@@ -9,7 +9,7 @@
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ 'username': 'foo2@bar.com', 'password': 'foobar' }"
+        "equalToJson": "{ 'username': 'andrea.williams@104.com.tw', 'password': '123qwe' }"
       }
     ]
   },
@@ -21,7 +21,7 @@
     },
     "jsonBody": {
       "error": "",
-      "id": "123456"
+      "id": "40000"
     }
   }
 }

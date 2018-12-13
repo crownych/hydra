@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/ac/getInfoByCode/NjljNDJhZTEtNWYxNS00ZDU1LWFjOWEtZGIxM2ZmMmNiM2Yy"
+    "url": "/ac/isEmailAvailable/YWxleC5jaGFuZ0AxMDQuY29tLnR3"
   },
   "response": {
     "status": 200,
@@ -12,8 +12,7 @@
     "jsonBody": {
       "error": "",
       "data": {
-        "email": "available-email@104.com.tw",
-        "id": "12345678"
+        "available": "false"
       },
       "success": "true"
     }

@@ -1,7 +1,7 @@
 {
   "request": {
-    "method": "PUT",
-    "url": "/ac/getPasswordMailCode",
+    "method": "POST",
+    "url": "/login",
     "headers": {
       "Content-Type": {
         "equalTo": "application/json"
@@ -9,7 +9,7 @@
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ 'id': '12345678', 'email': 'available-email@104.com.tw' }"
+        "equalToJson": "{ 'username': 'alex.chang@104.com.tw', 'password': '123qwe' }"
       }
     ]
   },
@@ -21,12 +21,7 @@
     },
     "jsonBody": {
       "error": "",
-      "data": {
-        "id": "12345678",
-        "code": "69c42ae1-5f15-4d55-ac9a-db13ff2cb3f2",
-        "email": "available-email@104.com.tw"
-      },
-      "success": "true"
+      "id": "10000"
     }
   }
 }

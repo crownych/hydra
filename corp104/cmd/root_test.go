@@ -126,7 +126,7 @@ func TestExecute(t *testing.T) {
 		for i, v := range c.args {
 			envPrefix := "env:"
 			if strings.HasPrefix(v, envPrefix) {
-				c.args[i] = os.Getenv(strings.TrimPrefix(v, envPrefix))
+				c.args[i] = viper.GetString(strings.TrimPrefix(v, envPrefix))
 			}
 		}
 		c.args = append(c.args, []string{"--skip-tls-verify"}...)

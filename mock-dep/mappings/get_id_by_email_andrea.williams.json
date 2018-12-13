@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/ac/getIdByMail/YXZhaWxhYmxlLWVtYWlsQDEwNC5jb20udHc"
+    "url": "/ac/getIdByMail/YW5kcmVhLndpbGxpYW1zQDEwNC5jb20udHc="
   },
   "response": {
     "status": 200,
@@ -12,7 +12,7 @@
     "jsonBody": {
       "error": "",
       "data": {
-        "id": "12345678"
+        "id": "40000"
       },
       "success": "true"
     }

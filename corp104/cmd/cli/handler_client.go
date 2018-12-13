@@ -89,7 +89,7 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		err = json.NewDecoder(reader).Decode(&c)
 		pkg.Must(err, "Could not parse JSON: %s", err)
 
-		result, response, err := m.CreateOAuth2Client(c, signingJwk, getAuthServicePublicJWK(cmd))
+		result, response, err := m.PutOAuth2Client(c, signingJwk, getAuthServicePublicJWK(cmd))
 		checkResponse(response, err, http.StatusCreated)
 
 		/*

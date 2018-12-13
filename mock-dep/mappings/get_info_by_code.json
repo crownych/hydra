@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/company/Zm9vMkBiYXIuY29t"
+    "url": "/ac/getInfoByCode/NjljNDJhZTEtNWYxNS00ZDU1LWFjOWEtZGIxM2ZmMmNiM2Yy"
   },
   "response": {
     "status": 200,
@@ -11,7 +11,11 @@
     },
     "jsonBody": {
       "error": "",
-      "company": ["123"]
+      "data": {
+        "email": "alex.chang@104.com.tw",
+        "id": "10000"
+      },
+      "success": "true"
     }
   }
 }

@@ -33,7 +33,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 
@@ -367,6 +366,6 @@ func (h *Handler) initOffineJWK() {
 	c.GetLogger().Infoln(strings.Replace(mataPubKeyStr, `"`, `'`, -1))
 	c.GetLogger().Infoln(string(pemBytes))
 	if viper.GetBool("TEST_MODE") {
-		os.Setenv("OFFLINE_PUBLIC_KEY", mataPubKeyStr)
+		viper.Set("OFFLINE_PUBLIC_KEY", mataPubKeyStr)
 	}
 }

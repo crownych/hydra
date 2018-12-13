@@ -8,7 +8,6 @@ import (
 	"github.com/goincremental/negroni-sessions"
 	"github.com/ory/go-convenience/stringslice"
 	"github.com/ory/hydra/pkg"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -29,7 +28,6 @@ func validateADUser(adLoginURL, id, pwd string) error {
 	if adLoginURL == "" {
 		return errors.New("no AD login url")
 	}
-	log.Println("AD_LOGIN_URL:", adLoginURL)
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		SetBody(fmt.Sprintf("id=%s&pwd=%s&nat=1", id, pwd)).

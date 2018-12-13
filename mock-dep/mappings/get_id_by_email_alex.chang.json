@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/company/Zm9vMUBiYXIuY29t"
+    "url": "/ac/getIdByMail/YWxleC5jaGFuZ0AxMDQuY29tLnR3"
   },
   "response": {
     "status": 200,
@@ -11,7 +11,10 @@
     },
     "jsonBody": {
       "error": "",
-      "company": []
+      "data": {
+        "id": "10000"
+      },
+      "success": "true"
     }
   }
 }

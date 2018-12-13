@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/ac/isEmailAvailable/bm90LWF2YWlsYWJsZS1lbWFpbEAxMDQuY29tLnR3"
+    "url": "/ac/getIdByMail/YnJhbmRvbi5oYXJtb25AMTA0LmNvbS50dw=="
   },
   "response": {
     "status": 200,
@@ -12,7 +12,7 @@
     "jsonBody": {
       "error": "",
       "data": {
-        "available": "false"
+        "id": "20000"
       },
       "success": "true"
     }

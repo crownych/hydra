@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "POST",
-    "url": "/company",
+    "url": "/login",
     "headers": {
       "Content-Type": {
         "equalTo": "application/json"
@@ -9,19 +9,19 @@
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ 'companyName': 'Good Company', 'companyId': '123456789' }"
+        "equalToJson": "{ 'username': 'brandon.harmon@104.com.tw', 'password': '123qwe' }"
       }
     ]
   },
   "response": {
-    "status": 201,
+    "status": 200,
     "headers": {
       "Content-Type": "application/json; charset=UTF-8",
       "Cache-Control": "no-cache"
     },
     "jsonBody": {
       "error": "",
-      "companyId": "123456789"
+      "id": "20000"
     }
   }
 }
