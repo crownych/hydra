@@ -42,7 +42,7 @@ func init() {
 	clientManagers["memory"] = NewMemoryManager(&fosite.BCrypt{})
 }
 
-func _TestMain(m *testing.M) {
+func TestMain(m *testing.M) {
 	runner := dockertest.Register()
 
 	flag.Parse()
