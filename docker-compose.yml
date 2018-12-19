@@ -62,13 +62,13 @@ services:
       - OIDC_SUBJECT_TYPE_PAIRWISE_SALT=youReallyNeedToChangeThis
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
-      - BY_PASS_ROUTES=/clients,/forgot-password,/reset-password
+      - BY_PASS_ROUTES=/clients,/forgotPassword,/resetPassword
       - CORS_ENABLED=1
       - CORP_INTERNAL_API_URL=http://mock-dep:8080
       - AD_LOGIN_URL=http://mock-dep:8080/ad/login
       - GRAPHQL_API_URL=http://mbs:4000
       - EMAIL_SERVICE_URL=http://mta:10025
-      - RESET_PASSWORD_ROUTE=http://localhost:4200/resetPassword
+      - RESET_PASSWORD_ROUTE=http://localhost:4200/reset-password
     restart: on-failure
 
 #  consent:
