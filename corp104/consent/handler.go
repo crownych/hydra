@@ -55,8 +55,8 @@ const (
 	ConsentPath        = "/oauth2/auth/requests/consent"
 	SessionsPath       = "/oauth2/auth/sessions"
 	IdpPath            = "/idp"
-	ForgotPasswordPath = "/forgot-password"
-	ResetPasswordPath  = "/reset-password"
+	ForgotPasswordPath = "/forgotPassword"
+	ResetPasswordPath  = "/resetPassword"
 
 	ClientsMetadataSessionKey = "client_metadata"
 )
