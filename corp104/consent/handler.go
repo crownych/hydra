@@ -58,7 +58,7 @@ const (
 	ForgotPasswordPath = "/forgotPassword"
 	ResetPasswordPath  = "/resetPassword"
 
-	ClientsMetadataSessionKey = "client_metadata"
+	ClientMetadataSessionKey = "client_metadata"
 )
 
 func NewHandler(
@@ -879,7 +879,7 @@ func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string
 
 func (h *Handler) removeClientMetadataFromSession(r *http.Request) {
 	session := nSession.GetSession(r)
-	session.Delete(ClientsMetadataSessionKey)
+	session.Delete(ClientMetadataSessionKey)
 }
 
 func checkAuthUserPayload(json map[string]interface{}) error {

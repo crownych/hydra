@@ -48,8 +48,8 @@ type Client struct {
 	RedirectURIs []string `json:"redirect_uris"`
 
 	// GrantTypes is an array of grant types the client is allowed to use.
-	// Public Client 必須是 [“implicit”].
-	// Confidential Client 必須是 [“urn:ietf:params:oauth:grant-type:token-exchange”].
+	// Public Client 必須是 ["implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"].
+	// Confidential Client 必須是 ["urn:ietf:params:oauth:grant-type:jwt-bearer"].
 	GrantTypes []string `json:"grant_types"`
 
 	// ResponseTypes is an array of the OAuth 2.0 response type strings that the client can
@@ -183,9 +183,9 @@ func (c *Client) GetGrantTypes() fosite.Arguments {
 	// that it will restrict itself to using.
 	if len(c.GrantTypes) == 0 {
 		if c.IsPublic() {
-			return fosite.Arguments{"implicit"}
+			return fosite.Arguments{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"}
 		} else {
-			return fosite.Arguments{"urn:ietf:params:oauth:grant-type:token-exchange"}
+			return fosite.Arguments{"urn:ietf:params:oauth:grant-type:jwt-bearer"}
 		}
 	}
 	return fosite.Arguments(c.GrantTypes)

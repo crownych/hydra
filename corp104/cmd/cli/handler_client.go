@@ -108,7 +108,8 @@ func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 	m := h.newClientManager(cmd)
 	secret, _ := cmd.Flags().GetString("secret")
 
-	cc, signingJwk := getClientFromPutCmd(cmd)
+	endpoint, _ := cmd.Flags().GetString("endpoint")
+	cc, signingJwk := h.getClientFromPutCmd(cmd)
 	if secret != "" {
 		cc.ClientSecret = secret
 	}
@@ -136,7 +137,7 @@ func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 	} else {
 		checkResponse(response, err, http.StatusAccepted)
 		storeCookies(cc.ClientId, response.Cookies(), getEndpointHostname(h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd)))
-		fmt.Printf("\nRun \"hydra clients commit --id %s --commit-code <COMMIT_CODE>\" to complete client creation\n", cc.ClientId)
+		fmt.Printf("\nRun \"hydra clients commit --endpoint %s --id %s --commit-code <COMMIT_CODE>\" to complete client registration\n", endpoint, cc.ClientId)
 	}
 }
 
@@ -182,7 +183,7 @@ func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
 	fmt.Printf("%s\n", formatResponse(cl))
 }
 
-func getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
+func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
 	responseTypes, _ := cmd.Flags().GetStringSlice("response-types")
 	grantTypes, _ := cmd.Flags().GetStringSlice("grant-types")
 	allowedScopes, _ := cmd.Flags().GetStringSlice("scope")
@@ -232,9 +233,4 @@ func getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWeb
 	signingJwk := hydra.LoadJsonWebKey([]byte(signingJwkJSON))
 
 	return cc, signingJwk
-}
-
-func getAuthServicePublicJWK(cmd *cobra.Command) *hydra.JsonWebKey {
-	authSrvPubKeyJSON, _ := cmd.Flags().GetString("auth-public-jwk")
-	return hydra.LoadJsonWebKey([]byte(authSrvPubKeyJSON))
 }

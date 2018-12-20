@@ -184,7 +184,7 @@ func (a OAuth2Api) AcceptLoginRequest(challenge string, body AcceptLoginRequest)
  *
  * @param body
  * @param signingJwk
- * @return *OAuth2Client
+ * @return *PutClientResponse
  */
 func (a OAuth2Api) PutOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (*PutClientResponse, *APIResponse, error) {
 
@@ -523,7 +523,7 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
 	localVarPath := a.Configuration.BasePath + "/clients/{id}"
-	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
+	localVarPath = strings.Replace(localVarPath, "{id}", fmt.Sprintf("%v", id), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -581,7 +581,11 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
  *
  * @return *WellKnown
  */
-func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
+func (a OAuth2Api) GetWellKnown(authSrvPubJwk *JsonWebKey) (*WellKnown, *APIResponse, error) {
+	if authSrvPubJwk == nil {
+		return nil, nil, errors.New("auth service public key is required")
+	}
+
 	if authServerMetadata, found := a.Configuration.Cache.Get(CacheOAuthServerMetadata); found {
 		return authServerMetadata.(*WellKnown), nil, nil
 	}
@@ -645,11 +649,10 @@ func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
 	if err != nil {
 		return successPayload, localVarAPIResponse, err
 	}
-	jsonWebKey := a.WellKnownByKeyId(keyId)
-	if jsonWebKey == nil {
-		return successPayload, localVarAPIResponse, err
+	if keyId != authSrvPubJwk.Kid {
+		return successPayload, localVarAPIResponse, errors.New("invalid auth service public key")
 	}
-	srvJwk, _, err := convertToJwxJWK(jsonWebKey, true)
+	srvJwk, _, err := convertToJwxJWK(authSrvPubJwk, true)
 	if err != nil {
 		return successPayload, localVarAPIResponse, err
 	}
@@ -742,11 +745,16 @@ func (a OAuth2Api) IntrospectOAuth2Token(token string, scope string) (*OAuth2Tok
  * List OAuth 2.0 Clients
  * This endpoint lists all clients in the database, and never returns client secrets.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
+ * @param authSrvPubJwk The public key of auth service.
  * @param limit The maximum amount of policies returned.
  * @param offset The offset from where to start looking.
  * @return []OAuth2Client
  */
-func (a OAuth2Api) ListOAuth2Clients(limit int64, offset int64) ([]OAuth2Client, *APIResponse, error) {
+func (a OAuth2Api) ListOAuth2Clients(authSrvPubJwk *JsonWebKey, limit int64, offset int64) ([]OAuth2Client, *APIResponse, error) {
+
+	if authSrvPubJwk == nil {
+		return nil, nil, errors.New("auth service public key is required")
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -794,10 +802,19 @@ func (a OAuth2Api) ListOAuth2Clients(limit int64, offset int64) ([]OAuth2Client,
 		localVarAPIResponse.Payload = localVarHttpResponse.Body()
 	}
 
+	// 驗證 JWS 及取得 resources 內容
+	var payloadMap map[string]string
+	err = json.Unmarshal(localVarAPIResponse.Payload, &payloadMap)
 	if err != nil {
 		return *successPayload, localVarAPIResponse, err
 	}
-	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+	signedClients := payloadMap["signed_clients"]
+	rbuf, err := getSignedClaim("clients", signedClients, a.Configuration.BasePath, authSrvPubJwk)
+	if err != nil {
+		return *successPayload, localVarAPIResponse, err
+	}
+	err = json.Unmarshal(rbuf, &successPayload)
+
 	return *successPayload, localVarAPIResponse, err
 }
 
@@ -1422,84 +1439,6 @@ func (a OAuth2Api) RevokeUserLoginCookie() (*APIResponse, error) {
 }
 
 /**
- * Update an OAuth 2.0 Client
- * Update an existing OAuth 2.0 Client. If you pass &#x60;client_secret&#x60; the secret will be updated and returned via the API. This is the only time you will be able to retrieve the client secret, so write it down and keep it safe.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
- *
- * @param id
- * @param secret
- * @param body
- * @return *OAuth2Client
- */
-func (a OAuth2Api) UpdateOAuth2Client(id, secret string, body OAuth2Client, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (*OAuth2Client, *APIResponse, error) {
-
-	var localVarHttpMethod = strings.ToUpper("Put")
-	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/clients/{id}"
-	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
-
-	localVarHeaderParams := make(map[string]string)
-	localVarQueryParams := url.Values{}
-	localVarFormParams := make(map[string]string)
-	var localVarPostBody interface{}
-	var localVarFileName string
-	var localVarFileBytes []byte
-	// add default headers if any
-	for key := range a.Configuration.DefaultHeader {
-		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
-	}
-
-	// set Authorization header
-	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
-
-	// to determine the Content-Type header
-	localVarHttpContentTypes := []string{"application/json"}
-
-	// set Content-Type header
-	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
-	if localVarHttpContentType != "" {
-		localVarHeaderParams["Content-Type"] = localVarHttpContentType
-	}
-	// to determine the Accept header
-	localVarHttpHeaderAccepts := []string{
-		"application/json",
-	}
-
-	// set Accept header
-	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
-	if localVarHttpHeaderAccept != "" {
-		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
-	}
-
-	swStatement, err := a.createSoftwareStatement(body, signingJwk, authSrvPubJwk)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Create software_statement payload
-	postPayload := make(map[string]interface{})
-	postPayload["software_statement"] = swStatement
-
-	// body params
-	localVarPostBody = &postPayload
-	var successPayload = new(OAuth2Client)
-	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
-
-	var localVarURL, _ = url.Parse(localVarPath)
-	localVarURL.RawQuery = localVarQueryParams.Encode()
-	var localVarAPIResponse = &APIResponse{Operation: "UpdateOAuth2Client", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
-	if localVarHttpResponse != nil {
-		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
-		localVarAPIResponse.Payload = localVarHttpResponse.Body()
-	}
-
-	if err != nil {
-		return successPayload, localVarAPIResponse, err
-	}
-	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
-	return successPayload, localVarAPIResponse, err
-}
-
-/**
  * OpenID Connect Userinfo
  * This endpoint returns the payload of the ID Token, including the idTokenExtra values, of the provided OAuth 2.0 access token. The endpoint implements http://openid.net/specs/openid-connect-core-1_0.html#UserInfo .
  *
@@ -1657,7 +1596,7 @@ func (a OAuth2Api) GetAnyAuthServerPublicKey() (jwk.Key, crypto.PublicKey, error
  *
  * @param cookies session cookies
  * @param commitCode string
- * @return *RegistrationSavedResponse
+ * @return *CommitClientResponse
  */
 func (a OAuth2Api) CommitOAuth2Client(cookies map[string]string, commitCode string) (*CommitClientResponse, *APIResponse, error) {
 	if cookies == nil || len(cookies) == 0 {
@@ -1733,16 +1672,23 @@ func (a OAuth2Api) CommitOAuth2Client(cookies map[string]string, commitCode stri
 }
 
 func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (string, error) {
+	// server's key
+	if authSrvPubJwk == nil {
+		return "", errors.New("auth service public key is required")
+	}
 	serverPubJwk, serverPubKey, err := convertToJwxJWK(authSrvPubJwk, true)
 	if err != nil {
 		return "", err
 	}
-	// client's public key
+
+	// client's keys
+	if signingJwk == nil {
+		return "", errors.New("signing key is required")
+	}
 	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
 	if err != nil {
 		return "", err
 	}
-	// client's private key
 	_, signingKey, err := convertToJwxJWK(signingJwk, false)
 
 	// create and sign JWS of client's software statement

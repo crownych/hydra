@@ -113,8 +113,8 @@ type WellKnown struct {
 	// End Session Endpoint
 	EndSessionEndpoint string `json:"end_session_endpoint"`
 
-	// Resource Set Endpoint
-	ResourceSetEndpoint string `json:"resource_set_endpoint"`
+	// Resources Endpoint
+	ResourcesEndpoint string `json:"resources_endpoint"`
 
 	// JSON array containing a list of the OAuth 2.0 [RFC6749] scope values that this server supports. The server MUST
 	// support the openid scope value. Servers MAY choose not to advertise some supported scope values even when this parameter is used
@@ -171,7 +171,7 @@ func (w *WellKnown) ToMap() map[string]interface{} {
 	m["revocation_endpoint"] = w.RevocationEndpoint
 	m["check_session_iframe"] = w.CheckSessionIFrame
 	m["end_session_endpoint"] = w.EndSessionEndpoint
-	m["resource_set_endpoint"] = w.ResourceSetEndpoint
+	m["resources_endpoint"] = w.ResourcesEndpoint
 	m["scopes_supported"] = w.ScopesSupported
 	m["response_types_supported"] = w.ResponseTypes
 	m["grant_types_supported"] = w.GrantTypesSupported
@@ -250,9 +250,10 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 		RevocationEndpoint:                strings.TrimRight(h.IssuerURL, "/") + RevocationPath,
 		CheckSessionIFrame:                strings.TrimRight(h.IssuerURL, "/") + CheckSessionPath,
 		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + EndSessionPath,
+		ResourcesEndpoint:                 strings.TrimRight(h.IssuerURL, "/") + "/resources",
 		ScopesSupported:                   scopesSupported,
 		ResponseTypes:                     []string{"id_token", "token"},
-		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
+		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt"},
 		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
 		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},

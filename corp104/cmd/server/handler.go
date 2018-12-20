@@ -276,7 +276,7 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 
 	oauth2Provider := newOAuth2Provider(c)
 
-	h.initOffineJWK()
+	h.initOfflineJWK()
 
 	// Set up handlers
 	h.Clients = newClientHandler(c, frontend, clientsManager)
@@ -340,12 +340,13 @@ func (h *Handler) check(session sessions.Session) bool {
 	//return ok
 }
 
-func (h *Handler) initOffineJWK() {
+func (h *Handler) initOfflineJWK() {
 	c := h.Config
 
 	// 產生 JWKS
 	kid := uuid.New()
-	if _, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "private"); err != nil {
+	privKey, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "private")
+	if err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch offline private JWK`)
 	}
 	pubKey, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "public")
@@ -367,5 +368,10 @@ func (h *Handler) initOffineJWK() {
 	c.GetLogger().Infoln(string(pemBytes))
 	if viper.GetBool("TEST_MODE") {
 		viper.Set("OFFLINE_PUBLIC_KEY", mataPubKeyStr)
+		c.GetLogger().Infoln()
+		c.GetLogger().Infoln("Private JSON Web Key (offline)")
+		mataPrivKeyBytes, _ := privKey.MarshalJSON()
+		mataPrivKeyStr := string(mataPrivKeyBytes)
+		c.GetLogger().Infoln(strings.Replace(mataPrivKeyStr, `"`, `'`, -1))
 	}
 }

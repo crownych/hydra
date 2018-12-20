@@ -42,6 +42,7 @@ Example:
      --id "a3a89ca9-c54c-4731-8494-6c057a16a14c" \
      --name "my-app" \
      --grant-types "implicit" \
+     --grant-types "urn:ietf:params:oauth:grant-type:jwt-bearer" \
      --client-uri "http://myapp.com" \
 	 --contacts "admin@myapp.com" \
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
@@ -52,6 +53,7 @@ Example:
      --scope "openid" \
      --id-token-signed-response-alg "ES256" \
      --request-object-signing-alg "ES256" \
+	 --token-endpoint-auth-method "session" \
      --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}'
@@ -61,7 +63,7 @@ Example:
      --endpoint "http://localhost:4444" \
      --id "fa3030d2-9e16-4b7d-b27f-381e840175cb" \
      --name "my-app" \
-     --grant-types "urn:ietf:params:oauth:grant-type:token-exchange" \
+     --grant-types "urn:ietf:params:oauth:grant-type:jwt-bearer" \
      --client-uri "http://myapp.com" \
 	 --contacts "admin@myapp.com" \
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
@@ -70,8 +72,8 @@ Example:
 	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \ 
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \ 
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \ 
-     --ad-user foo.bar \
-	 --ad-pwd secret
+     --user foo.bar \
+	 --pwd secret
 
 
 `,
@@ -115,4 +117,5 @@ func init() {
 	clientsPutCmd.MarkFlagRequired("software-version")
 	clientsPutCmd.MarkFlagRequired("signing-jwk")
 	clientsPutCmd.MarkFlagRequired("auth-public-jwk")
+	clientsPutCmd.MarkFlagRequired("token-endpoint-auth-method")
 }

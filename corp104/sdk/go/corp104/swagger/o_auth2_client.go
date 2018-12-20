@@ -92,8 +92,5 @@ type OAuth2Client struct {
 }
 
 func (c OAuth2Client) IsPublic() bool {
-	if c.RedirectUris != nil && len(c.RedirectUris) > 0 {
-		return true
-	}
-	return false
+	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "session"
 }

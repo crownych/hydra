@@ -23,8 +23,6 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ory/hydra/pkg"
-	"github.com/spf13/viper"
 	"net/http"
 	"net/url"
 	"strings"
@@ -62,13 +60,14 @@ func NewValidator(
 
 func (v *Validator) Validate(c *Client) error {
 	checkFields := map[string]interface{}{
-		"client_id":        c.ClientID,
-		"client_name":      c.Name,
-		"client_uri":       c.ClientURI,
-		"grant_types":      c.GrantTypes,
-		"contacts":         c.Contacts,
-		"software_id":      c.SoftwareId,
-		"software_version": c.SoftwareVersion,
+		"client_id":                  c.ClientID,
+		"client_name":                c.Name,
+		"client_uri":                 c.ClientURI,
+		"grant_types":                c.GrantTypes,
+		"contacts":                   c.Contacts,
+		"software_id":                c.SoftwareId,
+		"software_version":           c.SoftwareVersion,
+		"token_endpoint_auth_method": c.TokenEndpointAuthMethod,
 	}
 	for k, fv := range checkFields {
 		if err := v.checkRequired(k, fv); err != nil {
@@ -119,12 +118,6 @@ func (v *Validator) Validate(c *Client) error {
 		}
 	}
 
-	if c.RedirectURIs != nil || c.ResponseTypes != nil {
-		if c.TokenEndpointAuthMethod == "" {
-			c.TokenEndpointAuthMethod = "session"
-		}
-	}
-
 	if c.IsPublic() {
 		if c.TokenEndpointAuthMethod != "session" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field token_endpoint_auth_method should be \"session\"."))
@@ -134,8 +127,8 @@ func (v *Validator) Validate(c *Client) error {
 			return err
 		}
 
-		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "implicit" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" only."))
+		if !(len(c.GrantTypes) == 2 && hasStrings(c.GrantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
 		}
 
 		if err := v.checkRequired("response_types", c.ResponseTypes); err != nil {
@@ -174,8 +167,8 @@ func (v *Validator) Validate(c *Client) error {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
 		}
 
-		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:token-exchange" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"urn:ietf:params:oauth:grant-type:token-exchange\" only."))
+		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"urn:ietf:params:oauth:grant-type:jwt-bearer\" only."))
 		}
 	}
 
@@ -245,17 +238,4 @@ func (v *Validator) checkRequired(field string, fieldValue interface{}) error {
 	}
 
 	return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field " + field + " must be set."))
-}
-
-func (v *Validator) validateAuthentication(authentication *Authentication) error {
-	if authentication == nil {
-		return pkg.NewBadRequestError("AD user credentials required.")
-	}
-	user := authentication.User
-	pwd := authentication.Pwd
-	if user == "" || pwd == "" {
-		return pkg.NewBadRequestError("invalid signed user credentials")
-	}
-	adLoginURL := viper.GetString("AD_LOGIN_URL")
-	return validateADUser(adLoginURL, user, pwd)
 }
