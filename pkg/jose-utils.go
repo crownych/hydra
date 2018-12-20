@@ -222,13 +222,13 @@ func GetContentFromJWS(compactJws string) (map[string]interface{}, map[string]in
 	return header, payload, nil
 }
 
-func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[string]string) (string, error) {
+func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[string]interface{}) (string, error) {
 	headers := &jws.StandardHeaders{}
 	headers.Set("alg", authSrvPrivateKey.Algorithm)
 	headers.Set("typ", "JWT")
 	headers.Set("kid", strings.Replace(authSrvPrivateKey.KeyID, "private:", "public:", 1))
 
-	claims := make(map[string]string)
+	claims := make(map[string]interface{})
 	for k, v := range keyValuePairs {
 		claims[k] = v
 	}
@@ -264,4 +264,31 @@ func DecryptJWE(compactJwe []byte, key interface{}) ([]byte, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+// 檢查 `kid` header 宣告的 key 是否有效，key 有效時解密回傳 payload
+func DecryptJWEByKid(compactJwe []byte, validKeySet *jose.JSONWebKeySet) ([]byte, *jose.JSONWebKey, error) {
+	if compactJwe == nil || len(compactJwe) == 0 {
+		return nil, nil, NewBadRequestError("empty payload")
+	}
+
+	// Extract kid from JWE header
+	kid, err := ExtractKidFromJWE(compactJwe)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Check private key from valid JWKS
+	keys := validKeySet.Key(kid)
+	if keys == nil || len(keys) == 0 {
+		pubKeyId := strings.Replace(kid, "private", "public", 1)
+		return nil, nil, NewBadRequestError(fmt.Sprintf("invalid public key (kid: %s)", pubKeyId))
+	}
+
+	// Decrypt JWE
+	decryptedMsg, err := DecryptJWE(compactJwe, keys[0].Key)
+	if err != nil {
+		return nil, nil, err
+	}
+	return decryptedMsg, &keys[0], nil
 }

@@ -1,13 +1,10 @@
 package client
 
-type SoftwareStatement struct {
-	Audience       string          `json:"aud"`
-	IssuedAt       int64           `json:"iat"`
-	Authentication *Authentication `json:"authentication,omitempty"`
-	Client         Client          `json:"client_metadata"`
-}
+import "github.com/ory/hydra/pkg"
 
-type Authentication struct {
-	User string `json:"ad_user,omitempty"`
-	Pwd  string `json:"ad_pwd,omitempty"`
+type SoftwareStatement struct {
+	Audience       string                 `json:"aud"`
+	IssuedAt       int64                  `json:"iat"`
+	Authentication *pkg.ADUserCredentials `json:"authentication,omitempty"`
+	Client         Client                 `json:"client_metadata"`
 }

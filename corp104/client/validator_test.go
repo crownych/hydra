@@ -52,17 +52,18 @@ func TestValidate(t *testing.T) {
 		{
 			// public client
 			in: &Client{
-				ClientID: uuid.New(),
-				RedirectURIs: []string{"https://localhost/login/cb"},
-				GrantTypes: []string{"implicit"},
-				ResponseTypes: []string{"token", "id_token"},
-				Name: "SPA",
-				ClientURI: "https://localhost/spa",
-				Contacts: []string{"周星馳(星輝海外有限公司)"},
-				SoftwareId: "4d51529c-37cd-424c-ba19-cba742d60903",
-				SoftwareVersion: "0.0.1",
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				ResponseTypes:                  []string{"token", "id_token"},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
 				IdTokenSignedResponseAlgorithm: "ES256",
-				RequestObjectSigningAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "session",
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)
@@ -77,20 +78,20 @@ func TestValidate(t *testing.T) {
 				JSONWebKeys: &jose.JSONWebKeySet{
 					Keys: []jose.JSONWebKey{
 						{
-							Key: &ecTestKey256.PublicKey,
-							KeyID: "public:" + uuid.New(),
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
 							Algorithm: "ES256",
-							Use: "sig",
+							Use:       "sig",
 						},
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes: []string{"urn:ietf:params:oauth:grant-type:token-exchange"},
-				Name: "foo",
-				ClientURI: "https://localhost/client",
-				Contacts: []string{"周星馳(星輝海外有限公司)"},
-				SoftwareId: "4d51529c-37cd-424c-ba19-cba742d60903",
-				SoftwareVersion: "0.0.1",
+				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.Equal(t, c.GetID(), c.ClientID)

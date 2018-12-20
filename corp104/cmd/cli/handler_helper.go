@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/cobra"
 	"net/http"
 	"net/url"
 	"os"
@@ -159,4 +160,9 @@ func parseUnixTimestamp(unixTimestamp string) time.Time {
 		panic(err)
 	}
 	return time.Unix(i, 0)
+}
+
+func getAuthServicePublicJWK(cmd *cobra.Command) *hydra.JsonWebKey {
+	authSrvPubKeyJSON, _ := cmd.Flags().GetString("auth-public-jwk")
+	return hydra.LoadJsonWebKey([]byte(authSrvPubKeyJSON))
 }

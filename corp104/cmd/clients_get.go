@@ -28,7 +28,7 @@ import (
 var clientsGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get an OAuth 2.0 Client",
-	Long: `This command retrieves an OAuth 2.0 Clients by its ID.
+	Long: `This command retrieves an OAuth 2.0 Client by its ID.
 
 Example:
   hydra clients get client-1 --secret secret`,

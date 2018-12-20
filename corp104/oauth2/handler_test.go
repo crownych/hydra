@@ -396,7 +396,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + oauth2.EndSessionPath,
 		ScopesSupported:                   []string{"openid"},
 		ResponseTypes:                     []string{"id_token", "token"},
-		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:token-exchange"},
+		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt"},
 		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
 		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},

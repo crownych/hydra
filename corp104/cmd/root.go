@@ -239,6 +239,9 @@ func initConfig() {
 	viper.BindEnv("RESET_PASSWORD_ROUTE")
 	viper.SetDefault("RESET_PASSWORD_ROUTE", "")
 
+	viper.BindEnv("TEST_MODE")
+	viper.SetDefault("TEST_MODE", false)
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf(`Config file not found because "%s"`, err)

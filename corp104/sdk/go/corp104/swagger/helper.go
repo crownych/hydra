@@ -282,3 +282,35 @@ func LoadJsonWebKey(signingJwkJSON []byte) *JsonWebKey {
 	}
 	return signingJwk
 }
+
+func getSignedClaim(claim, signedJws, issuer string, authSrvPubJwk *JsonWebKey) ([]byte, error) {
+	keyId, err := extractKeyIdFromHeader(signedJws)
+	if err != nil {
+		return nil, err
+	}
+	if keyId != authSrvPubJwk.Kid {
+		return nil, errors.New("invalid auth service public key")
+	}
+	srvJwk, _, err := convertToJwxJWK(authSrvPubJwk, true)
+	if err != nil {
+		return nil, err
+	}
+	claims, err := jws.VerifyWithJWK([]byte(signedJws), srvJwk)
+	if err != nil {
+		return nil, err
+	}
+
+	var claimMap map[string]interface{}
+	err = json.Unmarshal(claims, &claimMap)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimRight(claimMap["iss"].(string), "/") != strings.TrimRight(issuer, "/") {
+		return nil, errors.New("invalid issuer")
+	}
+	buf, err := json.Marshal(claimMap[claim])
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}

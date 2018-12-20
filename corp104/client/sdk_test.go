@@ -26,7 +26,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
@@ -116,7 +115,6 @@ func TestClientSDK(t *testing.T) {
 
 	router := httprouter.New()
 	handler.SetRoutes(router)
-	//mockOAuthServer(router, authSrvJwks)
 	n := negroni.New()
 	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
@@ -129,6 +127,7 @@ func TestClientSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
+	handler.IssuerURL = server.URL
 
 	// start mock server
 	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
@@ -233,13 +232,14 @@ func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2
 		ClientName:               prefix + "name",
 		ClientUri:                prefix + "uri",
 		Contacts:                 []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:               []string{"implicit"},
+		GrantTypes:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		ResponseTypes:            []string{"token", "id_token"},
 		RedirectUris:             []string{prefix + "redirect-url", prefix + "redirect-uri"},
 		SoftwareId:               prefix + "SPA",
 		SoftwareVersion:          prefix + "0.0.1",
 		IdTokenSignedResponseAlg: "ES256",
 		RequestObjectSigningAlg:  "ES256",
+		TokenEndpointAuthMethod:  "session",
 	}
 }
 
@@ -249,28 +249,12 @@ func createTestConfidentialClient(prefix string, pubJwk hydra.JsonWebKey) hydra.
 		ClientName:              prefix + "name",
 		ClientUri:               prefix + "uri",
 		Contacts:                []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:token-exchange"},
+		GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		TokenEndpointAuthMethod: "private_key_jwt",
 		SoftwareId:              prefix + "client1",
 		SoftwareVersion:         prefix + "0.0.1",
 		Jwks:                    &hydra.JsonWebKeySet{Keys: []hydra.JsonWebKey{pubJwk}},
 	}
-}
-
-func mockOAuthServer(r *httprouter.Router, jwks *jose.JSONWebKeySet) {
-	r.GET("/jwks.json", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		w.Header().Set("Content-Type", "application/json")
-		var keys []jose.JSONWebKey
-		for _, key := range jwks.Keys {
-			if key.IsPublic() {
-				keys = append(keys, key)
-			}
-		}
-		pubJwks := &jose.JSONWebKeySet{Keys: keys}
-		buf, _ := json.Marshal(pubJwks)
-
-		fmt.Fprint(w, string(buf))
-	})
 }
 
 func getClientSecretFromSignedCredentials(signedCredentials string) (string, error) {
