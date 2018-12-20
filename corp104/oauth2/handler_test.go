@@ -404,6 +404,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		IDTokenSigningAlgValuesSupported:                []string{"ES256"},
 		RequestParameterSupported:                       true,
 		RequestObjectSigningAlgValuesSupported:          []string{"ES256"},
+		ResourcesEndpoint:                               strings.TrimRight(h.IssuerURL, "/") + "/resources",
 	}).ToMap()
 
 	var signedMetadataResp oauth2.SignedMetadata
