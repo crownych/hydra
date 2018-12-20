@@ -23,6 +23,7 @@ package oauth2
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ory/hydra/corp104/resource"
 	"net/http"
 	"reflect"
 	"strings"
@@ -239,6 +240,9 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 	if h.ScopesSupported != "" {
 		scopesSupported = append(scopesSupported, strings.Split(h.ScopesSupported, ",")...)
 	}
+	resourceScopes, _ := h.ResourceManager.GetAllScopeNames()
+	fmt.Println("resourceScopes: ", resourceScopes)
+	scopesSupported = append(scopesSupported, resourceScopes...)
 
 	claims := (&WellKnown{
 		Issuer:                            strings.TrimRight(h.IssuerURL, "/") + "/",
@@ -250,7 +254,7 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request, _ htt
 		RevocationEndpoint:                strings.TrimRight(h.IssuerURL, "/") + RevocationPath,
 		CheckSessionIFrame:                strings.TrimRight(h.IssuerURL, "/") + CheckSessionPath,
 		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + EndSessionPath,
-		ResourcesEndpoint:                 strings.TrimRight(h.IssuerURL, "/") + "/resources",
+		ResourcesEndpoint:                 strings.TrimRight(h.IssuerURL, "/") + resource.ResourcesHandlerPath,
 		ScopesSupported:                   scopesSupported,
 		ResponseTypes:                     []string{"id_token", "token"},
 		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},

@@ -30,6 +30,7 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 )
 
@@ -71,4 +72,8 @@ func (m *MemoryBackend) Prefixes() []string {
 
 func (m *MemoryBackend) Ping() error {
 	return nil
+}
+
+func (m *MemoryBackend) NewResourceManager() resource.Manager {
+	return resource.NewMemoryManager()
 }

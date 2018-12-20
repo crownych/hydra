@@ -29,6 +29,7 @@ import (
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/sirupsen/logrus"
 )
@@ -65,4 +66,5 @@ type Handler struct {
 	ShareOAuth2Debug bool
 
 	OAuthServerMetadataStrategy jwk.JWTStrategy
+	ResourceManager             resource.Manager
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 )
 
@@ -48,6 +49,7 @@ type BackendConnector interface {
 	NewJWKManager(cipher *jwk.AEAD) jwk.Manager
 	Ping() error
 	Prefixes() []string
+	NewResourceManager() resource.Manager
 }
 
 func RegisterBackend(b BackendConnector) {

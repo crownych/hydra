@@ -29,7 +29,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/pborman/uuid"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -49,9 +48,11 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/health"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/metrics-middleware"
+	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/cors"
 	"github.com/spf13/cobra"
@@ -251,12 +252,13 @@ func serve(c *config.Config, cmd *cobra.Command, handler http.Handler, address s
 }
 
 type Handler struct {
-	Clients *client.Handler
-	Keys    *jwk.Handler
-	OAuth2  *oauth2.Handler
-	Consent *consent.Handler
-	Config  *config.Config
-	H       herodot.Writer
+	Clients   *client.Handler
+	Keys      *jwk.Handler
+	OAuth2    *oauth2.Handler
+	Consent   *consent.Handler
+	Config    *config.Config
+	H         herodot.Writer
+	Resources *resource.Handler
 }
 
 func NewHandler(c *config.Config, h herodot.Writer) *Handler {
@@ -276,13 +278,16 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 
 	oauth2Provider := newOAuth2Provider(c)
 
+	injectResourceManager(c)
+
 	h.initOfflineJWK()
 
 	// Set up handlers
 	h.Clients = newClientHandler(c, frontend, clientsManager)
 	h.Keys = newJWKHandler(c, frontend, backend)
 	h.Consent = newConsentHandler(c, frontend, backend)
-	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager)
+	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager, ctx.ResourceManager)
+	h.Resources = newResourceHandler(c, frontend, ctx.ResourceManager)
 	_ = newHealthHandler(c, frontend)
 }
 

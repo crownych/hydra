@@ -127,5 +127,11 @@ func TestBackendConnectors(t *testing.T) {
 			}
 			t.Errorf("did not find matching prefix for given backend uri")
 		})
+
+		t.Run(fmt.Sprintf("%s/NewResourceManager", tc.name), func(t *testing.T) {
+			if want := tc.b.NewResourceManager(); want == nil {
+				t.Errorf("expected non-nil result")
+			}
+		})
 	}
 }

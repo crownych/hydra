@@ -18,25 +18,22 @@
  * @license 	Apache-2.0
  */
 
-package config
+package resource
 
 import (
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/hydra/corp104/consent"
-	"github.com/ory/hydra/corp104/jwk"
-	"github.com/ory/hydra/corp104/resource"
-	"github.com/ory/hydra/pkg"
+	"context"
 )
 
-type Context struct {
-	Connection BackendConnector
+type Manager interface {
+	CreateResource(ctx context.Context, r *Resource) error
 
-	Hasher          fosite.Hasher
-	FositeStrategy  oauth2.CoreStrategy
-	FositeStore     pkg.FositeStorer
-	KeyManager      jwk.Manager
-	ConsentManager  consent.Manager
-	WebSession      *WebSession
-	ResourceManager resource.Manager
+	UpdateResource(ctx context.Context, r *Resource) error
+
+	DeleteResource(ctx context.Context, urn string) error
+
+	GetResource(ctx context.Context, urn string) (*Resource, error)
+
+	GetResources(ctx context.Context, limit, offset int) (map[string]Resource, error)
+
+	GetAllScopeNames() ([]string, error)
 }
