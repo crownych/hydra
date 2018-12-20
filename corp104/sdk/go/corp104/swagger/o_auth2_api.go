@@ -1726,3 +1726,358 @@ func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWe
 	}
 	return string(jweMsg), nil
 }
+
+/**
+ * Create or update an OAuth 2.0 resource
+ *
+ * @param body
+ * @param signingJwk
+ * @return *PutResourceResponse
+ */
+func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (*PutResourceResponse, *APIResponse, error) {
+
+	var localVarHttpMethod = http.MethodPut
+	// create path and map variables
+	localVarPath := a.Configuration.BasePath + "/resources"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := make(map[string]string)
+	var localVarPostBody interface{}
+	var localVarFileName string
+	var localVarFileBytes []byte
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+
+	// set Cookie header
+	localVarHttpHeaderCookies := make(map[string]string)
+
+	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
+	if localVarHttpHeaderCookie != "" {
+		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
+	}
+
+	statement, err := a.createResourceStatement(body, signingJwk, authSrvPubJwk)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create resource_statement payload
+	payload := make(map[string]interface{})
+	payload["resource_statement"] = statement
+
+	// body params
+	localVarPostBody = &payload
+	var successPayload = new(PutResourceResponse)
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "PutOAuth2Resource", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+	return successPayload, localVarAPIResponse, err
+}
+
+func (a OAuth2Api) createResourceStatement(body OAuth2Resource, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (string, error) {
+	// server's key
+	if authSrvPubJwk == nil {
+		return "", errors.New("auth service public key is required")
+	}
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(authSrvPubJwk, true)
+	if err != nil {
+		return "", err
+	}
+
+	// client's keys
+	if signingJwk == nil {
+		return "", errors.New("signing key is required")
+	}
+	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
+	if err != nil {
+		return "", err
+	}
+	_, signingKey, err := convertToJwxJWK(signingJwk, false)
+
+	// create and sign JWS of client's software statement
+	jwsHeaders := make(map[string]interface{})
+	jwsHeaders["alg"] = pubJwk.Algorithm()
+	jwsHeaders["typ"] = "resource-metadata+jwt"
+	jwsHeaders["jwk"] = pubJwk
+	bodyMap := map[string]interface{}{
+		"aud":               a.Configuration.BasePath,
+		"iat":               time.Now().UTC().Unix(),
+		"resource_metadata": body,
+	}
+	if a.Configuration.Username == "" || a.Configuration.Password == "" {
+		return "", errors.New("AD user credentials required")
+	}
+	bodyMap["authentication"] = map[string]string{
+		"ad_user": a.Configuration.Username,
+		"ad_pwd":  a.Configuration.Password,
+	}
+
+	payload, err := json.Marshal(&bodyMap)
+	if err != nil {
+		return "", err
+	}
+	jwsMsg, err := jwsSign(jwsHeaders, payload, signingKey)
+	if err != nil {
+		return "", err
+	}
+
+	// create JWE using server's public key
+	jweMsg, err := jweEncrypt(jwsMsg, serverPubKey, serverPubJwk.KeyID())
+	if err != nil {
+		return "", err
+	}
+	return string(jweMsg), nil
+}
+
+/**
+ * Commit an OAuth 2.0 resource
+ *
+ * @param cookies session cookies
+ * @param commitCode string
+ * @return *CommitResourceResponse
+ */
+func (a OAuth2Api) CommitOAuth2Resource(cookies map[string]string, commitCode string) (*CommitResourceResponse, *APIResponse, error) {
+	if cookies == nil || len(cookies) == 0 {
+		return nil, nil, errors.New("empty session cookies")
+	}
+
+	var localVarHttpMethod = http.MethodPut
+	// create path and map variables
+	localVarPath := a.Configuration.BasePath + "/resources/commit"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := make(map[string]string)
+	var localVarPostBody interface{}
+	var localVarFileName string
+	var localVarFileBytes []byte
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+
+	// set Cookie header
+	localVarHttpHeaderCookies := make(map[string]string)
+	for cookieName, cookieValue := range cookies {
+		localVarHttpHeaderCookies[cookieName] = cookieValue
+	}
+
+	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
+	if localVarHttpHeaderCookie != "" {
+		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
+	}
+
+	// body params
+	payload := map[string]string{"commit_code": commitCode}
+
+	localVarPostBody = &payload
+	var successPayload = new(CommitResourceResponse)
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "CommitOAuth2Resource", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+
+	return successPayload, localVarAPIResponse, err
+}
+
+/**
+ * Get an OAuth 2.0 resource.
+ * Get an OAUth 2.0 resource by its URN.
+ *
+ * @param urn The urn of the OAuth 2.0 Resource.
+ * @return *OAuth2Resource
+ */
+func (a OAuth2Api) GetOAuth2Resource(urn string) (*OAuth2Resource, *APIResponse, error) {
+	if urn == "" {
+		return nil, nil, errors.New("require resource URN")
+	}
+
+	var localVarHttpMethod = http.MethodGet
+	// create path and map variables
+	localVarPath := a.Configuration.BasePath + "/resources/{urn}"
+	localVarPath = strings.Replace(localVarPath, "{urn}", fmt.Sprintf("%v", urn), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := make(map[string]string)
+	var localVarPostBody interface{}
+	var localVarFileName string
+	var localVarFileBytes []byte
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+	var successPayload = new(OAuth2Resource)
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "GetOAuth2Resource", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	if err != nil {
+		return successPayload, localVarAPIResponse, err
+	}
+	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+	return successPayload, localVarAPIResponse, err
+}
+
+/**
+ * List OAuth 2.0 Resources
+ * This endpoint lists all resources in the database.
+ *
+ * @param authSrvPubJwk The public key of auth service.
+ * @param limit The maximum amount of policies returned.
+ * @param offset The offset from where to start looking.
+ * @return []OAuth2Resource
+ */
+func (a OAuth2Api) ListOAuth2Resources(authSrvPubJwk *JsonWebKey, limit int64, offset int64) ([]OAuth2Resource, *APIResponse, error) {
+	if authSrvPubJwk == nil {
+		return nil, nil, errors.New("auth service public key is required")
+	}
+
+	var localVarHttpMethod = http.MethodGet
+	// create path and map variables
+	localVarPath := a.Configuration.BasePath + "/resources"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := make(map[string]string)
+	var localVarPostBody interface{}
+	var localVarFileName string
+	var localVarFileBytes []byte
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+	localVarQueryParams.Add("limit", a.Configuration.APIClient.ParameterToString(limit, ""))
+	localVarQueryParams.Add("offset", a.Configuration.APIClient.ParameterToString(offset, ""))
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+	var successPayload = new([]OAuth2Resource)
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "ListOAuth2Resources", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	// 驗證 JWS 及取得 resources 內容
+	var payloadMap map[string]string
+	err = json.Unmarshal(localVarAPIResponse.Payload, &payloadMap)
+	if err != nil {
+		return *successPayload, localVarAPIResponse, err
+	}
+	signedResources := payloadMap["signed_resources"]
+	rbuf, err := getSignedClaim("resources", signedResources, a.Configuration.BasePath, authSrvPubJwk)
+	if err != nil {
+		return *successPayload, localVarAPIResponse, err
+	}
+	err = json.Unmarshal(rbuf, &successPayload)
+
+	return *successPayload, localVarAPIResponse, err
+}

@@ -31,6 +31,7 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/sqlcon"
 )
@@ -91,4 +92,9 @@ func (s *SQLBackend) Prefixes() []string {
 func (s *SQLBackend) Ping() error {
 	expectDependency(s.l, s.db)
 	return s.db.Ping()
+}
+
+func (s *SQLBackend) NewResourceManager() resource.Manager {
+	expectDependency(s.l, s.db)
+	return &resource.SQLManager{DB: s.db}
 }

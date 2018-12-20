@@ -39,6 +39,7 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/tracing"
 	"github.com/pborman/uuid"
@@ -158,8 +159,8 @@ func setDefaultConsentURL(s string, c *config.Config, path string) string {
 }
 
 //func newOAuth2Handler(c *config.Config, router *httprouter.Router, cm oauth2.ConsentRequestManager, o fosite.OAuth2Provider, idTokenKeyID string) *oauth2.Handler {
-func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm consent.Manager, o fosite.OAuth2Provider, clm client.Manager) *oauth2.Handler {
-	expectDependency(c.GetLogger(), c.Context().FositeStore, clm)
+func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm consent.Manager, o fosite.OAuth2Provider, clm client.Manager, rm resource.Manager) *oauth2.Handler {
+	expectDependency(c.GetLogger(), c.Context().FositeStore, clm, rm)
 
 	c.ConsentURL = setDefaultConsentURL(c.ConsentURL, c, oauth2.DefaultConsentPath)
 	c.LoginURL = setDefaultConsentURL(c.LoginURL, c, oauth2.DefaultConsentPath)
@@ -220,6 +221,7 @@ func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm
 		//IDTokenLifespan:        c.GetIDTokenLifespan(),
 		ShareOAuth2Debug:            c.SendOAuth2DebugMessagesToClients,
 		OAuthServerMetadataStrategy: initOAuthServerMetadataStrategy(c),
+		ResourceManager:             rm,
 	}
 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, o.IntrospectToken, clm.GetConcreteClient)

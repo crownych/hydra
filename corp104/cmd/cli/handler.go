@@ -30,6 +30,7 @@ type Handler struct {
 	Introspection *IntrospectionHandler
 	Token         *TokenHandler
 	Migration     *MigrateHandler
+	Resources     *ResourceHandler
 }
 
 func NewHandler(c *config.Config) *Handler {
@@ -39,5 +40,6 @@ func NewHandler(c *config.Config) *Handler {
 		Introspection: newIntrospectionHandler(c),
 		Token:         newTokenHandler(c),
 		Migration:     newMigrateHandler(c),
+		Resources:     newResourceHandler(c),
 	}
 }

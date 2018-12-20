@@ -28,6 +28,11 @@ Method | HTTP request | Description
 [**RevokeUserLoginCookie**](OAuth2Api.md#RevokeUserLoginCookie) | **Get** /oauth2/auth/sessions/login/revoke | Logs user out by deleting the session cookie
 [**Userinfo**](OAuth2Api.md#Userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 [**WellKnown**](OAuth2Api.md#WellKnown) | **Get** /jwks.json | Get Well-Known JSON Web Keys
+[**CommitOAuth2Resource**](OAuth2Api.md#CommitOAuth2Resource) | **Put** /resources/commit | Commit an OAuth 2.0 Resource 
+[**GetOAuth2Resource**](OAuth2Api.md#GetOAuth2Resource) | **Get** /resources/{urn} | Get an OAuth 2.0 Resource
+[**ListOAuth2Resources**](OAuth2Api.md#ListOAuth2Resources) | **Get** /resources | List OAuth 2.0 Resources
+[**PutOAuth2Resource**](OAuth2Api.md#PutOAuth2Resource) | **Put** /resources | Create or update an OAuth 2.0 Resource
+
 
 
 # **AcceptConsentRequest**
@@ -91,7 +96,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **CommitOAuth2Client**
-> OAuth2Client CommitOAuth2Client($body)
+> CommitClientResponse CommitOAuth2Client($cookies, $commitCode)
 
 Commit an OAuth 2.0 confidential client
 
@@ -321,7 +326,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **ListOAuth2Clients**
-> []OAuth2Client ListOAuth2Clients($limit, $offset)
+> []OAuth2Client ListOAuth2Clients($authSrvPubJwk, $limit, $offset)
 
 List OAuth 2.0 Clients
 
@@ -332,6 +337,7 @@ This endpoint lists all clients in the database, and never returns client secret
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **authSrvPubJwk** | **JsonWebKey**| The public key of the auth service. |
  **limit** | **int64**| The maximum amount of policies returned. | [optional] 
  **offset** | **int64**| The offset from where to start looking. | [optional] 
 
@@ -432,7 +438,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **PutOAuth2Client**
-> OAuth2Client PutOAuth2Client($body)
+> PutClientResponse PutOAuth2Client($body)
 
 Create or update an OAuth 2.0 client
 
@@ -705,6 +711,121 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**JsonWebKeySet**](JSONWebKeySet.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **CommitOAuth2Resource**
+> CommitResourceResponse CommitOAuth2Resource($cookies, $commieCode)
+
+Commit an OAuth 2.0 Resource
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cookies** | **map[string]string** |  |
+ **commitCode** | **string** | Token to commit the OAuth 2.0 resource | 
+
+### Return type
+
+[**CommitResourceResponse**](CommitResourceResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **GetOAuth2Resource**
+> OAuth2Resource GetOAuth2Resource($urn)
+
+Get an OAuth 2.0 Resource.
+
+Get an OAUth 2.0 resource by its URN.
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **urn** | **string**| The URN of the OAuth 2.0 Resource. | 
+ 
+### Return type
+
+[**OAuth2Resource**](oAuth2Resource.md)
+
+### Authorization
+
+Require client credentials
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **ListOAuth2Resources**
+> []OAuth2Resource ListOAuth2Resources($authSrvPubJwk, $limit, $offset)
+
+List OAuth 2.0 Resources
+
+This endpoint lists all resources in the database.
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **authSrvPubJwk** | **JsonWebKey**| The public key of the auth service. |
+ **limit** | **int64**| The maximum amount of policies returned. | [optional] 
+ **offset** | **int64**| The offset from where to start looking. | [optional] 
+ 
+### Return type
+
+[**[]OAuth2Resource**](oAuth2Resource.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **PutOAuth2Resource**
+> PutResourceResponse PutOAuth2Resource($body, $signingJwk, $authSrvPubJwk)
+
+Create or update an OAuth 2.0 resource.
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | [**OAuth2Client**](OAuth2Client.md)|  |
+ **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing resource statement |
+ **authSrvPubJwk** | [**JsonWebKey**](JsonWebKey.md)| Auth Service's public JWK | 
+
+### Return type
+
+[**PutResourceResponse**](PutResourceResponse.md)
 
 ### Authorization
 

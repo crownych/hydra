@@ -149,6 +149,33 @@
   version = "v1.4.2"
 
 [[projects]]
+  digest = "1:709292c015123a3bc69ea970dc9abd6667170e7fbf5cdeb10c6d14b250d3385f"
+  name = "github.com/go-playground/locales"
+  packages = [
+    ".",
+    "currency",
+  ]
+  pruneopts = ""
+  revision = "f63010822830b6fe52288ee52d5a1151088ce039"
+  version = "v0.12.1"
+
+[[projects]]
+  digest = "1:7ca0f6f2a364f603e843763d35c979b595d71159982791de27f9ec40d532876b"
+  name = "github.com/go-playground/universal-translator"
+  packages = ["."]
+  pruneopts = ""
+  revision = "b32fa301c9fe55953584134cb6853a13c87ec0a1"
+  version = "v0.16.0"
+
+[[projects]]
+  digest = "1:696eb9b26a92eaf8409085e03d4c0344112c86702ce9fe31a60c5a090c30c762"
+  name = "github.com/go-playground/validator"
+  packages = ["."]
+  pruneopts = ""
+  revision = "0277b12d53df79c9dbf7311cb07fa9c81ed621bb"
+  version = "v9.24.0"
+
+[[projects]]
   digest = "1:70c1e241bb9beaf46a8d7562dd046fcb048717513d7a93f63f32ff3153338d5d"
   name = "github.com/go-resty/resty"
   packages = ["."]
@@ -297,6 +324,14 @@
   pruneopts = ""
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
   version = "v1.1"
+
+[[projects]]
+  digest = "1:69979393fd313159f0eccc6bc260164c8796ef3cbacb943f8ad0bf272b2a5dff"
+  name = "github.com/leodido/go-urn"
+  packages = ["."]
+  pruneopts = ""
+  revision = "70078a794e8ea4b497ba7c19a78cd60f90ccf0f4"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -959,6 +994,7 @@
     "github.com/docker/docker/api/types/mount",
     "github.com/docker/docker/client",
     "github.com/docker/go-connections/nat",
+    "github.com/go-playground/validator",
     "github.com/go-resty/resty",
     "github.com/go-sql-driver/mysql",
     "github.com/goincremental/negroni-sessions",

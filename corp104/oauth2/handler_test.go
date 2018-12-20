@@ -43,6 +43,7 @@ import (
 	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -372,6 +373,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		IssuerURL:                   "https://auth.v3.104.com.tw",
 		SubjectTypes:                []string{"public"},
 		OAuthServerMetadataStrategy: metadataStrategy,
+		ResourceManager:             resource.NewMemoryManager(),
 	}
 
 	r := httprouter.New()
@@ -394,6 +396,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		RevocationEndpoint:                strings.TrimRight(h.IssuerURL, "/") + oauth2.RevocationPath,
 		CheckSessionIFrame:                strings.TrimRight(h.IssuerURL, "/") + oauth2.CheckSessionPath,
 		EndSessionEndpoint:                strings.TrimRight(h.IssuerURL, "/") + oauth2.EndSessionPath,
+		ResourcesEndpoint:                 strings.TrimRight(h.IssuerURL, "/") + resource.ResourcesHandlerPath,
 		ScopesSupported:                   []string{"openid"},
 		ResponseTypes:                     []string{"id_token", "token"},
 		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
@@ -404,7 +407,6 @@ func TestHandlerWellKnown(t *testing.T) {
 		IDTokenSigningAlgValuesSupported:                []string{"ES256"},
 		RequestParameterSupported:                       true,
 		RequestObjectSigningAlgValuesSupported:          []string{"ES256"},
-		ResourcesEndpoint:                               strings.TrimRight(h.IssuerURL, "/") + "/resources",
 	}).ToMap()
 
 	var signedMetadataResp oauth2.SignedMetadata

@@ -44,4 +44,10 @@ func _TestOAuth2API(t *testing.T) {
 		assert.NoError(t, err)
 		fmt.Println("clients: ", clients)
 	})
+
+	t.Run("case=get oauth 2.0 resources", func(t *testing.T) {
+		resources, _, err := oauth2Api.ListOAuth2Resources(authSrvPubKey, 100, 0)
+		assert.NoError(t, err)
+		fmt.Println("resources: ", resources)
+	})
 }
