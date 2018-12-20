@@ -22,7 +22,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/ory/hydra/corp104/resource"
 	"net/url"
 	"os"
 	"strings"
@@ -34,6 +33,7 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
