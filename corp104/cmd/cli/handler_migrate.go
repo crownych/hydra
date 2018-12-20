@@ -22,6 +22,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/ory/hydra/corp104/resource"
 	"net/url"
 	"os"
 	"strings"
@@ -167,10 +168,11 @@ func (h *MigrateHandler) MigrateSQL(cmd *cobra.Command, args []string) {
 func (h *MigrateHandler) runMigrateSQL(db *sqlx.DB) error {
 	var total int
 	for k, m := range map[string]schemaCreator{
-		"client":  &client.SQLManager{DB: db},
-		"oauth2":  &oauth2.FositeSQLStore{DB: db},
-		"jwk":     &jwk.SQLManager{DB: db},
-		"consent": consent.NewSQLManager(db, nil, nil),
+		"client":   &client.SQLManager{DB: db},
+		"oauth2":   &oauth2.FositeSQLStore{DB: db},
+		"jwk":      &jwk.SQLManager{DB: db},
+		"consent":  consent.NewSQLManager(db, nil, nil),
+		"resource": &resource.SQLManager{DB: db},
 	} {
 		fmt.Printf("Applying `%s` SQL migrations...\n", k)
 		if num, err := m.CreateSchemas(); err != nil {
