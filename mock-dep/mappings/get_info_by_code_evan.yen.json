@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ac/getInfoByCode/Y2UwMzk0N2QtMTJmMy00NzM2LTkwNWEtMWEwYmZjMjBiOTI1"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "data": {
+        "email": "evan.yen@104.com.tw",
+        "id": "90000",
+        "expireEpoch": 1346992000
+      },
+      "success": "true"
+    }
+  }
+}
