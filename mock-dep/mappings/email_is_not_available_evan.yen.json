@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/ac/getInfoByCode/NjljNDJhZTEtNWYxNS00ZDU1LWFjOWEtZGIxM2ZmMmNiM2Yy"
+    "url": "/ac/isEmailAvailable/ZXZhbi55ZW5AMTA0LmNvbS50dw"
   },
   "response": {
     "status": 200,
@@ -12,8 +12,7 @@
     "jsonBody": {
       "error": "",
       "data": {
-        "email": "alex.chang@104.com.tw",
-        "id": "10000"
+        "available": "false"
       },
       "success": "true"
     }

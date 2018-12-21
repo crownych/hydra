@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ac/getInfoByCode/NjljNDJhZTEtNWYxNS00ZDU1LWFjOWEtZGIxM2ZmMmNiM2Yy"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache"
+    },
+    "jsonBody": {
+      "error": "",
+      "data": {
+        "email": "alex.chang@104.com.tw",
+        "id": "10000",
+        "expireEpoch": 1546992000
+      },
+      "success": "true"
+    }
+  }
+}
