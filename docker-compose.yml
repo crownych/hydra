@@ -63,12 +63,19 @@ services:
       - OAUTH2_ACCESS_TOKEN_STRATEGY=jwt
       - DISABLE_CONSENT_FLOW=1
       - BY_PASS_ROUTES=/clients,/forgotPassword,/resetPassword
-      - CORS_ENABLED=1
+      - DISABLE_TELEMETRY=1
+      - CORS_ENABLED=true
+#      - CORS_ALLOWED_ORIGINS=*
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,OPTIONS
+      - CORS_ALLOWED_CREDENTIALS=true
+#      - CORS_MAX_AGE=0
+      - CORS_DEBUG=true
       - CORP_INTERNAL_API_URL=http://mock-dep:8080
       - AD_LOGIN_URL=http://mock-dep:8080/ad/login
       - GRAPHQL_API_URL=http://mbs:4000
       - EMAIL_SERVICE_URL=http://mta:10025
       - RESET_PASSWORD_ROUTE=http://localhost:4200/reset-password
+      - TEST_MODE=1
     restart: on-failure
 
 #  consent:
