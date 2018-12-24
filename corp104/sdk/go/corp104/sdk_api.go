@@ -49,7 +49,7 @@ type OAuth2API interface {
 	GetConsentRequest(challenge string) (*swagger.ConsentRequest, *swagger.APIResponse, error)
 
 	PutOAuth2Client(body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey, authSrvPubJwk *swagger.JsonWebKey) (*swagger.PutClientResponse, *swagger.APIResponse, error)
-	DeleteOAuth2Client(id, secret string) (*swagger.APIResponse, error)
+	DeleteOAuth2Client(id string) (*swagger.APIResponse, error)
 	GetOAuth2Client(id, secret string) (*swagger.OAuth2Client, *swagger.APIResponse, error)
 	GetWellKnown(*swagger.JsonWebKey) (*swagger.WellKnown, *swagger.APIResponse, error)
 	IntrospectOAuth2Token(token string, scope string) (*swagger.OAuth2TokenIntrospection, *swagger.APIResponse, error)

@@ -74,12 +74,13 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) SetRoutes(r *httprouter.Router) {
-	r.GET(ClientsHandlerPath, h.List)
-	r.PUT(ClientsHandlerPath, h.Put)
-	r.PUT(ClientsHandlerPath+"/commit", h.Commit)
-	r.GET(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Get))
-	r.DELETE(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Delete))
+func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
+	backend.GET(ClientsHandlerPath, h.List)
+	frontend.Handler("OPTIONS", ClientsHandlerPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("PUT", ClientsHandlerPath, corsMiddleware(http.HandlerFunc(h.Put)))
+	frontend.PUT(ClientsHandlerPath+"/commit", h.Commit)
+	frontend.GET(ClientsHandlerPath+"/:id", h.checkClientCredentials(h.Get))
+	backend.DELETE(ClientsHandlerPath+"/:id", h.Delete)
 }
 
 // swagger:route PUT /clients oAuth2 putOAuth2Client
@@ -103,7 +104,7 @@ func (h *Handler) SetRoutes(r *httprouter.Router) {
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
@@ -529,3 +530,7 @@ func (h *Handler) getOfflinePrivateJWK(ctx context.Context) (*jose.JSONWebKey, e
 	}
 	return nil, errors.New("offline private key not found")
 }
+
+// This function will not be called, OPTIONS request will be handled by cors
+// this is just a placeholder.
+func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request) {}

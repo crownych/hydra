@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/viper"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	nSession "github.com/goincremental/negroni-sessions"
@@ -77,10 +78,13 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) SetRoutes(frontend, backend *httprouter.Router) {
-	backend.GET(LoginPath+"/:challenge", h.GetLoginRequest)
-	backend.PUT(LoginPath+"/:challenge/accept", h.AcceptLoginRequest)
-	backend.PUT(LoginPath+"/:challenge/reject", h.RejectLoginRequest)
+func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
+	frontend.Handler("OPTIONS", LoginPath+"/:challenge", corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("GET", LoginPath+"/:challenge", corsMiddleware(http.HandlerFunc(h.GetLoginRequest)))
+	frontend.Handler("OPTIONS", LoginPath+"/:challenge/accept", corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("PUT", LoginPath+"/:challenge/accept", corsMiddleware(http.HandlerFunc(h.AcceptLoginRequest)))
+	frontend.Handler("OPTIONS", LoginPath+"/:challenge/reject", corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("PUT", LoginPath+"/:challenge/reject", corsMiddleware(http.HandlerFunc(h.RejectLoginRequest)))
 
 	backend.GET(ConsentPath+"/:challenge", h.GetConsentRequest)
 	backend.PUT(ConsentPath+"/:challenge/accept", h.AcceptConsentRequest)
@@ -91,11 +95,15 @@ func (h *Handler) SetRoutes(frontend, backend *httprouter.Router) {
 	backend.DELETE(SessionsPath+"/consent/:user", h.DeleteUserConsentSession)
 	backend.DELETE(SessionsPath+"/consent/:user/:client", h.DeleteUserClientConsentSession)
 
-	frontend.GET(SessionsPath+"/login/revoke", h.LogoutUser)
+	frontend.Handler("OPTIONS", SessionsPath+"/login/revoke", corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("GET", SessionsPath+"/login/revoke", corsMiddleware(http.HandlerFunc(h.LogoutUser)))
 
-	frontend.POST(IdpPath, h.AuthUser)
-	frontend.POST(ForgotPasswordPath, h.ForgotPassword)
-	frontend.POST(ResetPasswordPath, h.ResetPassword)
+	frontend.Handler("OPTIONS", IdpPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("POST", IdpPath, corsMiddleware(http.HandlerFunc(h.AuthUser)))
+	frontend.Handler("OPTIONS", ForgotPasswordPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("POST", ForgotPasswordPath, corsMiddleware(http.HandlerFunc(h.ForgotPassword)))
+	frontend.Handler("OPTIONS", ResetPasswordPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("POST", ResetPasswordPath, corsMiddleware(http.HandlerFunc(h.ResetPassword)))
 }
 
 // swagger:route DELETE /oauth2/auth/sessions/consent/{user} oAuth2 revokeAllUserConsentSessions
@@ -269,8 +277,9 @@ func (h *Handler) DeleteLoginSession(w http.ResponseWriter, r *http.Request, ps 
 //       200: loginRequest
 //       401: genericError
 //       500: genericError
-func (h *Handler) GetLoginRequest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	request, err := h.M.GetAuthenticationRequest(r.Context(), ps.ByName("challenge"))
+func (h *Handler) GetLoginRequest(w http.ResponseWriter, r *http.Request) {
+	challenge := strings.TrimPrefix(r.URL.Path, LoginPath+"/")
+	request, err := h.M.GetAuthenticationRequest(r.Context(), challenge)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
@@ -311,7 +320,7 @@ func (h *Handler) GetLoginRequest(w http.ResponseWriter, r *http.Request, ps htt
 //       200: completedRequest
 //       401: genericError
 //       500: genericError
-func (h *Handler) AcceptLoginRequest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) AcceptLoginRequest(w http.ResponseWriter, r *http.Request) {
 	var p HandledAuthenticationRequest
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
@@ -320,8 +329,9 @@ func (h *Handler) AcceptLoginRequest(w http.ResponseWriter, r *http.Request, ps 
 		return
 	}
 
-	p.Challenge = ps.ByName("challenge")
-	ar, err := h.M.GetAuthenticationRequest(r.Context(), ps.ByName("challenge"))
+	challenge := strings.TrimPrefix(strings.TrimSuffix(r.URL.Path, "/accept"), LoginPath+"/")
+	p.Challenge = challenge
+	ar, err := h.M.GetAuthenticationRequest(r.Context(), challenge)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
@@ -340,7 +350,7 @@ func (h *Handler) AcceptLoginRequest(w http.ResponseWriter, r *http.Request, ps 
 	}
 	p.RequestedAt = ar.RequestedAt
 
-	request, err := h.M.HandleAuthenticationRequest(r.Context(), ps.ByName("challenge"), &p)
+	request, err := h.M.HandleAuthenticationRequest(r.Context(), challenge, &p)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return
@@ -386,7 +396,7 @@ func (h *Handler) AcceptLoginRequest(w http.ResponseWriter, r *http.Request, ps 
 //       200: completedRequest
 //       401: genericError
 //       500: genericError
-func (h *Handler) RejectLoginRequest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) RejectLoginRequest(w http.ResponseWriter, r *http.Request) {
 	var p RequestDeniedError
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
@@ -395,15 +405,16 @@ func (h *Handler) RejectLoginRequest(w http.ResponseWriter, r *http.Request, ps 
 		return
 	}
 
-	ar, err := h.M.GetAuthenticationRequest(r.Context(), ps.ByName("challenge"))
+	challenge := strings.TrimPrefix(strings.TrimSuffix(r.URL.Path, "/reject"), LoginPath+"/")
+	ar, err := h.M.GetAuthenticationRequest(r.Context(), challenge)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
 	}
 
-	request, err := h.M.HandleAuthenticationRequest(r.Context(), ps.ByName("challenge"), &HandledAuthenticationRequest{
+	request, err := h.M.HandleAuthenticationRequest(r.Context(), challenge, &HandledAuthenticationRequest{
 		Error:       &p,
-		Challenge:   ps.ByName("challenge"),
+		Challenge:   challenge,
 		RequestedAt: ar.RequestedAt,
 	})
 	if err != nil {
@@ -617,7 +628,7 @@ func (h *Handler) RejectConsentRequest(w http.ResponseWriter, r *http.Request, p
 //       302: emptyResponse
 //       404: genericError
 //       500: genericError
-func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request) {
 	sid, err := revokeAuthenticationCookie(w, r, h.CookieStore)
 	if err != nil {
 		h.H.WriteError(w, r, err)
@@ -637,7 +648,7 @@ func (h *Handler) LogoutUser(w http.ResponseWriter, r *http.Request, ps httprout
 	http.Redirect(w, r, h.LogoutRedirectURL, 302)
 }
 
-func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request) {
 
 	msg, err := h.verifyJWS(w, r, "signed_credentials", nil, checkAuthUserPayload)
 	if err != nil {
@@ -688,7 +699,7 @@ func (h *Handler) AuthUser(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 }
 
-func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	payload, err := pkg.GetValueFromRequestBody(r, "email")
 	if err != nil {
@@ -770,7 +781,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request, ps http
 	h.H.Write(w, r, map[string]interface{}{"ok": true})
 }
 
-func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
 		h.H.WriteError(w, r, err)
@@ -901,3 +912,7 @@ func checkRequired(fields []string, json map[string]interface{}) error {
 	}
 	return nil
 }
+
+// This function will not be called, OPTIONS request will be handled by cors
+// this is just a placeholder.
+func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request) {}

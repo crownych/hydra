@@ -52,7 +52,9 @@ func init() {
 	h.Manager.AddKeySet(context.TODO(), IDTokenKeyName, IDKS)
 	offlineKS, _ := testGenerator.Generate("test-offline-jwk", "sig")
 	h.Manager.AddKeySet(context.TODO(), "jwk.offline", offlineKS)
-	h.SetRoutes(router, router)
+	h.SetRoutes(router, router, func(h http.Handler) http.Handler {
+		return h
+	})
 	testServer = httptest.NewServer(router)
 }
 

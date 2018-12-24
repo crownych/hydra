@@ -114,7 +114,9 @@ func TestClientSDK(t *testing.T) {
 	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager, "http://localhost:4444", "jwk.offline")
 
 	router := httprouter.New()
-	handler.SetRoutes(router)
+	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {
+		return h
+	})
 	n := negroni.New()
 	store := cookiestore.New([]byte("secret"))
 	store.Options(sessions.Options{
@@ -207,14 +209,8 @@ func TestClientSDK(t *testing.T) {
 					require.EqualValues(t, updateClient.SoftwareVersion, c.SoftwareVersion)
 				})
 
-				t.Run("case=delete client with invalid client credentials", func(t *testing.T) {
-					response, err := c.DeleteOAuth2Client(createClient.ClientId, "wrong")
-					require.NoError(t, err)
-					require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
-				})
-
-				t.Run("case=delete client with valid client credentials", func(t *testing.T) {
-					response, err := c.DeleteOAuth2Client(createClient.ClientId, clientSecret)
+				t.Run("case=delete client", func(t *testing.T) {
+					response, err := c.DeleteOAuth2Client(createClient.ClientId)
 					require.NoError(t, err)
 					require.EqualValues(t, http.StatusNoContent, response.StatusCode)
 				})

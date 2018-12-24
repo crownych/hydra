@@ -283,9 +283,9 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 	h.initOfflineJWK()
 
 	// Set up handlers
-	h.Clients = newClientHandler(c, frontend, clientsManager)
-	h.Keys = newJWKHandler(c, frontend, backend)
-	h.Consent = newConsentHandler(c, frontend, backend)
+	h.Clients = newClientHandler(c, frontend, backend, clientsManager, oauth2Provider)
+	h.Keys = newJWKHandler(c, frontend, backend, oauth2Provider, clientsManager)
+	h.Consent = newConsentHandler(c, frontend, backend, oauth2Provider, clientsManager)
 	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager, ctx.ResourceManager)
 	h.Resources = newResourceHandler(c, frontend, ctx.ResourceManager)
 	_ = newHealthHandler(c, frontend)

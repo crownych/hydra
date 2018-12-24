@@ -264,18 +264,17 @@ func (a OAuth2Api) PutOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey, au
  * Delete an existing OAuth 2.0 Client by its ID.  OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. To manage ORY Hydra, you will need an OAuth 2.0 Client as well. Make sure that this endpoint is well protected and only callable by first-party components.
  *
  * @param id The id of the OAuth 2.0 Client.
- * @param secret The secret of the OAuth 2.0 Client.
  * @return void
  */
-func (a OAuth2Api) DeleteOAuth2Client(id, secret string) (*APIResponse, error) {
-	if id == "" || secret == "" {
-		return nil, errors.New("require client credentials")
+func (a OAuth2Api) DeleteOAuth2Client(id string) (*APIResponse, error) {
+	if id == "" {
+		return nil, errors.New("require client ID")
 	}
 
 	var localVarHttpMethod = strings.ToUpper("Delete")
 	// create path and map variables
 	localVarPath := a.Configuration.BasePath + "/clients/{id}"
-	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", fmt.Sprintf("%v", id), -1)
+	localVarPath = strings.Replace(localVarPath, "{id}", fmt.Sprintf("%v", id), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -287,9 +286,6 @@ func (a OAuth2Api) DeleteOAuth2Client(id, secret string) (*APIResponse, error) {
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
-
-	// set Authorization header
-	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}

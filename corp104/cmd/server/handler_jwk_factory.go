@@ -22,7 +22,12 @@ package server
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/spf13/viper"
+
+	"github.com/ory/fosite"
+	"github.com/ory/go-convenience/corsx"
 	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/config"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
@@ -36,7 +41,7 @@ func injectJWKManager(c *config.Config) {
 	})
 }
 
-func newJWKHandler(c *config.Config, frontend, backend *httprouter.Router) *jwk.Handler {
+func newJWKHandler(c *config.Config, frontend, backend *httprouter.Router, o fosite.OAuth2Provider, clm client.Manager) *jwk.Handler {
 	ctx := c.Context()
 	w := herodot.NewJSONWriter(c.GetLogger())
 	w.ErrorEnhancer = writerErrorEnhancer
@@ -53,6 +58,8 @@ func newJWKHandler(c *config.Config, frontend, backend *httprouter.Router) *jwk.
 		w,
 		wellKnown,
 	)
-	h.SetRoutes(frontend, backend)
+
+	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
+	h.SetRoutes(frontend, backend, corsMiddleware)
 	return h
 }
