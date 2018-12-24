@@ -71,8 +71,10 @@ func (h *Handler) GetGenerators() map[string]KeyGenerator {
 	return h.Generators
 }
 
-func (h *Handler) SetRoutes(frontend, backend *httprouter.Router) {
-	frontend.GET(WellKnownKeysPath, h.WellKnown)
+func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
+	frontend.Handler("OPTIONS", WellKnownKeysPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("GET", WellKnownKeysPath, corsMiddleware(http.HandlerFunc(h.WellKnown)))
+
 	backend.GET(KeyHandlerPath+"/:set/:key", h.GetKey)
 	backend.GET(KeyHandlerPath+"/:set", h.GetKeySet)
 
@@ -107,7 +109,7 @@ func (h *Handler) SetRoutes(frontend, backend *httprouter.Router) {
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) WellKnown(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) WellKnown(w http.ResponseWriter, r *http.Request) {
 	var jwks jose.JSONWebKeySet
 
 	for _, set := range h.WellKnownKeys {
@@ -390,3 +392,7 @@ func (h *Handler) DeleteKey(w http.ResponseWriter, r *http.Request, ps httproute
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// This function will not be called, OPTIONS request will be handled by cors
+// this is just a placeholder.
+func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request) {}

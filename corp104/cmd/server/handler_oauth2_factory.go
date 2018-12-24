@@ -32,6 +32,7 @@ import (
 	"github.com/ory/fosite/compose"
 	foauth2 "github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/handler/openid"
+	"github.com/ory/go-convenience/corsx"
 	"github.com/ory/go-convenience/stringslice"
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/client"
@@ -224,7 +225,7 @@ func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm
 		ResourceManager:             rm,
 	}
 
-	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, o.IntrospectToken, clm.GetConcreteClient)
+	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
 	handler.SetRoutes(frontend, backend, corsMiddleware)
 	return handler
 }

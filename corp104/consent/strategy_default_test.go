@@ -46,8 +46,8 @@ import (
 	"github.com/ory/fosite/token/jwt"
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/client"
-	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/pkg"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,7 +128,9 @@ func TestStrategy(t *testing.T) {
 	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
 	handler := NewHandler(writer, manager, cs, "https://www.ory.sh", keyManager)
 	router := httprouter.New()
-	handler.SetRoutes(router, router)
+	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {
+		return h
+	})
 	api := httptest.NewServer(router)
 
 	strategy := NewStrategy(
@@ -289,10 +291,10 @@ func TestStrategy(t *testing.T) {
 			expectErr:             []bool{true, true},
 		},
 		{
-			d:   "This should fail because consent verifier was set but does not exist",
-			jar: newCookieJar(),
-			cv:  "invalid",
-			req: fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
+			d:                     "This should fail because consent verifier was set but does not exist",
+			jar:                   newCookieJar(),
+			cv:                    "invalid",
+			req:                   fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
 			expectFinalStatusCode: http.StatusForbidden,
 			expectErrType:         []error{fosite.ErrAccessDenied},
 			expectErr:             []bool{true},
@@ -322,11 +324,11 @@ func TestStrategy(t *testing.T) {
 			expectErr:             []bool{true, true, true},
 		},
 		{
-			d:   "This should pass because login and consent have been granted",
-			req: fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
-			jar: newCookieJar(),
-			lph: passAuthentication(apiClient, false),
-			cph: passAuthorization(apiClient, false),
+			d:                     "This should pass because login and consent have been granted",
+			req:                   fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
+			jar:                   newCookieJar(),
+			lph:                   passAuthentication(apiClient, false),
+			cph:                   passAuthorization(apiClient, false),
 			expectFinalStatusCode: http.StatusOK,
 			expectErrType:         []error{ErrAbortOAuth2Request, ErrAbortOAuth2Request, nil},
 			expectErr:             []bool{true, true, false},
@@ -342,11 +344,11 @@ func TestStrategy(t *testing.T) {
 			},
 		},
 		{
-			d:   "This should pass because login and consent have been granted, this time we remember the decision",
-			req: fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
-			jar: persistentCJ,
-			lph: passAuthentication(apiClient, true),
-			cph: passAuthorization(apiClient, true),
+			d:                     "This should pass because login and consent have been granted, this time we remember the decision",
+			req:                   fosite.AuthorizeRequest{Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
+			jar:                   persistentCJ,
+			lph:                   passAuthentication(apiClient, true),
+			cph:                   passAuthorization(apiClient, true),
 			expectFinalStatusCode: http.StatusOK,
 			expectErrType:         []error{ErrAbortOAuth2Request, ErrAbortOAuth2Request, nil},
 			expectErr:             []bool{true, true, false},
@@ -422,11 +424,11 @@ func TestStrategy(t *testing.T) {
 			},
 		},
 		{
-			d:      "This should fail because prompt=none, client is public, and redirection scheme is not HTTPS but a custom scheme",
-			req:    fosite.AuthorizeRequest{RedirectURI: mustParseURL(t, "custom://redirection-scheme/path"), Request: fosite.Request{Client: &client.Client{TokenEndpointAuthMethod: "none", ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
-			prompt: "none",
-			jar:    persistentCJ,
-			lph:    passAuthentication(apiClient, false),
+			d:                     "This should fail because prompt=none, client is public, and redirection scheme is not HTTPS but a custom scheme",
+			req:                   fosite.AuthorizeRequest{RedirectURI: mustParseURL(t, "custom://redirection-scheme/path"), Request: fosite.Request{Client: &client.Client{TokenEndpointAuthMethod: "none", ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
+			prompt:                "none",
+			jar:                   persistentCJ,
+			lph:                   passAuthentication(apiClient, false),
 			expectFinalStatusCode: fosite.ErrConsentRequired.StatusCode(),
 			expectErrType:         []error{ErrAbortOAuth2Request, fosite.ErrConsentRequired},
 			expectErr:             []bool{true, true},
@@ -799,10 +801,10 @@ func TestStrategy(t *testing.T) {
 			expectErr:             []bool{true, true},
 		},
 		{
-			d:      "This should fail because prompt is none but no auth session exists",
-			prompt: "none",
-			req:    fosite.AuthorizeRequest{ResponseTypes: fosite.Arguments{"code"}, Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
-			jar:    newCookieJar(),
+			d:                     "This should fail because prompt is none but no auth session exists",
+			prompt:                "none",
+			req:                   fosite.AuthorizeRequest{ResponseTypes: fosite.Arguments{"code"}, Request: fosite.Request{Client: &client.Client{ClientID: "client-id"}, Scopes: []string{"scope-a"}}},
+			jar:                   newCookieJar(),
 			expectFinalStatusCode: http.StatusBadRequest,
 			expectErrType:         []error{fosite.ErrLoginRequired},
 			expectErr:             []bool{true},
@@ -985,12 +987,12 @@ func TestStrategy(t *testing.T) {
 			},
 		},
 		{
-			d:           "This should pass as regularly even though id_token_hint is expired",
-			req:         fosite.AuthorizeRequest{ResponseTypes: fosite.Arguments{"token", "code", "id_token"}, Request: fosite.Request{Client: &client.Client{ClientID: "client-id", SectorIdentifierURI: "foo"}, Scopes: []string{"scope-a"}}},
-			jar:         newCookieJar(),
-			idTokenHint: expiredAuthUserToken,
-			lph:         passAuthentication(apiClient, false),
-			cph:         passAuthorization(apiClient, false),
+			d:                     "This should pass as regularly even though id_token_hint is expired",
+			req:                   fosite.AuthorizeRequest{ResponseTypes: fosite.Arguments{"token", "code", "id_token"}, Request: fosite.Request{Client: &client.Client{ClientID: "client-id", SectorIdentifierURI: "foo"}, Scopes: []string{"scope-a"}}},
+			jar:                   newCookieJar(),
+			idTokenHint:           expiredAuthUserToken,
+			lph:                   passAuthentication(apiClient, false),
+			cph:                   passAuthorization(apiClient, false),
 			expectFinalStatusCode: http.StatusOK,
 			expectErrType:         []error{ErrAbortOAuth2Request, ErrAbortOAuth2Request, nil},
 			expectErr:             []bool{true, true, false},

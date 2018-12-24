@@ -135,15 +135,14 @@ Delete an existing OAuth 2.0 Client by its ID.  OAuth 2.0 clients are used to pe
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **string**| The id of the OAuth 2.0 Client. | 
- **secret** | **string**| The secret of the OAuth 2.0 Client. |
-
+ 
 ### Return type
 
 void (empty response body)
 
 ### Authorization
 
-Require client credentials
+No authorization required
 
 ### HTTP request headers
 

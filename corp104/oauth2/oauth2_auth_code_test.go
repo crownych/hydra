@@ -49,8 +49,8 @@ import (
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
 	. "github.com/ory/hydra/corp104/oauth2"
-	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/pkg"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,10 +102,10 @@ func _TestAuthCodeWithDefaultStrategy(t *testing.T) {
 		s foauth2.CoreStrategy
 	}{
 		/*
-		{
-			d: "opaque",
-			s: oauth2OpqaueStrategy,
-		},
+			{
+				d: "opaque",
+				s: oauth2OpqaueStrategy,
+			},
 		*/
 		{
 			d: "jwt",
@@ -203,7 +203,9 @@ func _TestAuthCodeWithDefaultStrategy(t *testing.T) {
 
 					apiHandler := consent.NewHandler(herodot.NewJSONWriter(l), cm, cookieStore, "", jm)
 					apiRouter := httprouter.New()
-					apiHandler.SetRoutes(apiRouter, apiRouter)
+					apiHandler.SetRoutes(apiRouter, apiRouter, func(h http.Handler) http.Handler {
+						return h
+					})
 					api := httptest.NewServer(apiRouter)
 
 					client := hc.Client{

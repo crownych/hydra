@@ -192,6 +192,23 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:9ab1b1c637d7c8f49e39d8538a650d7eb2137b076790cff69d160823b505964c"
+  name = "github.com/gobwas/glob"
+  packages = [
+    ".",
+    "compiler",
+    "match",
+    "syntax",
+    "syntax/ast",
+    "syntax/lexer",
+    "util/runes",
+    "util/strings",
+  ]
+  pruneopts = ""
+  revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
+  version = "v0.2.3"
+
+[[projects]]
   branch = "master"
   digest = "1:046a699004979280a3644e97d4758e832e81d70910974f1ff8728cf83a632a24"
   name = "github.com/goincremental/negroni-sessions"
@@ -997,6 +1014,7 @@
     "github.com/go-playground/validator",
     "github.com/go-resty/resty",
     "github.com/go-sql-driver/mysql",
+    "github.com/gobwas/glob",
     "github.com/goincremental/negroni-sessions",
     "github.com/goincremental/negroni-sessions/cookiestore",
     "github.com/golang/mock/gomock",

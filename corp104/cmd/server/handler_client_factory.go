@@ -21,6 +21,9 @@
 package server
 
 import (
+	"github.com/ory/fosite"
+	"github.com/ory/go-convenience/corsx"
+	"github.com/spf13/viper"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -34,7 +37,7 @@ func newClientManager(c *config.Config) client.Manager {
 	return ctx.Connection.NewClientManager(ctx.Hasher)
 }
 
-func newClientHandler(c *config.Config, router *httprouter.Router, manager client.Manager) *client.Handler {
+func newClientHandler(c *config.Config, frontend, backend *httprouter.Router, manager client.Manager, o fosite.OAuth2Provider) *client.Handler {
 	w := herodot.NewJSONWriter(c.GetLogger())
 	w.ErrorEnhancer = writerErrorEnhancer
 
@@ -48,6 +51,8 @@ func newClientHandler(c *config.Config, router *httprouter.Router, manager clien
 		c.Issuer,
 		c.GetOfflineJWKSName(),
 	)
-	h.SetRoutes(router)
+
+	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, manager.GetConcreteClient)
+	h.SetRoutes(frontend, backend, corsMiddleware)
 	return h
 }

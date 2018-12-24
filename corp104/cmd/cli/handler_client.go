@@ -161,9 +161,7 @@ func (h *ClientHandler) DeleteClient(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	clientSecret, _ := cmd.Flags().GetString("secret")
-
-	response, err := m.DeleteOAuth2Client(args[0], clientSecret)
+	response, err := m.DeleteOAuth2Client(args[0])
 	checkResponse(response, err, http.StatusNoContent)
 	fmt.Println("OAuth2 client deleted.")
 }

@@ -62,7 +62,7 @@ func StartMockServer() error {
 	}
 
 	// waiting for the server to start
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	return nil
 }

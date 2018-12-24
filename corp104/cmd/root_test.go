@@ -109,7 +109,7 @@ func TestExecute(t *testing.T) {
 		{args: []string{"clients", "put", "--endpoint", frontend, "--id", "foobarbaz", "--secret", "secret", "--name", "foobarbaz", "-g", "urn:ietf:params:oauth:grant-type:jwt-bearer", "--client-uri", "http://foobarbaz.org", "--contacts", "admin@foobarbaz.org", "--software-id", "4d51529c-37cd-424c-ba19-cba742d60903", "--software-version", "0.0.1", "--token-endpoint-auth-method", "private_key_jwt", "--jwks", `{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}`, "--signing-jwk", `{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
 		{args: []string{"clients", "commit", "--endpoint", frontend, "--id", "foobarbaz", "--commit-code", "env:COMMIT_CODE"}},
 		{args: []string{"clients", "get", "--endpoint", frontend, "foobarbaz", "--secret", "secret"}},
-		{args: []string{"clients", "delete", "--endpoint", frontend, "foobarbaz", "--secret", "secret"}},
+		{args: []string{"clients", "delete", "--endpoint", backend, "foobarbaz"}},
 		{args: []string{"keys", "create", "foo", "--endpoint", backend, "-a", "HS256"}},
 		{args: []string{"keys", "get", "--endpoint", backend, "foo"}},
 		//{args: []string{"keys", "rotate", "--endpoint", backend, "foo"}},

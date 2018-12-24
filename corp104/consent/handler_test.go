@@ -79,7 +79,9 @@ func TestLogout(t *testing.T) {
 	r.Handle("GET", "/logout", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	})
 
-	h.SetRoutes(r, r)
+	h.SetRoutes(r, r, func(h http.Handler) http.Handler {
+		return h
+	})
 	ts := httptest.NewServer(n)
 	defer ts.Close()
 
