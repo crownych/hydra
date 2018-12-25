@@ -207,7 +207,7 @@ func (c *Client) GetOwner() string {
 }
 
 func (c *Client) IsPublic() bool {
-	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "session"
+	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "private_key_jwt+session"
 }
 
 func (c *Client) GetJSONWebKeysURI() string {

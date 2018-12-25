@@ -119,8 +119,8 @@ func (v *Validator) Validate(c *Client) error {
 	}
 
 	if c.IsPublic() {
-		if c.TokenEndpointAuthMethod != "session" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field token_endpoint_auth_method should be \"session\"."))
+		if c.TokenEndpointAuthMethod != "private_key_jwt+session" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field token_endpoint_auth_method should be \"private_key_jwt+session\"."))
 		}
 
 		if err := v.checkRequired("redirect_uris", c.RedirectURIs); err != nil {

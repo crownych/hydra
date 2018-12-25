@@ -35,7 +35,7 @@ func TestClient(t *testing.T) {
 		ClientID:                "foo",
 		RedirectURIs:            []string{"foo"},
 		Scope:                   "foo bar",
-		TokenEndpointAuthMethod: "session",
+		TokenEndpointAuthMethod: "private_key_jwt+session",
 	}
 
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
