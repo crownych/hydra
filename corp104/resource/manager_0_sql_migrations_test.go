@@ -20,7 +20,7 @@ var createResourceMigrations = []*migrate.Migration{
 	{
 		Id: "urn:104:v3:resource:resume:v1.0",
 		Up: []string{
-			`INSERT INTO hydra_resource (urn, content) VALUES ('urn:104:v3:resource:resume:v1.0', '{"urn":"urn:104:v3:resource:resume:v1.0","uri":"https://v3ms.104.com.tw/resume","name":"resume","scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:token-exchange"],"scopes":[{"name":"resume:v1.0:semi-read","scope_auth_type":"","description":"讀半顯履歷資料"},{"name":"resume:v1.0:read","scope_auth_type":"","description":"讀履歷資料"}],"paths":[{"name":"/{resume_id}","methods":[{"name":"GET","description":"取得 resume 資料","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]},{"name":"/","methods":[{"name":"GET","description":"取得 resume 列表","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]}],"version":"1.0","contacts":["some.one@104.com.tw"],"description":"履歷資料API"}')`,
+			`INSERT INTO hydra_resource (urn, content) VALUES ('urn:104:v3:resource:resume:v1.0', '{"urn":"urn:104:v3:resource:resume:v1.0","uri":"https://v3ms.104.com.tw/resume","name":"resume","scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"resume:v1.0:semi-read","scope_auth_type":"","description":"讀半顯履歷資料"},{"name":"resume:v1.0:read","scope_auth_type":"","description":"讀履歷資料"}],"paths":[{"name":"/{resume_id}","methods":[{"name":"GET","description":"取得 resume 資料","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]},{"name":"/","methods":[{"name":"GET","description":"取得 resume 列表","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]}],"version":"1.0","contacts":["some.one@104.com.tw"],"description":"履歷資料API"}')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_resource WHERE urn='1-data'`,
