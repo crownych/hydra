@@ -672,7 +672,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request, _ httprout
 		DefaultSession: &openid.DefaultSession{
 			Claims: &jwt.IDTokenClaims{
 				// We do not need to pass the audience because it's included directly by ORY Fosite
-				//Audience:    []string{authorizeRequest.GetClient().GetID()},
+				Audience: []string{authorizeRequest.GetClient().GetID(), h.IssuerURL},
 				Subject:  session.ConsentRequest.SubjectIdentifier,
 				Issuer:   strings.TrimRight(h.IssuerURL, "/") + "/",
 				IssuedAt: time.Now().UTC(),
