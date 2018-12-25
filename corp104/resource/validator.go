@@ -50,8 +50,8 @@ func (v *Validator) Validate(r *Resource) error {
 		return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Version' Error:Version pattern should be "%s"` + versionRegex.String()))
 	}
 
-	if r.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:token-exchange" {
-		return pkg.NewBadRequestError(`Key: 'Resource.GrantTypes' Error:GrantType should be "urn:ietf:params:oauth:grant-type:token-exchange"`)
+	if r.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
+		return pkg.NewBadRequestError(`Key: 'Resource.GrantTypes' Error:GrantType should be "urn:ietf:params:oauth:grant-type:jwt-bearer"`)
 	}
 
 	resourceScope := fmt.Sprintf("%s.v%s", r.Name, r.Version)
