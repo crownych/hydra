@@ -1,0 +1,14 @@
+{
+  "request": {
+    "url": "*",
+    "method": "OPTIONS"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Origin": "http://localhost:4200",
+      "Access-Control-Allow-Methods": "GET, POST, PUT"
+    }
+  }
+}
