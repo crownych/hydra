@@ -21,13 +21,17 @@
 package server
 
 import (
+	"github.com/julienschmidt/httprouter"
+	"github.com/spf13/viper"
+
+	"github.com/ory/fosite"
+	"github.com/ory/go-convenience/corsx"
+	"github.com/ory/herodot"
+	"github.com/ory/hydra/corp104/client"
+	"github.com/ory/hydra/corp104/config"
 	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/jwk"
 	"github.com/ory/hydra/pkg"
-
-	"github.com/julienschmidt/httprouter"
-	"github.com/ory/herodot"
-	"github.com/ory/hydra/corp104/config"
 )
 
 func injectResourceManager(c *config.Config) {
@@ -35,7 +39,7 @@ func injectResourceManager(c *config.Config) {
 	ctx.ResourceManager = ctx.Connection.NewResourceManager()
 }
 
-func newResourceHandler(c *config.Config, router *httprouter.Router, manager resource.Manager) *resource.Handler {
+func newResourceHandler(c *config.Config, router *httprouter.Router, manager resource.Manager, o fosite.OAuth2Provider, clm client.Manager) *resource.Handler {
 	w := herodot.NewJSONWriter(c.GetLogger())
 	w.ErrorEnhancer = writerErrorEnhancer
 
@@ -47,7 +51,9 @@ func newResourceHandler(c *config.Config, router *httprouter.Router, manager res
 		c.Issuer,
 		c.GetOfflineJWKSName(),
 	)
-	h.SetRoutes(router)
+
+	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
+	h.SetRoutes(router, corsMiddleware)
 	return h
 }
 

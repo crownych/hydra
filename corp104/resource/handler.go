@@ -72,11 +72,13 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) SetRoutes(frontend *httprouter.Router) {
-	frontend.GET(ResourcesHandlerPath, h.List)
+func (h *Handler) SetRoutes(frontend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
+	frontend.Handler("OPTIONS", ResourcesHandlerPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("GET", ResourcesHandlerPath, corsMiddleware(http.HandlerFunc(h.List)))
 	frontend.PUT(ResourcesHandlerPath, h.Put)
 	frontend.PUT(ResourcesHandlerPath+"/commit", h.Commit)
-	frontend.GET(ResourcesHandlerPath+"/:urn", h.Get)
+	frontend.Handler("OPTIONS", ResourcesHandlerPath+"/:urn", corsMiddleware(http.HandlerFunc(h.handleOptions)))
+	frontend.Handler("GET", ResourcesHandlerPath+"/:urn", corsMiddleware(http.HandlerFunc(h.Get)))
 }
 
 // swagger:route PUT /resources resource createResource
@@ -221,7 +223,7 @@ func (h *Handler) Commit(w http.ResponseWriter, r *http.Request, ps httprouter.P
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) List(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limit, offset := pagination.Parse(r, 100, 0, 500)
 	c, err := h.Manager.GetResources(r.Context(), limit, offset)
 	if err != nil {
@@ -273,9 +275,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 //       401: genericError
 //       403: genericError
 //       500: genericError
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var urn = ps.ByName("urn")
-
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	urn := strings.TrimPrefix(r.URL.Path, ResourcesHandlerPath+"/")
 	c, err := h.Manager.GetResource(r.Context(), urn)
 	if err != nil {
 		h.H.WriteError(w, r, err)
@@ -399,3 +400,7 @@ func (h *Handler) getOfflinePrivateJWK(ctx context.Context) (*jose.JSONWebKey, e
 	}
 	return nil, errors.New("offline private key not found")
 }
+
+// This function will not be called, OPTIONS request will be handled by cors
+// this is just a placeholder.
+func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request) {}
