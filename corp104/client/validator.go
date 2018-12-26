@@ -167,8 +167,8 @@ func (v *Validator) Validate(c *Client) error {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
 		}
 
-		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"urn:ietf:params:oauth:grant-type:jwt-bearer\" only."))
+		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "client_credentials" {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"client_credentials\" only."))
 		}
 	}
 

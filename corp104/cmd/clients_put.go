@@ -63,7 +63,7 @@ Example:
      --endpoint "http://localhost:4444" \
      --id "fa3030d2-9e16-4b7d-b27f-381e840175cb" \
      --name "my-app" \
-     --grant-types "urn:ietf:params:oauth:grant-type:jwt-bearer" \
+     --grant-types "client_credentials" \
      --client-uri "http://myapp.com" \
 	 --contacts "admin@myapp.com" \
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
