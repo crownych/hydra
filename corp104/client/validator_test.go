@@ -86,7 +86,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				GrantTypes:              []string{"client_credentials"},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},

@@ -245,7 +245,7 @@ func createTestConfidentialClient(prefix string, pubJwk hydra.JsonWebKey) hydra.
 		ClientName:              prefix + "name",
 		ClientUri:               prefix + "uri",
 		Contacts:                []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
+		GrantTypes:              []string{"client_credentials"},
 		TokenEndpointAuthMethod: "private_key_jwt",
 		SoftwareId:              prefix + "client1",
 		SoftwareVersion:         prefix + "0.0.1",

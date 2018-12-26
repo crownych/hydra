@@ -399,7 +399,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		ResourcesEndpoint:                 strings.TrimRight(h.IssuerURL, "/") + resource.ResourcesHandlerPath,
 		ScopesSupported:                   []string{"openid"},
 		ResponseTypes:                     []string{"id_token", "token"},
-		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+		GrantTypesSupported:               []string{"client_credentials", "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt", "private_key_jwt+session"},
 		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
 		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},
