@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"gopkg.in/square/go-jose.v2"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -348,13 +349,42 @@ func (h *Handler) check(session sessions.Session) bool {
 func (h *Handler) initOfflineJWK() {
 	c := h.Config
 
-	// 產生 JWKS
-	kid := uuid.New()
-	privKey, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "private")
-	if err != nil {
-		c.GetLogger().WithError(err).Fatalf(`Could not fetch offline private JWK`)
+	var pubKey, privKey *jose.JSONWebKey
+	var err error
+
+	offlineJWKSName := c.GetOfflineJWKSName()
+
+	// check offline JWK already exists
+	offlineJWKS, _ := getJWKS(c, offlineJWKSName)
+	if offlineJWKS != nil && len(offlineJWKS.Keys) > 0 {
+		for _, k := range offlineJWKS.Keys {
+			if strings.HasPrefix(k.KeyID, "private") {
+				privKey = &k
+				break
+			}
+		}
 	}
-	pubKey, err := createOrGetJWK(c, c.GetOfflineJWKSName(), kid, "public")
+
+	// try to read private key from env
+	if privKey == nil {
+		if envPrivKey := viper.GetString("OFFLINE_PRIVATE_JWK"); envPrivKey != "" {
+			tPrivKey, err := pkg.LoadJSONWebKey([]byte(envPrivKey), false)
+			if err == nil {
+				privKey = tPrivKey
+			}
+		}
+	}
+
+	// generate new offline JWKS if private key not exists
+	if privKey == nil {
+		kid := uuid.New()
+		privKey, err = createOrGetJWK(c, offlineJWKSName, kid, "private")
+		if err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not fetch offline private JWK`)
+		}
+	}
+
+	pubKey, err = createOrGetJWK(c, offlineJWKSName, strings.TrimPrefix(privKey.KeyID, "private:"), "public")
 	if err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch offline public JWK`)
 	}
