@@ -400,7 +400,7 @@ func TestHandlerWellKnown(t *testing.T) {
 		ScopesSupported:                   []string{"openid"},
 		ResponseTypes:                     []string{"id_token", "token"},
 		GrantTypesSupported:               []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt"},
+		TokenEndpointAuthMethodsSupported: []string{"private_key_jwt", "private_key_jwt+session"},
 		TokenEndpointAuthSigningAlgValuesSupported:      []string{"ES256"},
 		RevocationEndpointAuthMethodsSupported:          []string{"private_key_jwt"},
 		RevocationEndpointAuthSigningAlgValuesSupported: []string{"ES256"},

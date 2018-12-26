@@ -53,7 +53,7 @@ Example:
      --scope "openid" \
      --id-token-signed-response-alg "ES256" \
      --request-object-signing-alg "ES256" \
-	 --token-endpoint-auth-method "session" \
+	 --token-endpoint-auth-method "private_key_jwt+session" \
      --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}'
@@ -88,7 +88,7 @@ func init() {
 	clientsPutCmd.Flags().StringSliceP("grant-types", "g", []string{""}, "A list of allowed grant types")
 	clientsPutCmd.Flags().StringSliceP("response-types", "r", []string{""}, "A list of allowed response types")
 	clientsPutCmd.Flags().StringSliceP("scope", "a", []string{""}, "The scope the client is allowed to request")
-	clientsPutCmd.Flags().String("token-endpoint-auth-method", "session", "Define which authentication method the client may use at the Token Endpoint. Valid values are \"private_key_jwt\" and \"session\"")
+	clientsPutCmd.Flags().String("token-endpoint-auth-method", "private_key_jwt", "Define which authentication method the client may use at the Token Endpoint. Valid values are \"private_key_jwt\" and \"session\"")
 	//clientsPutCmd.Flags().String("jwks-uri", "", "Define the URL where the JSON Web Key Set should be fetched from when performing the \"private_key_jwt\" client authentication method")
 	clientsPutCmd.Flags().String("policy-uri", "", "A URL string that points to a human-readable privacy policy document that describes how the deployment organization collects, uses, retains, and discloses personal data")
 	clientsPutCmd.Flags().String("tos-uri", "", "A URL string that points to a human-readable terms of service document for the client that describes a contractual relationship between the end-user and the client that the end-user accepts when authorizing the client")

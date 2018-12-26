@@ -63,7 +63,7 @@ func TestValidate(t *testing.T) {
 				SoftwareVersion:                "0.0.1",
 				IdTokenSignedResponseAlgorithm: "ES256",
 				RequestObjectSigningAlgorithm:  "ES256",
-				TokenEndpointAuthMethod:        "session",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)

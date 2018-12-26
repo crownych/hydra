@@ -92,5 +92,5 @@ type OAuth2Client struct {
 }
 
 func (c OAuth2Client) IsPublic() bool {
-	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "session"
+	return c.TokenEndpointAuthMethod == "none" || c.TokenEndpointAuthMethod == "private_key_jwt+session"
 }
