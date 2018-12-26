@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/login",
+    "headers": {
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": "{ 'username': 'mobile.reg@grr.la', 'password': '123qwe' }"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Origin": "http://localhost:4200",
+      "Access-Control-Allow-Methods": "GET, POST, PUT"
+    },
+    "jsonBody": {
+      "error": "",
+      "id": "70000"
+    }
+  }
+}
