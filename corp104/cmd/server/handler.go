@@ -409,14 +409,14 @@ func (h *Handler) initOfflineJWK() {
 	pubY, _ := base64.RawURLEncoding.DecodeString(pubKeyInfo["y"])
 	derBytes, _ := x509.MarshalPKIXPublicKey(&ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(pubX), Y: new(big.Int).SetBytes(pubY)})
 	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
-	c.GetLogger().Infoln("Public JSON Web Key (distributed offline)")
-	c.GetLogger().Infoln(mataPubKeyStr)
-	c.GetLogger().Infoln(string(pemBytes))
+	fmt.Println("Public JSON Web Key (distributed offline)")
+	fmt.Println(mataPubKeyStr)
+	fmt.Println(string(pemBytes))
 	if viper.GetBool("TEST_MODE") {
 		viper.Set("OFFLINE_PUBLIC_KEY", mataPubKeyStr)
-		c.GetLogger().Infoln()
-		c.GetLogger().Infoln("Private JSON Web Key (offline)")
+		fmt.Println()
+		fmt.Println("Private JSON Web Key (offline)")
 		mataPrivKeyBytes, _ := privKey.MarshalJSON()
-		c.GetLogger().Infoln(string(mataPrivKeyBytes))
+		fmt.Println(string(mataPrivKeyBytes))
 	}
 }
