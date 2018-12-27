@@ -96,7 +96,7 @@ type Config struct {
 
 	// Cookie name of web session
 	WebSessionName           string `mapstructure:"WEB_SESSION_NAME" yaml:"-"`
-	ByPassSessionCheckRoutes string `mapstructure:"BY_PASS_ROUTES" yaml:"-"`
+	ByPassSessionCheckRoutes string `mapstructure:"BYPASS_ROUTES" yaml:"-"`
 	DisableConsentFlow       bool   `mapstructure:"DISABLE_CONSENT_FLOW" yaml:"-"`
 	CorpInternalAPIUrl       string `mapstructure:"CORP_INTERNAL_API_URL" yaml:"-"`
 	GraphQLAPIUrl            string `mapstructure:"GRAPHQL_API_URL" yaml:"-"`
