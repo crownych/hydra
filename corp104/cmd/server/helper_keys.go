@@ -107,5 +107,8 @@ func getJWKS(c *config.Config, set string) (*jose.JSONWebKeySet, error) {
 func addJWK(c *config.Config, set string, key *jose.JSONWebKey) error {
 	ctx := c.Context()
 	expectDependency(c.GetLogger(), ctx.KeyManager)
+	if oKey, _ := ctx.KeyManager.GetKey(context.TODO(), set, key.KeyID); oKey != nil {
+		return nil
+	}
 	return ctx.KeyManager.AddKey(context.TODO(), set, key)
 }
