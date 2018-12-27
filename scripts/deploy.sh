@@ -20,3 +20,5 @@ cd ${TRAVIS_BUILD_DIR}
 docker build -t hydra .
 docker tag hydra:latest ${AUTH_REPO_URI}:latest
 docker push ${AUTH_REPO_URI}:latest
+docker tag hydra:latest ${AUTH_REPO_URI}:${TRAVIS_COMMIT}
+docker push ${AUTH_REPO_URI}:${TRAVIS_COMMIT}
