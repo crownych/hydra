@@ -76,6 +76,7 @@ services:
       - EMAIL_SERVICE_URL=http://mta:10025
       - RESET_PASSWORD_ROUTE=http://localhost:4200/reset-password
       - TEST_MODE=1
+      - OFFLINE_PRIVATE_JWK=${OFFLINE_PRIVATE_JWK}
     restart: on-failure
 
 #  consent:
