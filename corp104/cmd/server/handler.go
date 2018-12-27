@@ -354,23 +354,34 @@ func (h *Handler) initOfflineJWK() {
 
 	offlineJWKSName := c.GetOfflineJWKSName()
 
-	// check offline JWK already exists
-	offlineJWKS, _ := getJWKS(c, offlineJWKSName)
-	if offlineJWKS != nil && len(offlineJWKS.Keys) > 0 {
-		for _, k := range offlineJWKS.Keys {
-			if strings.HasPrefix(k.KeyID, "private") {
-				privKey = &k
-				break
-			}
+	// try to read private key from env
+	if envPrivKey := viper.GetString("OFFLINE_PRIVATE_JWK"); envPrivKey != "" {
+		tPrivKey, err := pkg.LoadJSONWebKey([]byte(envPrivKey), false)
+		if err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not fetch offline private JWK from env variable`)
 		}
+		err = addJWK(c, offlineJWKSName, tPrivKey)
+		if err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not persist offline private JWK from env variable`)
+		}
+		tPubJwk := tPrivKey.Public()
+		tPubJwk.KeyID = strings.Replace(tPubJwk.KeyID, "private:", "public:", 1)
+		err = addJWK(c, offlineJWKSName, &tPubJwk)
+		if err != nil {
+			c.GetLogger().WithError(err).Fatalf(`Could not persist offline public JWK from env variable`)
+		}
+		privKey = tPrivKey
 	}
 
-	// try to read private key from env
+	// check offline JWK already exists
 	if privKey == nil {
-		if envPrivKey := viper.GetString("OFFLINE_PRIVATE_JWK"); envPrivKey != "" {
-			tPrivKey, err := pkg.LoadJSONWebKey([]byte(envPrivKey), false)
-			if err == nil {
-				privKey = tPrivKey
+		offlineJWKS, _ := getJWKS(c, offlineJWKSName)
+		if offlineJWKS != nil && len(offlineJWKS.Keys) > 0 {
+			for _, k := range offlineJWKS.Keys {
+				if strings.HasPrefix(k.KeyID, "private:") {
+					privKey = &k
+					break
+				}
 			}
 		}
 	}
