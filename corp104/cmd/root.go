@@ -218,8 +218,8 @@ func initConfig() {
 	viper.BindEnv("WEB_SESSION_NAME")
 	viper.SetDefault("WEB_SESSION_NAME", "")
 
-	viper.BindEnv("BY_PASS_ROUTES")
-	viper.SetDefault("BY_PASS_ROUTES", "")
+	viper.BindEnv("BYPASS_ROUTES")
+	viper.SetDefault("BYPASS_ROUTES", "")
 
 	viper.BindEnv("DISABLE_CONSENT_FLOW")
 	viper.SetDefault("DISABLE_CONSENT_FLOW", false)
