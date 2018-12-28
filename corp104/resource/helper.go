@@ -7,6 +7,9 @@ import (
 )
 
 func sendCommitCode(recipient, commitCode string) {
+	if recipient == "foo.bar" {
+		return
+	}
 	_, err := pkg.SendTextMail(recipient+"@104.com.tw", "Resource註冊確認碼", "commit_code: "+commitCode)
 	if err != nil {
 		log.Println(fmt.Sprintf(`send commit_code to %s failed`, recipient))
