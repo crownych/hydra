@@ -617,6 +617,7 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 				session.Session.IDToken["urn:104v3:entity:company_list"] = list
 			}
 		}
+		session.Session.IDToken["azp"] = req.GetClient().GetID()
 	}
 
 	session.ConsentRequest.SubjectIdentifier = pw
