@@ -14,18 +14,18 @@ version: '2'
 
 services:
 
-  hydra-migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    links:
-      - postgresd:postgresd
-    environment:
-      - LOG_LEVEL=debug
-      - DATABASE_URL=postgres://hydra:secret@postgresd:5432/hydra?sslmode=disable
-    command:
-      migrate sql -e
-    restart: on-failure
+#  hydra-migrate:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    links:
+#      - postgresd:postgresd
+#    environment:
+#      - LOG_LEVEL=debug
+#      - DATABASE_URL=postgres://hydra:secret@postgresd:5432/hydra?sslmode=disable
+#    command:
+#      migrate sql -e
+#    restart: on-failure
 
   hydra:
     build:
@@ -36,8 +36,8 @@ services:
       - mock-dep
 #     Uncomment the following line to use mysql instead.
 #      - mysqld:mysqld
-    depends_on:
-      - hydra-migrate
+#    depends_on:
+#      - hydra-migrate
     ports:
       # Public port
       - "4444:4444"
@@ -46,7 +46,8 @@ services:
       # Port for hydra token user
       - "5555:5555"
     command:
-      serve all --dangerous-force-http
+      #serve all --dangerous-force-http
+      /bin/sh -c ./start-all.sh
     environment:
       - LOG_LEVEL=debug
       - OAUTH2_ISSUER_URL=http://localhost:4444
