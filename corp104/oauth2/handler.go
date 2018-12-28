@@ -43,6 +43,7 @@ import (
 const (
 	OpenIDConnectKeyName = "openid.id-token"
 	OAuth2JWTKeyName     = "jwt.access-token"
+	idTokenSignatureSessionKey  = "id_token_signature"
 
 	DefaultConsentPath = "/oauth2/fallbacks/consent"
 	DefaultLogoutPath  = "/logout"
@@ -696,6 +697,14 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request, _ httprout
 		pkg.LogError(err, h.L)
 		h.writeAuthorizeError(w, authorizeRequest, err)
 		return
+	}
+
+	idToken := response.GetFragment().Get("id_token")
+	if idToken != "" {
+		parts := strings.Split(idToken, ".")
+		if len(parts) == 3 && parts[2] != "" {
+			pkg.SaveSessionValue(r, idTokenSignatureSessionKey, parts[2])
+		}
 	}
 
 	h.OAuth2.WriteAuthorizeResponse(w, authorizeRequest, response)
