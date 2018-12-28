@@ -3,6 +3,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:79be26262aa2f3ec027835641575ab6166b093a610a595a743f63bee51dc58b6"
+  name = "github.com/104corp/vip3-go-auth"
+  packages = [
+    "vip3auth",
+    "vip3auth/jwt",
+  ]
+  pruneopts = ""
+  revision = "5905c6c05963d3453a14562cb19185ea29e78563"
+
+[[projects]]
+  branch = "master"
   digest = "1:6978a38432a017763a148afbc7ce6491734b54292af7d3e969d84d2e9dd242e2"
   name = "github.com/Azure/go-ansiterm"
   packages = [
@@ -891,6 +902,7 @@
     "blowfish",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "pbkdf2",
     "ssh/terminal",
   ]
   pruneopts = ""
@@ -982,7 +994,7 @@
   version = "v1.7.1"
 
 [[projects]]
-  digest = "1:de0ec5755ee1a5e61f079c8855cf2073b5a5f614ae3b51db65f2c4e1044455fd"
+  digest = "1:a3532282671b21e7d256f849866ff95addf15e0090f27a9c5c98196953c3cdef"
   name = "gopkg.in/square/go-jose.v2"
   packages = [
     ".",
@@ -990,8 +1002,8 @@
     "json",
   ]
   pruneopts = ""
-  revision = "76dd09796242edb5b897103a75df2645c028c960"
-  version = "v2.1.6"
+  revision = "72415094398e2f013bf50b76fd6de36df47938ea"
+  version = "v2.2.1"
 
 [[projects]]
   branch = "v2"
@@ -1005,6 +1017,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/104corp/vip3-go-auth/vip3auth",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/api/types/container",
