@@ -35,8 +35,9 @@ type Session struct {
 	Audience               []string
 	Extra                  map[string]interface{} `json:"extra"`
 	//JTI                    string
-	KID      string
-	ClientID string
+	KID               string
+	ClientID          string
+	accessTokenHeader *jwt.Headers
 }
 
 func NewSession(subject string) *Session {
@@ -73,14 +74,18 @@ func (s *Session) GetJWTClaims() *jwt.JWTClaims {
 		claims.Extra = map[string]interface{}{}
 	}
 
-	claims.Extra["client_id"] = s.ClientID
+	claims.Extra["azp"] = s.ClientID
 	return claims
 }
 
 func (s *Session) GetJWTHeader() *jwt.Headers {
-	return &jwt.Headers{
-		Extra: map[string]interface{}{"kid": s.KID},
+	if s.accessTokenHeader == nil {
+		s.accessTokenHeader = &jwt.Headers{Extra: map[string]interface{}{}}
 	}
+	if s.KID != "" {
+		s.accessTokenHeader.Add("kid", s.KID)
+	}
+	return s.accessTokenHeader
 }
 
 func (s *Session) Clone() fosite.Session {
