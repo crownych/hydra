@@ -41,9 +41,9 @@ import (
 )
 
 const (
-	OpenIDConnectKeyName = "openid.id-token"
-	OAuth2JWTKeyName     = "jwt.access-token"
-	idTokenSignatureSessionKey  = "id_token_signature"
+	OpenIDConnectKeyName       = "openid.id-token"
+	OAuth2JWTKeyName           = "jwt.access-token"
+	idTokenSignatureSessionKey = "id_token_signature"
 
 	DefaultConsentPath = "/oauth2/fallbacks/consent"
 	DefaultLogoutPath  = "/logout"
@@ -573,29 +573,30 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if accessRequest.GetGrantTypes().Exact("client_credentials") {
-		var accessTokenKeyID string
-		if h.AccessTokenStrategy == "jwt" {
-			accessTokenKeyID, err = h.AccessTokenJWTStrategy.GetPublicKeyID(r.Context())
-			if err != nil {
-				pkg.LogError(err, h.L)
-				h.OAuth2.WriteAccessError(w, accessRequest, err)
-				return
-			}
+	// TODO 應該放在 AccessTokenStrategy 中處理
+	if h.AccessTokenStrategy == "jwt" {
+		accessTokenKeyID, err := h.AccessTokenJWTStrategy.GetPublicKeyID(r.Context())
+		if err != nil {
+			pkg.LogError(err, h.L)
+			h.OAuth2.WriteAccessError(w, accessRequest, err)
+			return
 		}
-
-		session.Subject = accessRequest.GetClient().GetID()
+		claims := session.GetJWTClaims()
+		if sub, ok := claims.Extra["sub"].(string); ok {
+			session.Subject = sub
+		}
+		if aud, ok := claims.Extra["aud"].(string); ok {
+			session.Audience = []string{aud}
+		} else if auds, ok := claims.Extra["aud"].([]string); ok {
+			session.Audience = auds
+		}
 		session.ClientID = accessRequest.GetClient().GetID()
 		session.KID = accessTokenKeyID
 		session.DefaultSession.Claims.Issuer = strings.TrimRight(h.IssuerURL, "/") + "/"
 		session.DefaultSession.Claims.IssuedAt = time.Now().UTC()
-
-		for _, scope := range accessRequest.GetRequestedScopes() {
-			if h.ScopeStrategy(accessRequest.GetClient().GetScopes(), scope) {
-				accessRequest.GrantScope(scope)
-			}
-		}
+		session.GetJWTHeader().Add("cty", "resource-access-token+jwt")
 	}
+	// TODO: ScopeStrategy 暫時忽略
 
 	accessResponse, err := h.OAuth2.NewAccessResponse(ctx, accessRequest)
 	if err != nil {
