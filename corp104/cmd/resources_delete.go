@@ -28,7 +28,7 @@ import (
 var resourcesDeleteCmd = &cobra.Command{
 	Use:   "delete <urn>",
 	Short: "Delete an OAuth 2.0 Resource",
-	Long: `This command deletes a OAuth 2.0 Resource by its URN.
+	Long: `This command deletes an OAuth 2.0 Resource by its URN.
 
 Example:
   hydra resources delete urn:104:v3:resource:rest:jobs`,

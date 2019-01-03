@@ -28,7 +28,7 @@ import (
 var clientsDeleteCmd = &cobra.Command{
 	Use:   "delete <id>",
 	Short: "Delete an OAuth 2.0 Client",
-	Long: `This command deletes a OAuth 2.0 Client by its ID.
+	Long: `This command deletes an OAuth 2.0 Client by its ID.
 
 Example:
   hydra clients delete client-1`,
