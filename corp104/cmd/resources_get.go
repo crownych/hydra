@@ -5,12 +5,12 @@ import (
 )
 
 var resourcesGetCmd = &cobra.Command{
-	Use:   "get <id>",
+	Use:   "get <urn>",
 	Short: "Get an OAuth 2.0 Resource",
 	Long: `This command retrieves an OAuth 2.0 Resource by its URN.
 
 Example:
-  hydra resources get "urn:104v3:job:v1.0"`,
+  hydra resources get "urn:104:v3:resource:rest:jobs"`,
 	Run: cmdHandler.Resources.GetResource,
 }
 

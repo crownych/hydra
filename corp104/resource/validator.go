@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	nameRegex    = regexp.MustCompile(`^[a-zA-Z0-9]+[a-zA-Z0-9_\-\.]+$`)
-	versionRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+$`)
+	nameRegex     = regexp.MustCompile(`^[a-zA-Z0-9]+[a-zA-Z0-9_\-\.]+$`)
+	pathNameRegex = regexp.MustCompile(`^/|(/[a-zA-Z0-9\-\._~%!\$&'()*+,;=:@]+|\/\{[a-zA-Z_]+[a-zA-Z0-9_]*\})+$`)
+	graphQLOperationNameRegex = regexp.MustCompile(`^[a-zA-Z_]+[a-zA-Z0-9_]*(\/[a-zA-Z_]+[a-zA-Z0-9_]*)*$`)
 )
 
 type Validator struct {
@@ -43,41 +44,79 @@ func (v *Validator) Validate(r *Resource) error {
 	}
 
 	if !nameRegex.MatchString(r.Name) {
-		return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Name' Error:Name pattern should be "%s"` + nameRegex.String()))
+		return pkg.NewBadRequestError(`Key: 'Resource.Name' Error:Invalid name`)
 	}
 
-	if !versionRegex.MatchString(r.Version) {
-		return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Version' Error:Version pattern should be "%s"` + versionRegex.String()))
-	}
+	r.Urn = r.GetUrn()
+	r.DefaultScope = r.GetDefaultScope()
 
-	if r.GrantTypes[0] != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
-		return pkg.NewBadRequestError(`Key: 'Resource.GrantTypes' Error:GrantType should be "urn:ietf:params:oauth:grant-type:jwt-bearer"`)
-	}
-
-	resourceScope := fmt.Sprintf("%s.v%s", r.Name, r.Version)
-	scopeNamePrefix := resourceScope + ":"
-	rootScopeNames := make([]string, len(r.Scopes))
+	scopeNamePrefix := r.DefaultScope + ":"
+	var rootScopeNames []string
 	for _, scope := range r.Scopes {
-		if strings.HasPrefix(scope.Name, scopeNamePrefix) {
-			return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Scopes.Name' Error:Name should starts with "%s"`, scopeNamePrefix))
+		if !strings.HasPrefix(scope.Name, scopeNamePrefix) {
+			return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Scopes.Name' Error:Scope name should starts with "%s"`, scopeNamePrefix))
 		}
-		if scope.AuthType != "" && !stringslice.Has([]string{"none", "client", "user", "company"}, scope.AuthType) {
-			return pkg.NewBadRequestError(`Key: 'Resource.Scopes.AuthType' Error:AuthType should be 'none', 'client', 'user', 'company' or empty`)
+
+		if scope.ScopeAuthType != "" && !stringslice.Has([]string{"none", "client", "user", "company"}, scope.ScopeAuthType) {
+			return pkg.NewBadRequestError(`Key: 'Resource.Scopes.AuthType' Error:ScopeAuthType should be 'none', 'client', 'user', 'company' or empty`)
 		}
 		rootScopeNames = append(rootScopeNames, scope.Name)
 	}
+	if hasDuplicates(rootScopeNames) {
+		return pkg.NewBadRequestError(`Key: 'Resource.Scopes' Error:Duplicate scopes`)
+	}
 
-	for _, p := range r.Paths {
-		for _, m := range p.Methods {
-			if hasDuplicates(m.Scopes) {
-				return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths["%s"].Methods["%s"].Scopes' Error:Duplicate scopes`, p.Name, m.Name))
+	switch r.Type {
+	case RestResourceType:
+		if len(r.Paths) == 0 {
+			return pkg.NewBadRequestError(`Key: 'Resource.Paths' Error:Field 'Paths' should not be empty`)
+		}
+		for idx, p := range r.Paths {
+			if !pathNameRegex.MatchString(p.Name) {
+				return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths[%d].Name' Error:Invalid name`, idx))
 			}
 
-			for _, ms := range m.Scopes {
-				if ms != resourceScope && !stringslice.Has(rootScopeNames, ms) {
-					return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths["%s"].Methods["%s"].Scopes' Error:'%s' is not declared in Resource.Scopes`, p.Name, m.Name, ms))
+			if len(p.Methods) == 0 {
+				return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths["%s"].Methods' Error:Field 'Methods' should not be empty`, p.Name))
+			}
+
+			for _, m := range p.Methods {
+				if hasDuplicates(m.Scopes) {
+					return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths["%s"].Methods["%s"].Scopes' Error:Duplicate scopes`, p.Name, m.Name))
+				}
+
+				for _, ms := range m.Scopes {
+					if ms != r.DefaultScope && !stringslice.Has(rootScopeNames, ms) {
+						return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.Paths["%s"].Methods["%s"].Scopes' Error:'%s' is neither the default scope nor declared in Resource.Scopes`, p.Name, m.Name, ms))
+					}
 				}
 			}
+		}
+	case GraphQLResourceType:
+		if len(r.GraphQLOperations) == 0 {
+			return pkg.NewBadRequestError(`Key: 'Resource.GraphQLOperations' Error:Field 'GraphQLOperations' should not be empty`)
+		}
+
+		var nameTypeList []string
+		for idx, p := range r.GraphQLOperations {
+			if !graphQLOperationNameRegex.MatchString(p.Name) {
+				return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.GraphQLOperations[%d].Name' Error:Invalid name`, idx))
+			}
+			nameTypeList = append(nameTypeList, p.Name + ":" + p.Type)
+
+			if hasDuplicates(p.Scopes) {
+				return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.GraphQLOperations["%s"].Scopes' Error:Duplicate scopes`, p.Name))
+			}
+
+			for _, ms := range p.Scopes {
+				if ms != r.DefaultScope && !stringslice.Has(rootScopeNames, ms) {
+					return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.GraphQLOperations["%s"].Scopes' Error:'%s' is neither the default scope nor declared in Resource.Scopes`, p.Name, ms))
+				}
+
+			}
+		}
+		if hasDuplicates(nameTypeList) {
+			return pkg.NewBadRequestError(fmt.Sprintf(`Key: 'Resource.GraphQLOperations' Error:Duplicate name & type declaration`))
 		}
 	}
 

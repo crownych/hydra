@@ -72,13 +72,14 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) SetRoutes(frontend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
+func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware func(http.Handler) http.Handler) {
 	frontend.Handler("OPTIONS", ResourcesHandlerPath, corsMiddleware(http.HandlerFunc(h.handleOptions)))
 	frontend.Handler("GET", ResourcesHandlerPath, corsMiddleware(http.HandlerFunc(h.List)))
 	frontend.PUT(ResourcesHandlerPath, h.Put)
 	frontend.PUT(ResourcesHandlerPath+"/commit", h.Commit)
 	frontend.Handler("OPTIONS", ResourcesHandlerPath+"/:urn", corsMiddleware(http.HandlerFunc(h.handleOptions)))
 	frontend.Handler("GET", ResourcesHandlerPath+"/:urn", corsMiddleware(http.HandlerFunc(h.Get)))
+	backend.DELETE(ResourcesHandlerPath+"/:urn", h.Delete)
 }
 
 // swagger:route PUT /resources resource createResource
@@ -284,6 +285,36 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.H.Write(w, r, c)
+}
+
+// swagger:route DELETE /resources/{urn} oAuth2 deleteOAuth2Resource
+//
+// Deletes an OAuth 2.0 Resource
+//
+// Delete an existing OAuth 2.0 Resource by its URN.
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http, https
+//
+//     Responses:
+//       204: emptyResponse
+//       401: genericError
+//       403: genericError
+//       500: genericError
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var urn = ps.ByName("urn")
+
+	if err := h.Manager.DeleteResource(r.Context(), urn); err != nil {
+		h.H.WriteError(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) processResourceStatement(w http.ResponseWriter, r *http.Request, statementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {

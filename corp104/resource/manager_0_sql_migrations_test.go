@@ -18,9 +18,9 @@ import (
 
 var createResourceMigrations = []*migrate.Migration{
 	{
-		Id: "urn:104:v3:resource:resume:v1.0",
+		Id: "urn:104:v3:resource:rest:jobs",
 		Up: []string{
-			`INSERT INTO hydra_resource (urn, content) VALUES ('urn:104:v3:resource:resume:v1.0', '{"urn":"urn:104:v3:resource:resume:v1.0","uri":"https://v3ms.104.com.tw/resume","name":"resume","scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"resume:v1.0:semi-read","scope_auth_type":"","description":"讀半顯履歷資料"},{"name":"resume:v1.0:read","scope_auth_type":"","description":"讀履歷資料"}],"paths":[{"name":"/{resume_id}","methods":[{"name":"GET","description":"取得 resume 資料","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]},{"name":"/","methods":[{"name":"GET","description":"取得 resume 列表","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]}],"version":"1.0","contacts":["some.one@104.com.tw"],"description":"履歷資料API"}')`,
+			`INSERT INTO hydra_resource (urn, content) VALUES ('urn:104:v3:resource:rest:jobs', '{"urn":"urn:104:v3:resource:rest:jobs","uri":"https://v3ms.104.com.tw/jobs","name":"jobs","type":"rest","auth_service":"https://v3auth.104.com.tw","default_scope":"rest:jobs","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer","client_credentials"],"scopes":[{"name":"rest:jobs:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"rest:jobs:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"paths":[{"name":"/","methods":[{"name":"GET","description":"取得 job 列表","scopes":["rest:jobs:read","rest:jobs:write"]}]},{"name":"/","methods":[{"name":"POST","description":"取得 job 列表","scopes":["rest:jobs:write"]}]},{"name":"/{jobNo}","methods":[{"name":"GET","description":"取得 job 資料","scopes":["rest:jobs:read","rest:job:write"]}]},{"name":"/{jobNo}","methods":[{"name":"DELETE","description":"刪除 job 資料","scopes":["rest:jobs:write"]}]},{"name":"/{jobNo}","methods":[{"name":"PATCH","description":"修改 job 資料","scopes":["rest:jobs:write"]}]}],"contacts":["someone@104.com.tw"],"description":"公司資料"}')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_resource WHERE urn='1-data'`,
@@ -84,7 +84,7 @@ func TestMigrations(t *testing.T) {
 				})
 			}
 
-			for _, key := range []string{"urn:104:v3:resource:resume:v1.0"} {
+			for _, key := range []string{"urn:104:v3:resource:rest:jobs"} {
 				t.Run("resource="+key, func(t *testing.T) {
 					s := &resource.SQLManager{DB: db}
 					c, err := s.GetResource(context.TODO(), key)

@@ -39,7 +39,7 @@ func injectResourceManager(c *config.Config) {
 	ctx.ResourceManager = ctx.Connection.NewResourceManager()
 }
 
-func newResourceHandler(c *config.Config, router *httprouter.Router, manager resource.Manager, o fosite.OAuth2Provider, clm client.Manager) *resource.Handler {
+func newResourceHandler(c *config.Config, frontend, backend *httprouter.Router, manager resource.Manager, o fosite.OAuth2Provider, clm client.Manager) *resource.Handler {
 	w := herodot.NewJSONWriter(c.GetLogger())
 	w.ErrorEnhancer = writerErrorEnhancer
 
@@ -53,7 +53,7 @@ func newResourceHandler(c *config.Config, router *httprouter.Router, manager res
 	)
 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
-	h.SetRoutes(router, corsMiddleware)
+	h.SetRoutes(frontend, backend, corsMiddleware)
 	return h
 }
 

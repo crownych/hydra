@@ -513,7 +513,7 @@ func (a OAuth2Api) GetLoginRequest(challenge string) (*LoginRequest, *APIRespons
  */
 func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIResponse, error) {
 	if id == "" || secret == "" {
-		return nil, nil, errors.New("require client credentials")
+		return nil, nil, errors.New("client credentials is required")
 	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")
@@ -1939,6 +1939,68 @@ func (a OAuth2Api) CommitOAuth2Resource(cookies map[string]string, commitCode st
 }
 
 /**
+ * Deletes an OAuth 2.0 Resource
+ * Delete an existing OAuth 2.0 Resource by its URN.
+ *
+ * @param urn The URN of the OAuth 2.0 Resource.
+ * @return void
+ */
+func (a OAuth2Api) DeleteOAuth2Resource(urn string) (*APIResponse, error) {
+	if urn == "" {
+		return nil, errors.New("resource urn is required")
+	}
+
+	var localVarHttpMethod = strings.ToUpper("Delete")
+	// create path and map variables
+	localVarPath := a.Configuration.BasePath + "/resources/{urn}"
+	localVarPath = strings.Replace(localVarPath, "{urn}", fmt.Sprintf("%v", urn), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := make(map[string]string)
+	var localVarPostBody interface{}
+	var localVarFileName string
+	var localVarFileBytes []byte
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "DeleteOAuth2Resource", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	if err != nil {
+		return localVarAPIResponse, err
+	}
+	return localVarAPIResponse, err
+}
+
+/**
  * Get an OAuth 2.0 resource.
  * Get an OAUth 2.0 resource by its URN.
  *
@@ -1947,7 +2009,7 @@ func (a OAuth2Api) CommitOAuth2Resource(cookies map[string]string, commitCode st
  */
 func (a OAuth2Api) GetOAuth2Resource(urn string) (*OAuth2Resource, *APIResponse, error) {
 	if urn == "" {
-		return nil, nil, errors.New("require resource URN")
+		return nil, nil, errors.New("resource urn is required")
 	}
 
 	var localVarHttpMethod = http.MethodGet

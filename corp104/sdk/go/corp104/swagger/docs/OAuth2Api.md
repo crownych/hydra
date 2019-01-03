@@ -29,6 +29,7 @@ Method | HTTP request | Description
 [**Userinfo**](OAuth2Api.md#Userinfo) | **Post** /userinfo | OpenID Connect Userinfo
 [**WellKnown**](OAuth2Api.md#WellKnown) | **Get** /jwks.json | Get Well-Known JSON Web Keys
 [**CommitOAuth2Resource**](OAuth2Api.md#CommitOAuth2Resource) | **Put** /resources/commit | Commit an OAuth 2.0 Resource 
+[**DeleteOAuth2Resource**](OAuth2Api.md#DeleteOAuth2Resource) | **Delete** /resources/{urn} | Deletes an OAuth 2.0 Resource
 [**GetOAuth2Resource**](OAuth2Api.md#GetOAuth2Resource) | **Get** /resources/{urn} | Get an OAuth 2.0 Resource
 [**ListOAuth2Resources**](OAuth2Api.md#ListOAuth2Resources) | **Get** /resources | List OAuth 2.0 Resources
 [**PutOAuth2Resource**](OAuth2Api.md#PutOAuth2Resource) | **Put** /resources | Create or update an OAuth 2.0 Resource
@@ -259,7 +260,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-Require client credentials
+Client credentials is required
 
 ### HTTP request headers
 
@@ -458,7 +459,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+AD user credentials required
 
 ### HTTP request headers
 
@@ -749,6 +750,35 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **DeleteOAuth2Resource**
+> DeleteOAuth2Resource($urn)
+
+Deletes an OAuth 2.0 Resource
+
+Delete an existing OAuth 2.0 Resource by its URN.
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **urn** | **string**| The urn of the OAuth 2.0 Resource. | 
+ 
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **GetOAuth2Resource**
 > OAuth2Resource GetOAuth2Resource($urn)
 
@@ -765,11 +795,11 @@ Name | Type | Description  | Notes
  
 ### Return type
 
-[**OAuth2Resource**](oAuth2Resource.md)
+[**OAuth2Resource**](OAuth2Resource.md)
 
 ### Authorization
 
-Require client credentials
+No authorization required
 
 ### HTTP request headers
 
@@ -796,7 +826,7 @@ Name | Type | Description  | Notes
  
 ### Return type
 
-[**[]OAuth2Resource**](oAuth2Resource.md)
+[**[]OAuth2Resource**](OAuth2Resource.md)
 
 ### Authorization
 
@@ -818,7 +848,7 @@ Create or update an OAuth 2.0 resource.
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**OAuth2Client**](OAuth2Client.md)|  |
+ **body** | [**OAuth2Resource**](OAuth2Resource.md)|  |
  **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing resource statement |
  **authSrvPubJwk** | [**JsonWebKey**](JsonWebKey.md)| Auth Service's public JWK | 
 
@@ -828,7 +858,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+AD user credentials required
 
 ### HTTP request headers
 

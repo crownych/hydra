@@ -13,26 +13,33 @@ func TestHelperCreateGetDeleteResource(k string, m Manager) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Parallel()
 		ctx := context.TODO()
-		_, err := m.GetResource(ctx, "urn:104:v3:resource:resume:v1.0")
+		_, err := m.GetResource(ctx, "urn:104:v3:resource:rest:jobs")
 		assert.NotNil(t, err)
 
 		c := &Resource{
-			Urn:         "urn:104:v3:resource:resume:v1.0",
-			Uri:         "https://v3ms.104.com.tw/resume/v1.0",
-			Name:        "resume",
-			AuthService: "https://auth.v3.104.com.tw",
+			Urn:          "urn:104:v3:resource:rest:jobs",
+			Uri:          "https://v3ms.104.com.tw/jobs",
+			Name:         "jobs",
+			Type:         "rest",
+			AuthService:  "https://v3auth.104.com.tw",
+			DefaultScope: "rest:job",
+			DefaultScopeAuthType: "company",
+			GrantTypes:   []string{
+				"urn:ietf:params:oauth:grant-type:jwt-bearer",
+				"client_credentials",
+			},
 			Scopes: []Scope{
-				{Name: "resume:v1.0:semi-read", AuthType: "", Description: "讀半顯履歷資料"},
-				{Name: "resume:v1.0:read", AuthType: "", Description: "讀履歷資料"},
+				{Name: "rest:jobs:read",  ScopeAuthType: "", Description: "關於rest:jobs:read"},
+				{Name: "rest:jobs:write", ScopeAuthType: "", Description: "關於rest:jobs:write"},
 			},
 			Paths: []Path{
 				{
-					Name: "/{resume_id}",
+					Name: "/",
 					Methods: []Method{
 						{
 							Name:        "GET",
-							Description: "取得 resume 資料",
-							Scopes:      []string{"resume:v1.0:semi-read", "resume:v1.0:read"},
+							Description: "取得 job 列表",
+							Scopes:      []string{"rest:job:read", "rest:jobs:write"},
 						},
 					},
 				},
@@ -40,82 +47,76 @@ func TestHelperCreateGetDeleteResource(k string, m Manager) func(t *testing.T) {
 					Name: "/",
 					Methods: []Method{
 						{
+							Name:        "POST",
+							Description: "取得 job 列表",
+							Scopes:      []string{"rest:job:write"},
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
 							Name:        "GET",
-							Description: "取得 resume 列表",
-							Scopes:      []string{"resume:v1.0:semi-read", "resume:v1.0:read"},
+							Description: "取得 job 資料",
+							Scopes:      []string{"rest:job:read", "rest:jobs:write"},
+
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
+							Name:        "DELETE",
+							Description: "刪除 job 資料",
+							Scopes:      []string{"rest:job:write"},
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
+							Name:        "PATCH",
+							Description: "修改 job 資料",
+							Scopes:      []string{"rest:job:write"},
 						},
 					},
 				},
 			},
-			GrantTypes:    []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
-			Version:       "1.0",
-			Contacts:      []string{"some.one@104.com.tw"},
-			ScopeAuthType: "company",
-			Description:   "履歷資料API",
+			Contacts:      []string{"someone@104.com.tw"},
+			Description:   "公司資料",
 		}
 		assert.NoError(t, m.CreateResource(ctx, c))
-		assert.Equal(t, "urn:104:v3:resource:resume:v1.0", c.Urn)
-		assert.Equal(t, "urn:104:v3:resource:resume:v1.0", c.GetUrn())
+		assert.Equal(t, "urn:104:v3:resource:rest:jobs", c.Urn)
+		assert.Equal(t, "urn:104:v3:resource:rest:jobs", c.GetUrn())
 
 		d, err := m.GetResource(ctx, c.GetUrn())
 		require.NoError(t, err)
-		assert.Equal(t, "urn:104:v3:resource:resume:v1.0", d.Urn)
-		assert.Equal(t, "urn:104:v3:resource:resume:v1.0", d.GetUrn())
+		assert.Equal(t, "urn:104:v3:resource:rest:jobs", d.Urn)
+		assert.Equal(t, "urn:104:v3:resource:rest:jobs", d.GetUrn())
 
-		assert.NoError(t, m.CreateResource(ctx, &Resource{
-			Urn:         "urn:104:v3:resource:resume:v2.0",
-			Uri:         "https://v3ms.104.com.tw/resume/v2.0",
-			Name:        "resume",
-			AuthService: "https://auth.v3.104.com.tw",
-			Scopes: []Scope{
-				{Name: "resume:v2.0:semi-read", AuthType: "", Description: "讀半顯履歷資料"},
-				{Name: "resume:v2.0:read", AuthType: "", Description: "讀履歷資料"},
-			},
-			Paths: []Path{
-				{
-					Name: "/{resume_id}",
-					Methods: []Method{
-						{
-							Name:        "GET",
-							Description: "取得 resume 資料",
-							Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
-						},
-					},
-				},
-				{
-					Name: "/",
-					Methods: []Method{
-						{
-							Name:        "GET",
-							Description: "取得 resume 列表",
-							Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
-						},
-					},
-				},
-			},
-			GrantTypes:    []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
-			Version:       "2.0",
-			Contacts:      []string{"some.one@104.com.tw"},
-			ScopeAuthType: "company",
-			Description:   "履歷資料API",
-		}))
+		//create duplicate resource should fail
+		assert.Error(t, m.CreateResource(ctx, c))
 
 		ds, err := m.GetResources(ctx, 100, 0)
 		assert.NoError(t, err)
-		assert.Len(t, ds, 2)
-		assert.NotEqual(t, ds["urn:104:v3:resource:resume:v1.0"].Urn, ds["urn:104:v3:resource:resume:v2.0"].Urn)
+		assert.Len(t, ds, 1)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].Urn, ds["urn:104:v3:resource:rest:jobs"].Urn)
 
 		//test if properties were set properly
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].Uri, c.Uri)
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].Name, c.Name)
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].AuthService, c.AuthService)
-		assert.EqualValues(t, ds["urn:104:v3:resource:resume:v1.0"].Scopes, c.Scopes)
-		assert.EqualValues(t, ds["urn:104:v3:resource:resume:v1.0"].Paths, c.Paths)
-		assert.EqualValues(t, ds["urn:104:v3:resource:resume:v1.0"].GrantTypes, c.GrantTypes)
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].Version, c.Version)
-		assert.EqualValues(t, ds["urn:104:v3:resource:resume:v1.0"].Contacts, c.Contacts)
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].ScopeAuthType, c.ScopeAuthType)
-		assert.Equal(t, ds["urn:104:v3:resource:resume:v1.0"].Description, c.Description)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].Uri, c.Uri)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].Name, c.Name)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].Type, c.Type)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].AuthService, c.AuthService)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].DefaultScope, c.DefaultScope)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].DefaultScopeAuthType, c.DefaultScopeAuthType)
+		assert.EqualValues(t, ds["urn:104:v3:resource:rest:jobs"].GrantTypes, c.GrantTypes)
+		assert.EqualValues(t, ds["urn:104:v3:resource:rest:jobs"].Scopes, c.Scopes)
+		assert.EqualValues(t, ds["urn:104:v3:resource:rest:jobs"].Paths, c.Paths)
+		assert.EqualValues(t, ds["urn:104:v3:resource:rest:jobs"].Contacts, c.Contacts)
+		assert.Equal(t, ds["urn:104:v3:resource:rest:jobs"].Description, c.Description)
 
 		ds, err = m.GetResources(ctx, 1, 0)
 		assert.NoError(t, err)
@@ -126,22 +127,30 @@ func TestHelperCreateGetDeleteResource(k string, m Manager) func(t *testing.T) {
 		assert.Len(t, ds, 0)
 
 		err = m.UpdateResource(ctx, &Resource{
-			Urn:         "urn:104:v3:resource:resume:v2.0",
-			Uri:         "https://v3ms.104.com.tw/resume/v2.0",
-			Name:        "resume",
+			Urn:         "urn:104:v3:resource:rest:jobs",
+			Uri:         "https://v3ms.104.com.tw/jobs",
+			Name:        "jobs",
+			Type:		 "rest",
 			AuthService: "https://auth.v3.104.com.tw",
+			DefaultScope: "rest:job",
+			DefaultScopeAuthType: "company",
+			GrantTypes:   []string{
+				"urn:ietf:params:oauth:grant-type:jwt-bearer",
+				"client_credentials",
+			},
 			Scopes: []Scope{
-				{Name: "resume:v2.0:semi-read", AuthType: "company", Description: "讀半顯履歷資料"},
-				{Name: "resume:v2.0:read", AuthType: "company", Description: "讀履歷資料"},
+				{Name: "rest:jobs:read",  ScopeAuthType: "", Description: "關於rest:jobs:read"},
+				{Name: "rest:jobs:write", ScopeAuthType: "", Description: "關於rest:jobs:write"},
+				{Name: "rest:jobs:list",  ScopeAuthType: "", Description: "關於rest:jobs:list"},
 			},
 			Paths: []Path{
 				{
-					Name: "/{resume_id}",
+					Name: "/",
 					Methods: []Method{
 						{
 							Name:        "GET",
-							Description: "取得 resume 資料-update",
-							Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
+							Description: "取得 job 列表",
+							Scopes:      []string{"rest:job:list"},
 						},
 					},
 				},
@@ -149,36 +158,65 @@ func TestHelperCreateGetDeleteResource(k string, m Manager) func(t *testing.T) {
 					Name: "/",
 					Methods: []Method{
 						{
+							Name:        "POST",
+							Description: "取得 job 列表",
+							Scopes:      []string{"rest:job:read", "rest:job:write"},
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
 							Name:        "GET",
-							Description: "取得 resume 列表-update",
-							Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
+							Description: "取得 job 資料",
+							Scopes:      []string{"rest:job:read"},
+
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
+							Name:        "DELETE",
+							Description: "刪除 job 資料",
+							Scopes:      []string{"rest:job:read", "rest:job:write"},
+						},
+					},
+				},
+				{
+					Name: "/{jobNo}",
+					Methods: []Method{
+						{
+							Name:        "PATCH",
+							Description: "修改 job 資料",
+							Scopes:      []string{"rest:job:read", "rest:job:write"},
 						},
 					},
 				},
 			},
-			GrantTypes:    []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
-			Version:       "2.0",
 			Contacts:      []string{"some.two@104.com.tw"},
-			ScopeAuthType: "company",
-			Description:   "履歷資料API-update",
+			Description:   "公司資料-update",
 		})
 		require.NoError(t, err)
 
-		nc, err := m.GetResource(ctx, "urn:104:v3:resource:resume:v2.0")
+		nc, err := m.GetResource(ctx, "urn:104:v3:resource:rest:jobs")
 		require.NoError(t, err)
 
 		assert.EqualValues(t, []Scope{
-			{Name: "resume:v2.0:semi-read", AuthType: "company", Description: "讀半顯履歷資料"},
-			{Name: "resume:v2.0:read", AuthType: "company", Description: "讀履歷資料"},
+			{Name: "rest:jobs:read",  ScopeAuthType: "", Description: "關於rest:jobs:read"},
+			{Name: "rest:jobs:write", ScopeAuthType: "", Description: "關於rest:jobs:write"},
+			{Name: "rest:jobs:list",  ScopeAuthType: "", Description: "關於rest:jobs:list"},
 		}, nc.Scopes)
 		assert.EqualValues(t, []Path{
 			{
-				Name: "/{resume_id}",
+				Name: "/",
 				Methods: []Method{
 					{
 						Name:        "GET",
-						Description: "取得 resume 資料-update",
-						Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
+						Description: "取得 job 列表",
+						Scopes:      []string{"rest:job:list"},
 					},
 				},
 			},
@@ -186,23 +224,51 @@ func TestHelperCreateGetDeleteResource(k string, m Manager) func(t *testing.T) {
 				Name: "/",
 				Methods: []Method{
 					{
+						Name:        "POST",
+						Description: "取得 job 列表",
+						Scopes:      []string{"rest:job:read", "rest:job:write"},
+					},
+				},
+			},
+			{
+				Name: "/{jobNo}",
+				Methods: []Method{
+					{
 						Name:        "GET",
-						Description: "取得 resume 列表-update",
-						Scopes:      []string{"resume:v2.0:semi-read", "resume:v2.0:read"},
+						Description: "取得 job 資料",
+						Scopes:      []string{"rest:job:read"},
+
+					},
+				},
+			},
+			{
+				Name: "/{jobNo}",
+				Methods: []Method{
+					{
+						Name:        "DELETE",
+						Description: "刪除 job 資料",
+						Scopes:      []string{"rest:job:read", "rest:job:write"},
+					},
+				},
+			},
+			{
+				Name: "/{jobNo}",
+				Methods: []Method{
+					{
+						Name:        "PATCH",
+						Description: "修改 job 資料",
+						Scopes:      []string{"rest:job:read", "rest:job:write"},
 					},
 				},
 			},
 		}, nc.Paths)
 		assert.EqualValues(t, []string{"some.two@104.com.tw"}, nc.Contacts)
-		assert.Equal(t, "履歷資料API-update", nc.Description)
+		assert.Equal(t, "公司資料-update", nc.Description)
 
-		err = m.DeleteResource(ctx, "urn:104:v3:resource:resume:v1.0")
+		err = m.DeleteResource(ctx, "urn:104:v3:resource:rest:jobs")
 		assert.NoError(t, err)
 
-		err = m.DeleteResource(ctx, "urn:104:v3:resource:resume:v2.0")
-		assert.NoError(t, err)
-
-		_, err = m.GetResource(ctx, "urn:104:v3:resource:resume:v1.0")
+		_, err = m.GetResource(ctx, "urn:104:v3:resource:rest:jobs")
 		assert.NotNil(t, err)
 	}
 }

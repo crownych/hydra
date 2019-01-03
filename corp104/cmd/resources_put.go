@@ -12,9 +12,19 @@ var resourcesPutCmd = &cobra.Command{
 
 Example:
   
+  # Restful
   hydra resources put \
      --endpoint "http://localhost:4444" \
-     --resource-metadata '{"uri":"https://v3ms.104.com.tw/resume","name":"resume","scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"resume:v1.0:semi-read","scope_auth_type":"","description":"讀半顯履歷資料"},{"name":"resume:v1.0:read","scope_auth_type":"","description":"讀履歷資料"}],"paths":[{"name":"/{resume_id}","methods":[{"name":"GET","description":"取得 resume 資料","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]},{"name":"/","methods":[{"name":"GET","description":"取得 resume 列表","scopes":["resume:v1.0:semi-read","resume:v1.0:read"]}]}],"version":"1.0","contacts":["some.one@104.com.tw"],"description":"履歷資料API"}' \
+     --resource-metadata '{"uri":"https://v3ms.104.com.tw/jobs","name":"jobs","type":"rest","auth_service":"https://v3auth.104.com.tw","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer","client_credentials"],"scopes":[{"name":"rest:jobs:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"rest:jobs:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"paths":[{"name":"/","methods":[{"name":"GET","description":"取得 job 列表","scopes":["rest:jobs:read","rest:jobs:write"]}]},{"name":"/","methods":[{"name":"POST","description":"取得 job 列表","scopes":["rest:jobs:write"]}]},{"name":"/{jobNo}","methods":[{"name":"GET","description":"取得 job 資料","scopes":["rest:jobs:read","rest:jobs:write"]}]},{"name":"/{jobNo}","methods":[{"name":"DELETE","description":"刪除 job 資料","scopes":["rest:jobs:write"]}]},{"name":"/{jobNo}","methods":[{"name":"PATCH","description":"修改 job 資料","scopes":["rest:jobs:write"]}]}],"contacts":["someone@104.com.tw"],"description":"公司資料"}' \
+     --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \ 
+     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \ 
+     --user foo.bar \
+	 --pwd secret
+
+  # GraphQL
+  hydra resources put \
+     --endpoint "http://localhost:4444" \
+     --resource-metadata '{"uri":"https://v3ms.104.com.tw/graphql","name":"resumes","type":"graphql","auth_service":"https://v3auth.104.com.tw","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"graphql:resumes:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"graphql:resumes:edu:read","scope_auth_type":"","description":"關於rest:jobs:edu:read"},{"name":"graphql:resumes:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"graphql_operations":[{"name":"resumes","type":"query","scopes":["graphql:resumes:read","graphql:resumes:write"],"description":"查詢履歷"},{"name":"resumes/edu","type":"query","scopes":["graphql:resumes:edu:read","graphql:resumes:write"],"description":"查詢履歷的教育程度"},{"name":"createResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"新增履歷"},{"name":"deleteResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"刪除履歷"}],"contacts":["someone@104.com.tw"],"description":"歷履表"}' \
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \ 
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \ 
      --user foo.bar \

@@ -122,6 +122,10 @@ func TestExecute(t *testing.T) {
 		//{args: []string{"help", "migrate", "sql"}},
 		{args: []string{"version"}},
 		{args: []string{"token", "flush", "--endpoint", backend}},
+		{args: []string{"resources", "put", "--endpoint", frontend, "--resource-metadata", `{"uri":"https://v3ms.104.com.tw/graphql","name":"resumes","type":"graphql","auth_service":"https://v3auth.104.com.tw","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"graphql:resumes:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"graphql:resumes:edu:read","scope_auth_type":"","description":"關於rest:jobs:edu:read"},{"name":"graphql:resumes:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"graphql_operations":[{"name":"resumes","type":"query","scopes":["graphql:resumes:read","graphql:resumes:write"],"description":"查詢履歷"},{"name":"resumes/edu","type":"query","scopes":["graphql:resumes:edu:read","graphql:resumes:write"],"description":"查詢履歷的教育程度"},{"name":"createResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"新增履歷"},{"name":"deleteResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"刪除履歷"}],"contacts":["someone@104.com.tw"],"description":"歷履表"}`, "--signing-jwk", `{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
+		{args: []string{"resources", "commit", "--endpoint", frontend, "--urn", "urn:104:v3:resource:graphql:resumes", "--commit-code", "env:COMMIT_CODE"}},
+		{args: []string{"resources", "get", "--endpoint", frontend, "urn:104:v3:resource:graphql:resumes"}},
+		{args: []string{"resources", "delete", "--endpoint", backend, "urn:104:v3:resource:graphql:resumes"}},
 	} {
 		for i, v := range c.args {
 			envPrefix := "env:"
