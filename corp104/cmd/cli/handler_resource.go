@@ -84,6 +84,19 @@ func (h *ResourceHandler) CommitResource(cmd *cobra.Command, args []string) {
 	deleteCookies(cookieFileName)
 }
 
+func (h *ResourceHandler) DeleteResource(cmd *cobra.Command, args []string) {
+	m := h.newResourceManager(cmd)
+
+	if len(args) == 0 {
+		fmt.Print(cmd.UsageString())
+		return
+	}
+
+	response, err := m.DeleteOAuth2Resource(args[0])
+	checkResponse(response, err, http.StatusNoContent)
+	fmt.Println("OAuth2 resource deleted.")
+}
+
 func (h *ResourceHandler) GetResource(cmd *cobra.Command, args []string) {
 	m := h.newResourceManager(cmd)
 
@@ -92,11 +105,9 @@ func (h *ResourceHandler) GetResource(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	clientSecret, _ := cmd.Flags().GetString("urn")
-
-	cl, response, err := m.GetOAuth2Client(args[0], clientSecret)
+	resource, response, err := m.GetOAuth2Resource(args[0])
 	checkResponse(response, err, http.StatusOK)
-	fmt.Printf("%s\n", formatResponse(cl))
+	fmt.Printf("%s\n", formatResponse(resource))
 }
 
 func (h *ResourceHandler) getResourceFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Resource, *hydra.JsonWebKey) {

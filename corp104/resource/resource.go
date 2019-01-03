@@ -1,9 +1,15 @@
 package resource
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	UrnPrefix = "urn:104:v3:resource:"
+
+	RestResourceType = "rest"
+	GraphQLResourceType = "graphql"
 )
 
 // Resource represents an OAuth 2.0 Resource.
@@ -19,64 +25,88 @@ type Resource struct {
 	// Name of the resource.
 	Name string `json:"name" validate:"required"`
 
-	// AuthService is the URI of the authorization server responsible for the resource
+	// Type of the resource.
+	Type string `json:"type" validate:"required,oneof=rest graphql"`
+
+	// AuthService is the URI of the authorization server responsible for the resource.
 	AuthService string `json:"auth_server,omitempty"`
 
-	// List of paths provided by the resource
-	Paths []Path `json:"paths" validate:"required,min=1"`
+	// List of paths provided by the resource.
+	Paths []Path `json:"paths,omitempty" validate:"dive"`
 
-	// List of scopes supported by the resource
-	Scopes []Scope `json:"scopes,omitempty"`
+	// List of GraphQL operations provided by the resource.
+	GraphQLOperations []GraphQLOperation `json:"graphql_operations,omitempty" validate:"dive"`
 
-	// List of grant types that allow access to the resource
-	GrantTypes []string `json:"grant_types" validate:"required,min=1,max=1"`
+	// List of scopes supported by the resource.
+	Scopes []Scope `json:"scopes,omitempty" validate:"dive"`
 
-	// Resource version, in the format major_number.minor_number
-	Version string `json:"version" validate:"required"`
+	// List of grant types that allow access to the resource.
+	GrantTypes []string `json:"grant_types" validate:"required,min=1,dive,oneof=client_credentials implicit urn:ietf:params:oauth:grant-type:jwt-bearer"`
 
-	// List of contacts responsible for the resource
+	// List of contacts responsible for the resource.
 	Contacts []string `json:"contacts" validate:"required,min=1"`
 
-	// Auth type of the scope in the resource level
-	ScopeAuthType string `json:"scope_auth_type" validate:"required,oneof=none client user company"`
+	// Default scope of the resource.
+	DefaultScope string `json:"default_scope"`
 
-	// Description of the resource
+	// Auth type of the default scope.
+	DefaultScopeAuthType string `json:"default_scope_auth_type" validate:"required,oneof=none client user company"`
+
+	// Description of the resource.
 	Description string `json:"description" validate:"required"`
 }
 
 func (r *Resource) GetUrn() string {
-	return fmt.Sprintf("%s%s:v%s", UrnPrefix, r.Name, r.Version)
+	return fmt.Sprintf("%s%s:%s", UrnPrefix, r.Type, r.Name)
+}
+
+func (r *Resource) GetDefaultScope() string {
+	return strings.TrimPrefix(r.GetUrn(), UrnPrefix)
 }
 
 type Path struct {
 	// URI path of the resource.
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 
 	// List of HTTP methods supported by the resource.
-	Methods []Method `json:"methods"`
+	Methods []Method `json:"methods" validate:"required,min=1,dive"`
 
-	// Description of the Path
+	// Description of the Path.
 	Description string `json:"description,omitempty"`
 }
 
 type Method struct {
 	// HTTP method name.
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required,oneof=CONNECT DELETE GET HEAD PATCH POST PUT OPTIONS TRACE"`
 
-	// Scopes supported by the Path
-	Scopes []string `json:"scopes,omitempty"`
+	// Scopes supported by the method.
+	Scopes []string `json:"scopes"`
 
-	// Description of the method
+	// Description of the method.
 	Description string `json:"description,omitempty"`
 }
 
 type Scope struct {
 	// Name of the scope.
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required`
 
-	// Auth type of the scope
-	AuthType string `json:"scope_auth_type,omitempty"`
+	// Auth type of the scope.
+	ScopeAuthType string `json:"scope_auth_type"`
 
 	// Description of the scope
+	Description string `json:"description,omitempty"`
+}
+
+type GraphQLOperation struct {
+	// Name of the GraphQL operation.
+	Name string `json:"name" validate:"required`
+
+	// Type of the GraphQL operation.
+	Type string `json:"type" validate:"required,oneof=query mutation subscription"`
+
+	// Scopes supported by the GraphQL operation.
+	Scopes []string `json:"scopes"`
+
+	// Description of the GraphQL operation.
 	Description string `json:"description,omitempty"`
 }

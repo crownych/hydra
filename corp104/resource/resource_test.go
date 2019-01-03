@@ -7,10 +7,11 @@ import (
 
 func TestResource(t *testing.T) {
 	r := &Resource{
-		Uri:     "https://v3ms.104.com.tw/job",
-		Name:    "job",
-		Version: "1.0",
+		Uri:  "https://v3ms.104.com.tw/jobs",
+		Name: "jobs",
+		Type: "rest",
 	}
 
-	assert.EqualValues(t, UrnPrefix+"job:v1.0", r.GetUrn())
+	assert.EqualValues(t, UrnPrefix+"rest:jobs", r.GetUrn())
+	assert.EqualValues(t, "rest:jobs", r.GetDefaultScope())
 }

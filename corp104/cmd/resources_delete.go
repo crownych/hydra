@@ -24,17 +24,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// clientsDeleteCmd represents the delete command
-var clientsDeleteCmd = &cobra.Command{
-	Use:   "delete <id>",
-	Short: "Delete an OAuth 2.0 Client",
-	Long: `This command deletes an OAuth 2.0 Client by its ID.
+// resourcesDeleteCmd represents the delete command
+var resourcesDeleteCmd = &cobra.Command{
+	Use:   "delete <urn>",
+	Short: "Delete an OAuth 2.0 Resource",
+	Long: `This command deletes an OAuth 2.0 Resource by its URN.
 
 Example:
-  hydra clients delete client-1`,
-	Run: cmdHandler.Clients.DeleteClient,
+  hydra resources delete urn:104:v3:resource:rest:jobs`,
+	Run: cmdHandler.Resources.DeleteResource,
 }
 
 func init() {
-	clientsCmd.AddCommand(clientsDeleteCmd)
+	resourcesCmd.AddCommand(resourcesDeleteCmd)
 }

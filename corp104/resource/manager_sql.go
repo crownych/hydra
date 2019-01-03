@@ -19,7 +19,7 @@ var sharedMigrations = []*migrate.Migration{
 	content  	json NOT NULL
 )`},
 		Down: []string{
-			"DROP TABLE hydra_resource",
+			`DROP TABLE hydra_resource`,
 		},
 	},
 }
@@ -27,9 +27,26 @@ var sharedMigrations = []*migrate.Migration{
 var Migrations = map[string]*migrate.MemoryMigrationSource{
 	"mysql": {Migrations: []*migrate.Migration{
 		sharedMigrations[0],
+		{
+			Id: "2",
+			Up: []string{
+				`ALTER TABLE hydra_resource ADD uri VARCHAR(255) GENERATED ALWAYS AS (content->>'$.uri') UNIQUE NOT NULL`,
+			},
+			Down: []string{
+				`ALTER TABLE hydra_resource DROP uri`,
+
+			},
+		},
 	}},
 	"postgres": {Migrations: []*migrate.Migration{
 		sharedMigrations[0],
+		{
+			Id: "2",
+			Up: []string{`CREATE UNIQUE INDEX hydra_resource_uri_idx ON hydra_resource ((content->>'uri'))`},
+			Down: []string{
+				`DROP INDEX hydra_resource_uri_idx`,
+			},
+		},
 	}},
 }
 
@@ -84,7 +101,7 @@ func (m *SQLManager) CreateSchemas() (int, error) {
 
 func (m *SQLManager) GetResource(ctx context.Context, urn string) (*Resource, error) {
 	var d sqlData
-	if err := m.DB.Get(&d, m.DB.Rebind("SELECT * FROM hydra_resource WHERE urn=?"), urn); err != nil {
+	if err := m.DB.Get(&d, m.DB.Rebind("SELECT urn, content FROM hydra_resource WHERE urn=?"), urn); err != nil {
 		return nil, sqlcon.HandleError(err)
 	}
 
@@ -141,7 +158,7 @@ func (m *SQLManager) GetResources(ctx context.Context, limit, offset int) (map[s
 	d := make([]sqlData, 0)
 	resources := make(map[string]Resource)
 
-	if err := m.DB.Select(&d, m.DB.Rebind("SELECT * FROM hydra_resource ORDER BY urn LIMIT ? OFFSET ?"), limit, offset); err != nil {
+	if err := m.DB.Select(&d, m.DB.Rebind("SELECT urn, content FROM hydra_resource ORDER BY urn LIMIT ? OFFSET ?"), limit, offset); err != nil {
 		return nil, sqlcon.HandleError(err)
 	}
 

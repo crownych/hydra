@@ -18,3 +18,4 @@ plugin-*.so
 hydra-docker-bin
 cookies.txt
 vendor.orig
+.env
