@@ -181,3 +181,7 @@
 [[constraint]]
   name = "github.com/gobwas/glob"
   version = "0.2.3"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/104corp/vip3-go-auth"

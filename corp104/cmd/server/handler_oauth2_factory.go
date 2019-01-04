@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/104corp/vip3-go-auth/vip3auth"
 	"github.com/gorilla/sessions"
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/fosite"
@@ -121,14 +122,16 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 		hasher = &tracing.TracedBCrypt{fc.HashCost}
 	}
 
-	return compose.Compose(
+	commonStrategy := &compose.CommonStrategy{
+		CoreStrategy:               coreStrategy,
+		OpenIDConnectTokenStrategy: oidcStrategy,
+		JWTStrategy:                jwtStrategy,
+	}
+
+	oriProvider := compose.Compose(
 		fc,
 		store,
-		&compose.CommonStrategy{
-			CoreStrategy:               coreStrategy,
-			OpenIDConnectTokenStrategy: oidcStrategy,
-			JWTStrategy:                jwtStrategy,
-		},
+		commonStrategy,
 		hasher,
 		compose.OAuth2AuthorizeExplicitFactory,
 		compose.OAuth2AuthorizeImplicitFactory,
@@ -142,6 +145,8 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 		compose.OAuth2TokenRevocationFactory,
 		compose.OAuth2TokenIntrospectionFactory,
 	)
+	provider := vip3auth.ComposeWithFosite(oriProvider.(*fosite.Fosite), fc, store, commonStrategy)
+	return provider
 }
 
 func setDefaultConsentURL(s string, c *config.Config, path string) string {
