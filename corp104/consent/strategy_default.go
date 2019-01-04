@@ -600,21 +600,21 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 			return nil, err
 		}
 		if id != "" {
-			session.Session.IDToken["urn:104v3:entity:pid"] = id
+			session.Session.IDToken["urn:104:v3:entity:pid"] = id
 			list, err := s.getCompanyList(id)
 			if err != nil {
 				return nil, err
 			}
 			if len(list) == 0 || len(list) > 1 {
-				session.Session.IDToken["urn:104v3:entity:company_id"] = ""
+				session.Session.IDToken["urn:104:v3:entity:company_id"] = ""
 				if len(list) == 0 {
-					session.Session.IDToken["urn:104v3:entity:company_list"] = []string{}
+					session.Session.IDToken["urn:104:v3:entity:company_list"] = []string{}
 				} else {
-					session.Session.IDToken["urn:104v3:entity:company_list"] = list
+					session.Session.IDToken["urn:104:v3:entity:company_list"] = list
 				}
 			} else {
-				session.Session.IDToken["urn:104v3:entity:company_id"] = list[0]
-				session.Session.IDToken["urn:104v3:entity:company_list"] = list
+				session.Session.IDToken["urn:104:v3:entity:company_id"] = list[0]
+				session.Session.IDToken["urn:104:v3:entity:company_list"] = list
 			}
 		}
 		session.Session.IDToken["azp"] = req.GetClient().GetID()
