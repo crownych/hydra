@@ -114,7 +114,7 @@ func TestClientSDK(t *testing.T) {
 	resourceManager := &resource.MemoryManager{}
 
 	manager := client.NewMemoryManager(nil)
-	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{}, []string{"public"}, keyManager, resourceManager,"http://localhost:4444", "jwk.offline")
+	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{}, []string{"public"}, keyManager, resourceManager, "http://localhost:4444", "jwk.offline")
 
 	router := httprouter.New()
 	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {
@@ -157,7 +157,6 @@ func TestClientSDK(t *testing.T) {
 			c.Configuration.Password = "wrong"
 
 			_, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
-			fmt.Println(err)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
 		})
