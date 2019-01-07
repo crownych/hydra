@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/ory/hydra/corp104/jwk"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
@@ -44,6 +45,7 @@ type Handler struct {
 	H               herodot.Writer
 	Validator       *Validator
 	KeyManager      jwk.Manager
+	ResourceManager resource.Manager
 	IssuerURL       string
 	offlineJWKSName string
 }
@@ -61,6 +63,7 @@ func NewHandler(
 	defaultClientScopes []string,
 	subjectTypes []string,
 	keyManager jwk.Manager,
+	resourceManager resource.Manager,
 	issuerURL string,
 	offlineJWKSName string,
 ) *Handler {
@@ -69,6 +72,7 @@ func NewHandler(
 		H:               h,
 		Validator:       NewValidator(defaultClientScopes, subjectTypes),
 		KeyManager:      keyManager,
+		ResourceManager: resourceManager,
 		IssuerURL:       issuerURL,
 		offlineJWKSName: offlineJWKSName,
 	}
@@ -435,7 +439,11 @@ func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*SoftwareSta
 		return nil, verifiedMsg, pkg.NewBadRequestError("invalid audience")
 	}
 
-	if err := h.Validator.Validate(&stmt.Client); err != nil {
+	// get valid scopes
+	validScopes, err := h.ResourceManager.GetAllScopeNames()
+
+	// validate client
+	if err := h.Validator.Validate(&stmt.Client, validScopes); err != nil {
 		return nil, verifiedMsg, err
 	}
 

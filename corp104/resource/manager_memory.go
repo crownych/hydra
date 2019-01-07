@@ -100,10 +100,30 @@ func (m *MemoryManager) GetAllScopeNames() ([]string, error) {
 
 	var scopes []string
 	for _, resource := range m.Resources {
+		scopes = append(scopes, resource.GetUrn())
+		scopes = append(scopes, resource.GetDefaultScope())
 		for _, scope := range resource.Scopes {
 			scopes = append(scopes, scope.Name)
 		}
 	}
 
 	return scopes, nil
+}
+
+func (m *MemoryManager) GetResourceScopeMap() (map[string][]string, error) {
+	m.RLock()
+	defer m.RUnlock()
+
+	rsmap := make(map[string][]string)
+	for _, resource := range m.Resources {
+		var scopes []string
+		// resource 的 scopes，包含 default scope 及 scopes 宣告
+		scopes = append(scopes, resource.GetDefaultScope())
+		for _, scope := range resource.Scopes {
+			scopes = append(scopes, scope.Name)
+		}
+		rsmap[resource.GetUrn()] = scopes
+	}
+
+	return rsmap, nil
 }

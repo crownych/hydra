@@ -260,7 +260,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-Client credentials is required
+Client credentials required
 
 ### HTTP request headers
 

@@ -182,9 +182,33 @@ func (m *SQLManager) GetAllScopeNames() ([]string, error) {
 	}
 	var scopes []string
 	for _, resource := range resources {
+		scopes = append(scopes, resource.GetUrn())
+		scopes = append(scopes, resource.GetDefaultScope())
 		for _, scope := range resource.Scopes {
 			scopes = append(scopes, scope.Name)
 		}
 	}
 	return scopes, nil
+}
+
+func (m *SQLManager) GetResourceScopeMap() (map[string][]string, error) {
+	d := make([]sqlData, 0)
+	resources := make(map[string]Resource)
+
+	if err := m.DB.Select(&d, "SELECT * FROM hydra_resource ORDER BY urn"); err != nil {
+		return nil, sqlcon.HandleError(err)
+	}
+
+	rsmap := make(map[string][]string)
+	for _, resource := range resources {
+		// resource 的 scopes，包含 default scope 及 scopes 宣告
+		var scopes []string
+		scopes = append(scopes, resource.GetDefaultScope())
+		for _, scope := range resource.Scopes {
+			scopes = append(scopes, scope.Name)
+		}
+		rsmap[resource.GetUrn()] = scopes
+	}
+
+	return rsmap, nil
 }
