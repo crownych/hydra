@@ -245,7 +245,7 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request) {
 	if h.ScopesSupported != "" {
 		scopesSupported = append(scopesSupported, strings.Split(h.ScopesSupported, ",")...)
 	}
-	resourceScopes, _ := h.ResourceManager.GetAllScopeNames()
+	resourceScopes, _ := h.ResourceManager.GetAllScopeNames(r.Context())
 	scopesSupported = append(scopesSupported, resourceScopes...)
 
 	claims := (&WellKnown{

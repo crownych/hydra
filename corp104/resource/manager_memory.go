@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"math"
 	"sync"
 
 	"github.com/imdario/mergo"
@@ -94,12 +95,14 @@ func (m *MemoryManager) GetResources(ctx context.Context, limit, offset int) (ma
 	return resources, nil
 }
 
-func (m *MemoryManager) GetAllScopeNames() ([]string, error) {
-	m.RLock()
-	defer m.RUnlock()
+func (m *MemoryManager) GetAllScopeNames(ctx context.Context) ([]string, error) {
+	resources, err := m.GetResources(ctx, math.MaxUint32, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	var scopes []string
-	for _, resource := range m.Resources {
+	for _, resource := range resources {
 		scopes = append(scopes, resource.GetUrn())
 		scopes = append(scopes, resource.GetDefaultScope())
 		for _, scope := range resource.Scopes {
@@ -110,12 +113,14 @@ func (m *MemoryManager) GetAllScopeNames() ([]string, error) {
 	return scopes, nil
 }
 
-func (m *MemoryManager) GetResourceScopeMap() (map[string][]string, error) {
-	m.RLock()
-	defer m.RUnlock()
+func (m *MemoryManager) GetResourceScopeMap(ctx context.Context) (map[string][]string, error) {
+	resources, err := m.GetResources(ctx, math.MaxUint32, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	rsmap := make(map[string][]string)
-	for _, resource := range m.Resources {
+	for _, resource := range resources {
 		var scopes []string
 		// resource 的 scopes，包含 default scope 及 scopes 宣告
 		scopes = append(scopes, resource.GetDefaultScope())

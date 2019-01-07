@@ -380,7 +380,7 @@ func (h *Handler) createActualClient(ctx context.Context, c *Client) (string, er
 }
 
 func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Request, swStatementJWS []byte, authSrvPrivateKey *jose.JSONWebKey) {
-	stmt, _, err := h.validateSoftwareStatement(swStatementJWS)
+	stmt, _, err := h.validateSoftwareStatement(r.Context(), swStatementJWS)
 	if err != nil {
 		h.H.WriteError(w, r, err)
 		return
@@ -422,7 +422,7 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*SoftwareStatement, []byte, error) {
+func (h *Handler) validateSoftwareStatement(ctx context.Context, swStatementJWS []byte) (*SoftwareStatement, []byte, error) {
 	// JWS Verification using client's public key
 	verifiedMsg, err := pkg.VerifyJWSUsingEmbeddedKey(swStatementJWS, h.validateSoftwareStatementHeader, nil)
 	if err != nil {
@@ -440,7 +440,7 @@ func (h *Handler) validateSoftwareStatement(swStatementJWS []byte) (*SoftwareSta
 	}
 
 	// get valid scopes
-	validScopes, err := h.ResourceManager.GetAllScopeNames()
+	validScopes, err := h.ResourceManager.GetAllScopeNames(ctx)
 
 	// validate client
 	if err := h.Validator.Validate(&stmt.Client, validScopes); err != nil {
