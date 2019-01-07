@@ -8,6 +8,7 @@ import (
 	"github.com/ory/sqlcon"
 	"github.com/pkg/errors"
 	"github.com/rubenv/sql-migrate"
+	"math"
 	"strings"
 )
 
@@ -173,13 +174,12 @@ func (m *SQLManager) GetResources(ctx context.Context, limit, offset int) (map[s
 	return resources, nil
 }
 
-func (m *SQLManager) GetAllScopeNames() ([]string, error) {
-	d := make([]sqlData, 0)
-	resources := make(map[string]Resource)
-
-	if err := m.DB.Select(&d, "SELECT * FROM hydra_resource ORDER BY urn"); err != nil {
-		return nil, sqlcon.HandleError(err)
+func (m *SQLManager) GetAllScopeNames(ctx context.Context) ([]string, error) {
+	resources, err := m.GetResources(ctx, math.MaxUint32, 0)
+	if err != nil {
+		return nil, err
 	}
+
 	var scopes []string
 	for _, resource := range resources {
 		scopes = append(scopes, resource.GetUrn())
@@ -191,12 +191,10 @@ func (m *SQLManager) GetAllScopeNames() ([]string, error) {
 	return scopes, nil
 }
 
-func (m *SQLManager) GetResourceScopeMap() (map[string][]string, error) {
-	d := make([]sqlData, 0)
-	resources := make(map[string]Resource)
-
-	if err := m.DB.Select(&d, "SELECT * FROM hydra_resource ORDER BY urn"); err != nil {
-		return nil, sqlcon.HandleError(err)
+func (m *SQLManager) GetResourceScopeMap(ctx context.Context) (map[string][]string, error) {
+	resources, err := m.GetResources(ctx, math.MaxUint32, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	rsmap := make(map[string][]string)

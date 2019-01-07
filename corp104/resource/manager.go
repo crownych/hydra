@@ -35,7 +35,7 @@ type Manager interface {
 
 	GetResources(ctx context.Context, limit, offset int) (map[string]Resource, error)
 
-	GetAllScopeNames() ([]string, error)
+	GetAllScopeNames(ctx context.Context) ([]string, error)
 
-	GetResourceScopeMap() (map[string][]string, error)
+	GetResourceScopeMap(ctx context.Context) (map[string][]string, error)
 }
