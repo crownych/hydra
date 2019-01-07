@@ -21,7 +21,7 @@ func (m *ManagerWrapper) GetClient(ctx context.Context, id string) (fosite.Clien
 	// Scope 中包含 resource 定義
 	if strings.Contains(c.Scope, resource.UrnPrefix) {
 		// 取得 resource scopes
-		rsmap, err := m.ResourceManager.GetResourceScopeMap()
+		rsmap, err := m.ResourceManager.GetResourceScopeMap(ctx)
 		if err != nil {
 			return c, err
 		}
