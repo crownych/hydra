@@ -23,11 +23,12 @@ package oauth2
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ory/hydra/corp104/resource"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/ory/hydra/corp104/resource"
 
 	jwt2 "github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
