@@ -34,9 +34,9 @@ import (
 	"github.com/ory/hydra/pkg"
 )
 
-func injectResourceManager(c *config.Config) {
+func newResourceManager(c *config.Config) resource.Manager {
 	ctx := c.Context()
-	ctx.ResourceManager = ctx.Connection.NewResourceManager()
+	return ctx.Connection.NewResourceManager()
 }
 
 func newResourceHandler(c *config.Config, frontend, backend *httprouter.Router, manager resource.Manager, o fosite.OAuth2Provider, clm client.Manager) *resource.Handler {

@@ -25,7 +25,6 @@ import (
 	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/hydra/corp104/consent"
 	"github.com/ory/hydra/corp104/jwk"
-	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 )
 
@@ -38,5 +37,4 @@ type Context struct {
 	KeyManager      jwk.Manager
 	ConsentManager  consent.Manager
 	WebSession      *WebSession
-	ResourceManager resource.Manager
 }

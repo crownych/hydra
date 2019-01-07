@@ -33,6 +33,7 @@ import (
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/jwk"
+	"github.com/ory/hydra/corp104/resource"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
 	"github.com/ory/hydra/mock-dep"
 	"github.com/ory/hydra/pkg"
@@ -110,8 +111,10 @@ func TestClientSDK(t *testing.T) {
 		Y:   base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
 	}
 
+	resourceManager := &resource.MemoryManager{}
+
 	manager := client.NewMemoryManager(nil)
-	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{"foo", "bar"}, []string{"public"}, keyManager, "http://localhost:4444", "jwk.offline")
+	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{}, []string{"public"}, keyManager, resourceManager, "http://localhost:4444", "jwk.offline")
 
 	router := httprouter.New()
 	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {

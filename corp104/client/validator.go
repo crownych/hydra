@@ -58,7 +58,7 @@ func NewValidator(
 	}
 }
 
-func (v *Validator) Validate(c *Client) error {
+func (v *Validator) Validate(c *Client, validScopes []string) error {
 	checkFields := map[string]interface{}{
 		"client_id":                  c.ClientID,
 		"client_name":                c.Name,
@@ -81,6 +81,9 @@ func (v *Validator) Validate(c *Client) error {
 
 	if len(c.Scope) == 0 {
 		c.Scope = strings.Join(v.DefaultClientScopes, " ")
+	}
+	if err := v.validateScope(c.Scope, validScopes); err != nil {
+		return err
 	}
 
 	// has to be 0 because it is not supposed to be set
@@ -238,4 +241,24 @@ func (v *Validator) checkRequired(field string, fieldValue interface{}) error {
 	}
 
 	return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field " + field + " must be set."))
+}
+
+func (v *Validator) validateScope(requestScopes string, validScopes []string) error {
+	var rs []string
+	for _, s := range strings.Fields(requestScopes) {
+		if s == "" {
+			continue
+		}
+		// 檢查是否有重複的 scope
+		if stringslice.Has(rs, s) {
+			return fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate scope: %s", s))
+		} else {
+			rs = append(rs, s)
+		}
+		// 檢查 scope 是否有效
+		if  s != "openid" && !stringslice.Has(validScopes, s) {
+			return fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Invalid scope: %s", s))
+		}
+	}
+	return nil
 }

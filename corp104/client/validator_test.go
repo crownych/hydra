@@ -64,6 +64,7 @@ func TestValidate(t *testing.T) {
 				IdTokenSignedResponseAlgorithm: "ES256",
 				RequestObjectSigningAlgorithm:  "ES256",
 				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)
@@ -97,12 +98,62 @@ func TestValidate(t *testing.T) {
 				assert.Equal(t, c.GetID(), c.ClientID)
 			},
 		},
+		{
+			// fail with duplicate scope
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				ResponseTypes:                  []string{"token", "id_token"},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid openid",
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.NotEmpty(t, c.ClientID)
+				assert.NotEmpty(t, c.GetID())
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+			expectErr: true,
+		},
+		{
+			// fail with invalid scope
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"client_credentials"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				Scope:                   "undefined",
+			},
+			check: func(t *testing.T, c *Client) {},
+			expectErr: true,
+		},
 	} {
 		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
 			if tc.v == nil {
 				tc.v = v
 			}
-			err := tc.v.Validate(tc.in)
+			err := tc.v.Validate(tc.in, []string{"openid"})
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {
