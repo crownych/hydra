@@ -3,14 +3,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cca3327b3dee8a054db710d8c7866e0bceb2fb97b97ba053931e097c6ed1c6a0"
+  digest = "1:0882725154be71b89dd9c848ced067913aa5b182dcf8ca56b8dab6efb029b030"
   name = "github.com/104corp/vip3-go-auth"
   packages = [
     "vip3auth",
     "vip3auth/jwt",
   ]
   pruneopts = ""
-  revision = "cd4db6a70e10241f22a68f5670c47efe76e64830"
+  revision = "31ea07a13dd06f2457e5d1e16f827f8096f335b2"
 
 [[projects]]
   branch = "master"
@@ -256,6 +256,14 @@
   packages = ["proto"]
   pruneopts = ""
   revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+
+[[projects]]
+  digest = "1:a25a2c5ae694b01713fb6cd03c3b1ac1ccc1902b9f0a922680a88ec254f968e1"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:20ed7daa9b3b38b6d1d39b48ab3fd31122be5419461470d0c28de3e121c93ecf"
@@ -641,12 +649,12 @@
   version = "v2.1.0"
 
 [[projects]]
-  digest = "1:63e142fc50307bcb3c57494913cfc9c12f6061160bdf97a678f78c71615f939b"
+  digest = "1:a5484d4fa43127138ae6e7b2299a6a52ae006c7f803d98d717f60abf3e97192e"
   name = "github.com/pborman/uuid"
   packages = ["."]
   pruneopts = ""
-  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
-  version = "v1.1"
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
 
 [[projects]]
   digest = "1:9c740db1f7015dffa093aa5c70862d277fe49f5e92b56ca5d0d69ef0e37c01db"
