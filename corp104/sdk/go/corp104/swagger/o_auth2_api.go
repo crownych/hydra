@@ -513,7 +513,7 @@ func (a OAuth2Api) GetLoginRequest(challenge string) (*LoginRequest, *APIRespons
  */
 func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIResponse, error) {
 	if id == "" || secret == "" {
-		return nil, nil, errors.New("client credentials is required")
+		return nil, nil, errors.New("client credentials required")
 	}
 
 	var localVarHttpMethod = strings.ToUpper("Get")

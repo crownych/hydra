@@ -188,7 +188,7 @@ func createRestResource(pubJwk hydra.JsonWebKey) hydra.OAuth2Resource {
 		Name:         "jobs",
 		Type:         "rest",
 		AuthService:  "https://v3auth.104.com.tw",
-		DefaultScope: "rest:job",
+		DefaultScope: "rest:jobs",
 		DefaultScopeAuthType: "company",
 		GrantTypes:   []string{
 			"urn:ietf:params:oauth:grant-type:jwt-bearer",

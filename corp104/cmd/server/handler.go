@@ -272,23 +272,22 @@ func (h *Handler) RegisterRoutes(frontend, backend *httprouter.Router) {
 
 	// Set up dependencies
 	injectJWKManager(c)
-	clientsManager := newClientManager(c)
+	resourceManager := newResourceManager(c)
+	clientsManager := &client.ManagerWrapper{Manager: newClientManager(c), ResourceManager: resourceManager}
 
 	injectFositeStore(c, clientsManager)
 	injectConsentManager(c, clientsManager)
 
 	oauth2Provider := newOAuth2Provider(c)
 
-	injectResourceManager(c)
-
 	h.initOfflineJWK()
 
 	// Set up handlers
-	h.Clients = newClientHandler(c, frontend, backend, clientsManager, oauth2Provider)
+	h.Clients = newClientHandler(c, frontend, backend, clientsManager, oauth2Provider, resourceManager)
 	h.Keys = newJWKHandler(c, frontend, backend, oauth2Provider, clientsManager)
 	h.Consent = newConsentHandler(c, frontend, backend, oauth2Provider, clientsManager)
-	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager, ctx.ResourceManager)
-	h.Resources = newResourceHandler(c, frontend, backend, ctx.ResourceManager, oauth2Provider, clientsManager)
+	h.OAuth2 = newOAuth2Handler(c, frontend, backend, ctx.ConsentManager, oauth2Provider, clientsManager, resourceManager)
+	h.Resources = newResourceHandler(c, frontend, backend, resourceManager, oauth2Provider, clientsManager)
 	_ = newHealthHandler(c, frontend)
 }
 

@@ -23,6 +23,7 @@ package server
 import (
 	"github.com/ory/fosite"
 	"github.com/ory/go-convenience/corsx"
+	"github.com/ory/hydra/corp104/resource"
 	"github.com/spf13/viper"
 	"strings"
 
@@ -37,7 +38,7 @@ func newClientManager(c *config.Config) client.Manager {
 	return ctx.Connection.NewClientManager(ctx.Hasher)
 }
 
-func newClientHandler(c *config.Config, frontend, backend *httprouter.Router, manager client.Manager, o fosite.OAuth2Provider) *client.Handler {
+func newClientHandler(c *config.Config, frontend, backend *httprouter.Router, manager client.Manager, o fosite.OAuth2Provider, rm resource.Manager) *client.Handler {
 	w := herodot.NewJSONWriter(c.GetLogger())
 	w.ErrorEnhancer = writerErrorEnhancer
 
@@ -48,6 +49,7 @@ func newClientHandler(c *config.Config, frontend, backend *httprouter.Router, ma
 		strings.Split(c.DefaultClientScope, ","),
 		c.GetSubjectTypesSupported(),
 		c.Context().KeyManager,
+		rm,
 		c.Issuer,
 		c.GetOfflineJWKSName(),
 	)
