@@ -13,7 +13,7 @@ var resourcesCommitCmd = &cobra.Command{
 Example:
   hydra resource commit \
 	--endpoint "http://localhost:4444" \
-	--urn  "urn:104v3:job:v1.0" \
+	--urn  "urn:104:v3:job:v1.0" \
 	--commit-code 7a5e421f-d826-455b-bd5e-5457750d4daa
 `,
 	Run: cmdHandler.Resources.CommitResource,
