@@ -23,11 +23,12 @@ package oauth2
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ory/hydra/corp104/resource"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/ory/hydra/corp104/resource"
 
 	jwt2 "github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
@@ -572,7 +573,6 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO 應該放在 AccessTokenStrategy 中處理
 	if h.AccessTokenStrategy == "jwt" {
 		accessTokenKeyID, err := h.AccessTokenJWTStrategy.GetPublicKeyID(r.Context())
 		if err != nil {
@@ -593,7 +593,6 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		session.KID = accessTokenKeyID
 		session.DefaultSession.Claims.Issuer = strings.TrimRight(h.IssuerURL, "/") + "/"
 		session.DefaultSession.Claims.IssuedAt = time.Now().UTC()
-		session.GetJWTHeader().Add("cty", "resource-access-token+jwt")
 	}
 	// TODO: ScopeStrategy 暫時忽略
 

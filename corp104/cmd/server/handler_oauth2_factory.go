@@ -145,7 +145,8 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 		compose.OAuth2TokenRevocationFactory,
 		compose.OAuth2TokenIntrospectionFactory,
 	)
-	provider := vip3auth.ComposeWithFosite(oriProvider.(*fosite.Fosite), fc, store, commonStrategy)
+	tokenJwtStrategy := vip3auth.NewProxyJWTStrategy(jwtStrategy.ES256JWTStrategy)
+	provider := vip3auth.ComposeWithFosite(oriProvider.(*fosite.Fosite), fc, store, commonStrategy, tokenJwtStrategy)
 	return provider
 }
 
