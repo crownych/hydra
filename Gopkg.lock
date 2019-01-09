@@ -3,14 +3,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0882725154be71b89dd9c848ced067913aa5b182dcf8ca56b8dab6efb029b030"
+  digest = "1:734744c66c90419ae74b6c206e211eb0f385790b74667ca21b8bdb07152adf73"
   name = "github.com/104corp/vip3-go-auth"
   packages = [
     "vip3auth",
     "vip3auth/jwt",
   ]
   pruneopts = ""
-  revision = "31ea07a13dd06f2457e5d1e16f827f8096f335b2"
+  revision = "67b27817df638eae96324760e6b8bdf6b6f28c81"
 
 [[projects]]
   branch = "master"
