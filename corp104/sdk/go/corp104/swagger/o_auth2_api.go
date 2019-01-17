@@ -2247,25 +2247,7 @@ func (a OAuth2Api) GetOAuth2Token(resource, scope string) (*OauthTokenResponse, 
 // Get access token cache
 // tokenCacheKey format: token#<resource_hash>#<scope_hash>
 func (a OAuth2Api) getTokenCacheKey(resource, scope string) string {
-	tokenCacheKey := CacheOauthTokenPrefix
-
-	var resourceHash string
-	if resource != "" {
-		resourceHash = getHexEncodedHashString(resource)
-	} else {
-		resourceHash = getHexEncodedHashString("")
-	}
-	tokenCacheKey += resourceHash
-
-	var scopeHash string
-	if scope != "" {
-		scopeHash = getHexEncodedHashString(scope)
-	} else {
-		scopeHash = getHexEncodedHashString("")
-	}
-	tokenCacheKey += "#" + scopeHash
-
-	return tokenCacheKey
+	return CacheOauthTokenPrefix + getHexEncodedHashString(resource + "@" + scope)
 }
 
 // 檢查 token 是否有效 (未過期且 PoP private key 有效)，Token 有效時返回 PoP Private Key
