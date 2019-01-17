@@ -12,13 +12,17 @@ package swagger
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/ory/hydra/pkg"
 	"github.com/patrickmn/go-cache"
+	"github.com/pborman/uuid"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,6 +32,8 @@ import (
 const (
 	CacheOAuthServerMetadata = "auth-server.metadata"
 	CacheOAuthServerJWKS     = "auth-server.jwks"
+	CachePoPJWKSPrefix		 = "pop#"
+	CacheOauthTokenPrefix	 = "token#"
 )
 
 type OAuth2Api struct {
@@ -186,7 +192,10 @@ func (a OAuth2Api) AcceptLoginRequest(challenge string, body AcceptLoginRequest)
  * @param signingJwk
  * @return *PutClientResponse
  */
-func (a OAuth2Api) PutOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (*PutClientResponse, *APIResponse, error) {
+func (a OAuth2Api) PutOAuth2Client(body OAuth2Client) (*PutClientResponse, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	}
 
 	var localVarHttpMethod = http.MethodPut
 	// create path and map variables
@@ -230,7 +239,7 @@ func (a OAuth2Api) PutOAuth2Client(body OAuth2Client, signingJwk *JsonWebKey, au
 		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
 	}
 
-	swStatement, err := a.createSoftwareStatement(body, signingJwk, authSrvPubJwk)
+	swStatement, err := a.createSoftwareStatement(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -533,7 +542,7 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
 	}
 
 	// set Authorization header
-	localVarHeaderParams["Authorization"] = "Basic " + pkg.BasicAuth(id, secret)
+	localVarHeaderParams["Authorization"] = "Basic " + getBasicAuthEncodedString(id, secret)
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -577,12 +586,13 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
  *
  * @return *WellKnown
  */
-func (a OAuth2Api) GetWellKnown(authSrvPubJwk *JsonWebKey) (*WellKnown, *APIResponse, error) {
-	if authSrvPubJwk == nil {
-		return nil, nil, errors.New("auth service public key is required")
+func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
 	}
+	authSrvPubJwk := a.Configuration.AuthSvcOfflinePublicJwk
 
-	if authServerMetadata, found := a.Configuration.Cache.Get(CacheOAuthServerMetadata); found {
+	if authServerMetadata, found := a.Configuration.cacheGet(CacheOAuthServerMetadata); found {
 		return authServerMetadata.(*WellKnown), nil, nil
 	}
 
@@ -641,14 +651,14 @@ func (a OAuth2Api) GetWellKnown(authSrvPubJwk *JsonWebKey) (*WellKnown, *APIResp
 		return successPayload, localVarAPIResponse, err
 	}
 	signedMetadata := payloadMap["signed_metadata"]
-	keyId, err := extractKeyIdFromHeader(signedMetadata)
+	keyId, err := extractKeyIdFromJWSHeader(signedMetadata)
 	if err != nil {
 		return successPayload, localVarAPIResponse, err
 	}
 	if keyId != authSrvPubJwk.Kid {
 		return successPayload, localVarAPIResponse, errors.New("invalid auth service public key")
 	}
-	srvJwk, _, err := convertToJwxJWK(authSrvPubJwk, true)
+	srvJwk, _, err := convertToJwxJWK(authSrvPubJwk)
 	if err != nil {
 		return successPayload, localVarAPIResponse, err
 	}
@@ -659,7 +669,7 @@ func (a OAuth2Api) GetWellKnown(authSrvPubJwk *JsonWebKey) (*WellKnown, *APIResp
 
 	err = json.Unmarshal(metadata, &successPayload)
 	if err == nil {
-		a.Configuration.Cache.Set(CacheOAuthServerMetadata, successPayload, cache.DefaultExpiration)
+		a.Configuration.cacheSet(CacheOAuthServerMetadata, successPayload, 5 * time.Minute)
 	}
 	return successPayload, localVarAPIResponse, err
 }
@@ -746,11 +756,11 @@ func (a OAuth2Api) IntrospectOAuth2Token(token string, scope string) (*OAuth2Tok
  * @param offset The offset from where to start looking.
  * @return []OAuth2Client
  */
-func (a OAuth2Api) ListOAuth2Clients(authSrvPubJwk *JsonWebKey, limit int64, offset int64) ([]OAuth2Client, *APIResponse, error) {
-
-	if authSrvPubJwk == nil {
-		return nil, nil, errors.New("auth service public key is required")
+func (a OAuth2Api) ListOAuth2Clients(limit int64, offset int64) ([]OAuth2Client, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
 	}
+	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJwk
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -805,7 +815,7 @@ func (a OAuth2Api) ListOAuth2Clients(authSrvPubJwk *JsonWebKey, limit int64, off
 		return *successPayload, localVarAPIResponse, err
 	}
 	signedClients := payloadMap["signed_clients"]
-	rbuf, err := getSignedClaim("clients", signedClients, a.Configuration.BasePath, authSrvPubJwk)
+	rbuf, err := getSignedClaim("clients", signedClients, a.Configuration.BasePath, authSvcOfflinePubKey)
 	if err != nil {
 		return *successPayload, localVarAPIResponse, err
 	}
@@ -938,7 +948,10 @@ func (a OAuth2Api) OauthAuth() (*APIResponse, error) {
  *
  * @return *OauthTokenResponse
  */
-func (a OAuth2Api) OauthToken() (*OauthTokenResponse, *APIResponse, error) {
+func (a OAuth2Api) OauthToken(clientAssertion string, resource, scope string) (*OauthTokenResponse, *APIResponse, error) {
+	if clientAssertion == "" {
+		return nil, nil, errors.New("client assertion JWT must be set")
+	}
 
 	var localVarHttpMethod = strings.ToUpper("Post")
 	// create path and map variables
@@ -950,6 +963,7 @@ func (a OAuth2Api) OauthToken() (*OauthTokenResponse, *APIResponse, error) {
 	var localVarPostBody interface{}
 	var localVarFileName string
 	var localVarFileBytes []byte
+	/*
 	// authentication '(basic)' required
 	// http basic authentication required
 	if a.Configuration.Username != "" || a.Configuration.Password != "" {
@@ -960,6 +974,7 @@ func (a OAuth2Api) OauthToken() (*OauthTokenResponse, *APIResponse, error) {
 	if a.Configuration.AccessToken != "" {
 		localVarHeaderParams["Authorization"] = "Bearer " + a.Configuration.AccessToken
 	}
+	*/
 	// add default headers if any
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
@@ -983,6 +998,18 @@ func (a OAuth2Api) OauthToken() (*OauthTokenResponse, *APIResponse, error) {
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+
+	// Payload
+	localVarFormParams["client_assertion"] = clientAssertion
+	localVarFormParams["grant_type"] = "client_credentials"
+	localVarFormParams["client_assertion_type"] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+	if resource != "" {
+		localVarFormParams["resource"] = resource
+	}
+	if scope != "" {
+		localVarFormParams["resource"] = scope
+	}
+
 	var successPayload = new(OauthTokenResponse)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
@@ -1498,14 +1525,14 @@ func (a OAuth2Api) Userinfo() (*UserinfoResponse, *APIResponse, error) {
 	return successPayload, localVarAPIResponse, err
 }
 
-/**
+/**`
  * Get Well-Known JSON Web Keys
  * Returns metadata for discovering important JSON Web Keys. Currently, this endpoint returns the public key for verifying OpenID Connect ID Tokens.  A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. A JWK Set is a JSON data structure that represents a set of JWKs. A JSON Web Key is identified by its set and key id. ORY Hydra uses this functionality to store cryptographic keys used for TLS and JSON Web Tokens (such as OpenID Connect ID tokens), and allows storing user-defined keys as well.
  *
  * @return *JsonWebKeySet
  */
 func (a OAuth2Api) WellKnown() (*JsonWebKeySet, *APIResponse, error) {
-	if authServerJwks, found := a.Configuration.Cache.Get(CacheOAuthServerJWKS); found {
+	if authServerJwks, found := a.Configuration.cacheGet(CacheOAuthServerJWKS); found {
 		return authServerJwks.(*JsonWebKeySet), nil, nil
 	}
 
@@ -1558,7 +1585,7 @@ func (a OAuth2Api) WellKnown() (*JsonWebKeySet, *APIResponse, error) {
 	}
 	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
 	if err == nil {
-		a.Configuration.Cache.Set(CacheOAuthServerJWKS, successPayload, cache.DefaultExpiration)
+		a.Configuration.cacheSet(CacheOAuthServerJWKS, successPayload, cache.DefaultExpiration)
 	}
 	return successPayload, localVarAPIResponse, err
 }
@@ -1584,7 +1611,7 @@ func (a OAuth2Api) GetAnyAuthServerPublicKey() (jwk.Key, crypto.PublicKey, error
 	} else if serverJWKS == nil || len(serverJWKS.Keys) == 0 {
 		return nil, nil, errors.New("unable to get JWKS for OAuth Authorization Server")
 	}
-	return convertToJwxJWK(&serverJWKS.Keys[0], true)
+	return convertToJwxJWK(&serverJWKS.Keys[0])
 }
 
 /**
@@ -1667,25 +1694,29 @@ func (a OAuth2Api) CommitOAuth2Client(cookies map[string]string, commitCode stri
 	return successPayload, localVarAPIResponse, err
 }
 
-func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (string, error) {
-	// server's key
-	if authSrvPubJwk == nil {
-		return "", errors.New("auth service public key is required")
+func (a OAuth2Api) createSoftwareStatement(body OAuth2Client) (string, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return "", errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
 	}
-	serverPubJwk, serverPubKey, err := convertToJwxJWK(authSrvPubJwk, true)
+
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJwk)
 	if err != nil {
 		return "", err
 	}
 
 	// client's keys
+	signingJwk := a.Configuration.PrivateJWK
 	if signingJwk == nil {
 		return "", errors.New("signing key is required")
 	}
-	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
+	pubJwk, _, err := convertToJwxJWK(extractPublicJWK(signingJwk))
 	if err != nil {
 		return "", err
 	}
-	_, signingKey, err := convertToJwxJWK(signingJwk, false)
+	_, signingKey, err := convertToJwxJWK(signingJwk)
+	if err != nil {
+		return "", err
+	}
 
 	// create and sign JWS of client's software statement
 	jwsHeaders := make(map[string]interface{})
@@ -1698,12 +1729,12 @@ func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWe
 		"client_metadata": body,
 	}
 	if !body.IsPublic() {
-		if a.Configuration.Username == "" || a.Configuration.Password == "" {
+		if a.Configuration.ADUsername == "" || a.Configuration.ADPassword == "" {
 			return "", errors.New("AD user credentials required")
 		}
 		bodyMap["authentication"] = map[string]string{
-			"ad_user": a.Configuration.Username,
-			"ad_pwd":  a.Configuration.Password,
+			"ad_user": a.Configuration.ADUsername,
+			"ad_pwd":  a.Configuration.ADPassword,
 		}
 	}
 	payload, err := json.Marshal(&bodyMap)
@@ -1730,7 +1761,10 @@ func (a OAuth2Api) createSoftwareStatement(body OAuth2Client, signingJwk *JsonWe
  * @param signingJwk
  * @return *PutResourceResponse
  */
-func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (*PutResourceResponse, *APIResponse, error) {
+func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource) (*PutResourceResponse, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	}
 
 	var localVarHttpMethod = http.MethodPut
 	// create path and map variables
@@ -1774,7 +1808,7 @@ func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource, signingJwk *JsonWebKey
 		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
 	}
 
-	statement, err := a.createResourceStatement(body, signingJwk, authSrvPubJwk)
+	statement, err := a.createResourceStatement(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1803,25 +1837,28 @@ func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource, signingJwk *JsonWebKey
 	return successPayload, localVarAPIResponse, err
 }
 
-func (a OAuth2Api) createResourceStatement(body OAuth2Resource, signingJwk *JsonWebKey, authSrvPubJwk *JsonWebKey) (string, error) {
-	// server's key
-	if authSrvPubJwk == nil {
-		return "", errors.New("auth service public key is required")
+func (a OAuth2Api) createResourceStatement(body OAuth2Resource) (string, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return "", errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
 	}
-	serverPubJwk, serverPubKey, err := convertToJwxJWK(authSrvPubJwk, true)
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJwk)
 	if err != nil {
 		return "", err
 	}
 
 	// client's keys
+	signingJwk := a.Configuration.PrivateJWK
 	if signingJwk == nil {
 		return "", errors.New("signing key is required")
 	}
-	pubJwk, _, err := convertToJwxJWK(signingJwk, true)
+	pubJwk, _, err := convertToJwxJWK(extractPublicJWK(signingJwk))
 	if err != nil {
 		return "", err
 	}
-	_, signingKey, err := convertToJwxJWK(signingJwk, false)
+	_, signingKey, err := convertToJwxJWK(signingJwk)
+	if err != nil {
+		return "", err
+	}
 
 	// create and sign JWS of client's software statement
 	jwsHeaders := make(map[string]interface{})
@@ -1833,12 +1870,12 @@ func (a OAuth2Api) createResourceStatement(body OAuth2Resource, signingJwk *Json
 		"iat":               time.Now().UTC().Unix(),
 		"resource_metadata": body,
 	}
-	if a.Configuration.Username == "" || a.Configuration.Password == "" {
+	if a.Configuration.ADUsername == "" || a.Configuration.ADPassword == "" {
 		return "", errors.New("AD user credentials required")
 	}
 	bodyMap["authentication"] = map[string]string{
-		"ad_user": a.Configuration.Username,
-		"ad_pwd":  a.Configuration.Password,
+		"ad_user": a.Configuration.ADUsername,
+		"ad_pwd":  a.Configuration.ADPassword,
 	}
 
 	payload, err := json.Marshal(&bodyMap)
@@ -2073,10 +2110,11 @@ func (a OAuth2Api) GetOAuth2Resource(urn string) (*OAuth2Resource, *APIResponse,
  * @param offset The offset from where to start looking.
  * @return []OAuth2Resource
  */
-func (a OAuth2Api) ListOAuth2Resources(authSrvPubJwk *JsonWebKey, limit int64, offset int64) ([]OAuth2Resource, *APIResponse, error) {
-	if authSrvPubJwk == nil {
-		return nil, nil, errors.New("auth service public key is required")
+func (a OAuth2Api) ListOAuth2Resources(limit int64, offset int64) ([]OAuth2Resource, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
 	}
+	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJwk
 
 	var localVarHttpMethod = http.MethodGet
 	// create path and map variables
@@ -2131,11 +2169,351 @@ func (a OAuth2Api) ListOAuth2Resources(authSrvPubJwk *JsonWebKey, limit int64, o
 		return *successPayload, localVarAPIResponse, err
 	}
 	signedResources := payloadMap["signed_resources"]
-	rbuf, err := getSignedClaim("resources", signedResources, a.Configuration.BasePath, authSrvPubJwk)
+	rbuf, err := getSignedClaim("resources", signedResources, a.Configuration.BasePath, authSvcOfflinePubKey)
 	if err != nil {
 		return *successPayload, localVarAPIResponse, err
 	}
 	err = json.Unmarshal(rbuf, &successPayload)
 
 	return *successPayload, localVarAPIResponse, err
+}
+
+/**
+ * Get OAuth 2.0 access token.
+ *
+ * @return string, error
+ */
+func (a OAuth2Api) GetOAuth2Token(resource, scope string) (*OauthTokenResponse, *ecdsa.PrivateKey, error) {
+	if a.Configuration.Username == "" {
+		return nil, nil, errors.New("'Configuration.Username' (client ID) must be set")
+	}
+	if a.Configuration.PrivateJWK == nil {
+		return nil, nil, errors.New("'Configuration.PrivateJWK' must be set")
+	}
+
+	// 當 resource 與 scope 皆為空時，取得 resources 清單進行請求
+	if resource == "" && scope == "" {
+		resources, _, err := a.ListOAuth2Resources(math.MaxInt64, 0)
+		if err != nil {
+			return nil, nil, errors.New("get OAuth 2.0 resource list failed: " + err.Error())
+		}
+		for i, v := range resources {
+			if i > 0 {
+				resource += " "
+			}
+			resource += v.GetUrn()
+		}
+	}
+
+	tokenCacheKey := a.getTokenCacheKey(resource, scope)
+
+	// try to get token from cache and validate it
+	cachedTokenResp, tokenExists := a.Configuration.cacheGet(tokenCacheKey)
+	if tokenExists {
+		popPrivKey, _ := a.isTokenValid(cachedTokenResp.(OauthTokenResponse))
+		if popPrivKey != nil {
+			cTokenResp := cachedTokenResp.(OauthTokenResponse)
+			return &cTokenResp, popPrivKey, nil
+		}
+	}
+
+	//  create PoP Key pair
+	popKeyId := uuid.New()
+	popJWKS, err := a.GetPoPKeyPair(popKeyId)
+	if err != nil {
+		return nil, nil, errors.New("create PoP key failed:" + err.Error())
+	}
+	popECPrivKey, _ := LoadECPrivateKeyFromJsonWebKey(getPrivateJWKFromJWKS(popJWKS))
+
+	// create client assertion
+	clientAssertion, err := a.CreateOAuth2ClientAssertion(popJWKS)
+	if err != nil {
+		return nil, nil, errors.New("create client assertion failed:" + err.Error())
+	}
+
+	// request new token
+	tokenResp, _, err := a.OauthToken(clientAssertion, resource, scope)
+	if err != nil {
+		return nil, nil, errors.New("request access token failed: " + err.Error())
+	}
+
+	// set cache
+	expiredAt := time.Duration(tokenResp.ExpiresIn - time.Now().UTC().Unix()) * time.Second
+	a.Configuration.cacheSet(tokenCacheKey, *tokenResp, expiredAt)
+
+	return tokenResp, popECPrivKey, nil
+}
+
+// Get access token cache
+// tokenCacheKey format: token#<resource_hash>#<scope_hash>
+func (a OAuth2Api) getTokenCacheKey(resource, scope string) string {
+	tokenCacheKey := CacheOauthTokenPrefix
+
+	var resourceHash string
+	if resource != "" {
+		resourceHash = getHexEncodedHashString(resource)
+	} else {
+		resourceHash = getHexEncodedHashString("")
+	}
+	tokenCacheKey += resourceHash
+
+	var scopeHash string
+	if scope != "" {
+		scopeHash = getHexEncodedHashString(scope)
+	} else {
+		scopeHash = getHexEncodedHashString("")
+	}
+	tokenCacheKey += "#" + scopeHash
+
+	return tokenCacheKey
+}
+
+// 檢查 token 是否有效 (未過期且 PoP private key 有效)，Token 有效時返回 PoP Private Key
+func (a OAuth2Api) isTokenValid(tokenResponse OauthTokenResponse) (*ecdsa.PrivateKey, error) {
+	_, claims, err := getJWSContent(tokenResponse.AccessToken)
+	if err == nil {
+		// check token is expired
+		isTokenExpired := false
+		exp, expExists := claims["exp"]
+		if expExists {
+			if time.Now().UTC().Unix() >= int64(exp.(float64)) {
+				isTokenExpired = true
+			}
+		}
+		if !isTokenExpired {
+			// check pop cnf key exists
+			cnf, cnfExists := claims["cnf"]
+			if cnfExists {
+				cnf := cnf.(map[string]interface{})
+				cnfJwk := cnf["jwk"].(map[string]interface{})
+				cnfJwkId := cnfJwk["kid"].(string)
+				popJWKS, popJWKSExists := a.Configuration.cacheGet(CachePoPJWKSPrefix + strings.Replace(cnfJwkId, "pop:public:", "", 1))
+				if popJWKSExists {
+					popPrivKey := getPrivateJWKFromJWKS(popJWKS.(*JsonWebKeySet))
+					if popPrivKey.X == cnfJwk["x"].(string) && popPrivKey.Y == cnfJwk["y"].(string) {
+						popECPrivKey, err := LoadECPrivateKeyFromJsonWebKey(popPrivKey)
+						if err == nil {
+							return popECPrivKey, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil, errors.New("invalid token")
+}
+
+/**
+ * Create OAuth 2.0 client assertion.
+ *
+ * @return string, error
+ */
+func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, error) {
+	if a.Configuration.Username == "" {
+		return "", errors.New("'Configuration.Username' (client ID) must be set")
+	}
+	if popJWKS == nil {
+		return "", errors.New("PoP JWKS must be set")
+	}
+
+	pubJwk, _, err := convertToJwxJWK(extractPublicJWK(a.Configuration.PrivateJWK))
+	if err != nil {
+		return "", err
+	}
+
+	var popPrivJwk, popPubJwk JsonWebKey
+	for _, popJwk := range popJWKS.Keys {
+		if strings.Contains(popJwk.Kid, "private:") {
+			popPrivJwk = popJwk
+		} else if strings.Contains(popJwk.Kid, "public:") {
+			popPubJwk = popJwk
+		}
+	}
+
+	if popPrivJwk.Kid == "" || popPubJwk.Kid == "" {
+		return "", errors.New("PoP JWKS must contain both private and public keys")
+	}
+
+	_, popPrivECKey, err := convertToJwxJWK(&popPrivJwk)
+	if err != nil {
+		return "", err
+	}
+
+	// JWS Header
+	jwsHeaders := make(map[string]interface{})
+	jwsHeaders["alg"] = pubJwk.Algorithm()
+	jwsHeaders["typ"] = "client-assertion+jwt"
+	jwsHeaders["kid"] = pubJwk.KeyID()
+
+	// JWS Payload
+	iat := time.Now().UTC()
+	expires := 30 * time.Minute
+	exp := iat.Add(expires)
+	bodyMap := map[string]interface{}{
+		"iss": a.Configuration.Username,
+		"aud": a.Configuration.BasePath + "/token",
+		"sub": a.Configuration.Username,
+		"exp": exp.Unix(),
+		"iat": iat.Unix(),
+		"jti": uuid.New(),
+		"pop_cnf": map[string]JsonWebKey{
+			"jwk": popPubJwk,
+		},
+	}
+	payload, err := json.Marshal(&bodyMap)
+	if err != nil {
+		return "", err
+	}
+
+	jwsMsg, err := jwsSign(jwsHeaders, payload, popPrivECKey)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jwsMsg), nil
+}
+
+func (a OAuth2Api) SendHttpGet(requestURL string, headerParams map[string]string) (*APIResponse, error) {
+	return a.SendHttpRequest(requestURL, http.MethodGet, "", headerParams, nil, nil, "", nil)
+}
+
+func (a OAuth2Api) SendHttpPost(requestURL string, postBody string, headerParams map[string]string) (*APIResponse, error) {
+	return a.SendHttpRequest(requestURL, http.MethodPost, postBody, headerParams, nil, nil, "", nil)
+}
+
+func (a OAuth2Api) SendHttpPut(requestURL string, postBody string, headerParams map[string]string) (*APIResponse, error) {
+	return a.SendHttpRequest(requestURL, http.MethodPut, postBody, headerParams, nil, nil, "", nil)
+}
+
+func (a OAuth2Api) SendHttpPatch(requestURL string, postBody string, headerParams map[string]string) (*APIResponse, error) {
+	return a.SendHttpRequest(requestURL, http.MethodPatch, postBody, headerParams, nil, nil, "", nil)
+}
+
+func (a OAuth2Api) SendHttpDelete(requestURL string, headerParams map[string]string) (*APIResponse, error) {
+	return a.SendHttpRequest(requestURL, http.MethodDelete, "", headerParams, nil, nil, "", nil)
+}
+
+func (a OAuth2Api) SendHttpRequest(
+	requestURL string,
+	method string,
+	postBody string,
+	headerParams map[string]string,
+	queryParams url.Values,
+	formParams map[string]string,
+	fileName string,
+	fileBytes []byte) (*APIResponse, error) {
+
+	localVarHttpMethod := method
+	localVarPath := requestURL
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := queryParams
+	localVarFormParams := formParams
+	localVarPostBody := postBody
+	localVarFileName := fileName
+	localVarFileBytes := fileBytes
+
+	// add default headers if any
+	for key := range a.Configuration.DefaultHeader {
+		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
+	}
+
+	// to determine the Content-Type header
+	localVarHttpContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
+	if localVarHttpContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHttpContentType
+	}
+	// to determine the Accept header
+	localVarHttpHeaderAccepts := []string{
+		"application/json",
+	}
+
+	// set Accept header
+	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
+	if localVarHttpHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
+	}
+
+	// Set or override default headers
+	for name, value := range headerParams {
+		localVarHeaderParams[name] = value
+	}
+
+	// set "Authorization" Header
+	tokenResp, popPrivKey, err := a.GetOAuth2Token("", "")
+	if err != nil {
+		return nil, err
+	}
+	localVarHeaderParams["Authorization"] = "Bearer " + tokenResp.AccessToken
+
+	// set "104-Track-Id" header
+	if localVarHeaderParams["104-Track-Id"] == "" {
+		localVarHeaderParams["104-Track-Id"] = uuid.New()
+	}
+
+	// set "104-PoP-Timestamp" header
+	localVarHeaderParams["104-PoP-Timestamp"] = convertUnixTimestampToString(time.Now().UTC().Unix())
+
+	// set "104-PoP-Signature" header
+	reqUrl, err := url.Parse(localVarPath)
+	if err != nil {
+		return nil, err
+	}
+
+	popSignature, err := a.CreatePoPSignature(popPrivKey, localVarHttpMethod, reqUrl.Path, reqUrl.Host, localVarHeaderParams["104-Track-Id"], localVarHeaderParams["104-Token-Chain"], localVarHeaderParams["104-PoP-Timestamp"], localVarPostBody)
+	if err != nil {
+		return nil, err
+	}
+	localVarHeaderParams["104-PoP-Signature"] = popSignature
+
+	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
+
+	var localVarURL, _ = url.Parse(localVarPath)
+	localVarURL.RawQuery = localVarQueryParams.Encode()
+	var localVarAPIResponse = &APIResponse{Operation: "SendHttpRequest", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	if localVarHttpResponse != nil {
+		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
+		localVarAPIResponse.Payload = localVarHttpResponse.Body()
+	}
+
+	return localVarAPIResponse, err
+}
+
+func (a OAuth2Api) GetPoPKeyPair(keyId string) (*JsonWebKeySet, error) {
+	cacheKey := CachePoPJWKSPrefix + keyId
+	if popJwks, _ := a.Configuration.cacheGet(cacheKey); popJwks != nil {
+		return popJwks.(*JsonWebKeySet), nil
+	}
+	popJWKS, err := CreateECKeyPair(keyId, "pop:")
+	if err == nil {
+		a.Configuration.cacheSet(cacheKey, popJWKS, 30 * time.Minute)
+	}
+	return popJWKS, err
+}
+
+func (a OAuth2Api) CreatePoPNonce(method, path, host, trackId, tokenChain, popTimestamp, payload string) string {
+	return method + "\n" +
+		path + "\n" +
+		host + "\n" +
+		trackId + "\n" +
+		tokenChain + "\n" +
+		popTimestamp + "\n" +
+		payload
+}
+
+func (a OAuth2Api) CreatePoPSignature(popPrivateKey *ecdsa.PrivateKey, method, path, host, trackId, tokenChain, popTimestamp, payload string) (string, error) {
+	if popPrivateKey == nil {
+		return "", errors.New("PoP private key must be set")
+	}
+
+	nonce := a.CreatePoPNonce(method, path, host, trackId, tokenChain, popTimestamp, payload)
+
+	hash := sha256.Sum256([]byte(nonce))
+	signature, err := ecdsaSign(string(hash[:]), popPrivateKey)
+	if err != nil {
+		return "", errors.New("create PoP signature failed: " + err.Error())
+	}
+	return base64.RawURLEncoding.EncodeToString([]byte(signature)), nil
 }

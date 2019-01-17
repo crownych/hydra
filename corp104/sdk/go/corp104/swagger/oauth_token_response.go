@@ -20,13 +20,13 @@ type OauthTokenResponse struct {
 	ExpiresIn int64 `json:"expires_in,omitempty"`
 
 	// To retrieve a refresh token request the id_token scope.
-	IdToken int64 `json:"id_token,omitempty"`
+	IdToken string `json:"id_token,omitempty"`
 
 	// The refresh token, which can be used to obtain new access tokens. To retrieve it add the scope \"offline\" to your access token request.
 	RefreshToken string `json:"refresh_token,omitempty"`
 
 	// The scope of the access token
-	Scope int64 `json:"scope,omitempty"`
+	Scope string `json:"scope,omitempty"`
 
 	// The type of the token issued
 	TokenType string `json:"token_type,omitempty"`

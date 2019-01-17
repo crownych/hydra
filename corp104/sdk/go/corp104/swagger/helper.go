@@ -4,42 +4,172 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
+	"github.com/pborman/uuid"
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 )
 
-func JsonStringToMap(str string) (map[string]interface{}, error) {
-	var p interface{}
-	err := json.Unmarshal([]byte(str), &p)
+func CreateECKeyPair(kid, kidPrefix string) (*JsonWebKeySet, error) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
-	return p.(map[string]interface{}), nil
+	alg := "ES256"
+	kty := "EC"
+	use := "sig"
+	x := base64.RawURLEncoding.EncodeToString(privKey.X.Bytes())
+	y := base64.RawURLEncoding.EncodeToString(privKey.Y.Bytes())
+	d := base64.RawURLEncoding.EncodeToString(privKey.D.Bytes())
+	if kid == "" {
+		kid = uuid.New()
+	}
+	jwks := &JsonWebKeySet{
+		Keys: []JsonWebKey{
+			{
+				Crv: privKey.Params().Name,
+				Alg: alg,
+				Kid: kidPrefix + "private:" + kid,
+				Kty: kty,
+				Use: use,
+				X: x,
+				Y: y,
+				D: d,
+			},
+			{
+				Crv: privKey.Params().Name,
+				Alg: alg,
+				Kid: kidPrefix + "public:" + kid,
+				Kty: kty,
+				Use: use,
+				X: x,
+				Y: y,
+			},
+		},
+	}
+	return jwks, nil
 }
 
-func extractJWKStringFrom(joseString string) (string, error) {
-	m, err := JsonStringToMap(joseString)
+func LoadJsonWebKeySet(jwksJSON []byte) *JsonWebKeySet {
+	var jwks JsonWebKeySet
+	err := json.Unmarshal(jwksJSON, &jwks)
 	if err != nil {
-		return "", nil
+		panic("Invalid jwks:" + err.Error())
 	}
-
-	buf, err := json.Marshal(m["jwk"].(map[string]interface{}))
-	if err != nil {
-		return "", nil
-	}
-	return string(buf), nil
+	return &jwks
 }
 
-func extractHeader(msg string) ([]byte, error) {
+func LoadJsonWebKey(jwkJSON []byte) *JsonWebKey {
+	var jsonWebKey *JsonWebKey
+	err := json.Unmarshal(jwkJSON, &jsonWebKey)
+	if err != nil {
+		panic("Invalid jwk:" + err.Error())
+	}
+	return jsonWebKey
+}
+
+func LoadECPublicKeyFromJsonWebKey(jsonWebKey *JsonWebKey) (*ecdsa.PublicKey, error) {
+	if jsonWebKey == nil {
+		return nil, errors.New("jsonWebKey must be set")
+	}
+
+	if jsonWebKey.X == "" || jsonWebKey.Y == "" {
+		return nil, errors.New("invalid jsonWebKey")
+	}
+
+	xBytes, err := base64.RawURLEncoding.DecodeString(jsonWebKey.X)
+	if err != nil {
+		return nil, err
+	}
+	yBytes, err := base64.RawURLEncoding.DecodeString(jsonWebKey.Y)
+	if err != nil {
+		return nil, err
+	}
+
+	var curve elliptic.Curve
+	switch jsonWebKey.Crv {
+	case "P-224":
+		curve = elliptic.P224()
+	case "P-256":
+		curve = elliptic.P256()
+	case "P-384":
+		curve = elliptic.P384()
+	case "P-521":
+		curve = elliptic.P521()
+	default:
+		curve = elliptic.P256()
+	}
+
+	pubKey := &ecdsa.PublicKey{
+		Curve: curve,
+		X: big.NewInt(0).SetBytes(xBytes),
+		Y: big.NewInt(0).SetBytes(yBytes),
+	}
+
+	return pubKey, nil
+}
+
+func LoadECPrivateKeyFromJsonWebKey(jsonWebKey *JsonWebKey) (*ecdsa.PrivateKey, error) {
+	if jsonWebKey == nil {
+		return nil, errors.New("jsonWebKey must not be nil")
+	}
+
+	if jsonWebKey.X == "" || jsonWebKey.Y == "" || jsonWebKey.D == "" {
+		return nil, errors.New("invalid jsonWebKey")
+	}
+
+	xBytes, err := base64.RawURLEncoding.DecodeString(jsonWebKey.X)
+	if err != nil {
+		return nil, err
+	}
+	yBytes, err := base64.RawURLEncoding.DecodeString(jsonWebKey.Y)
+	if err != nil {
+		return nil, err
+	}
+	dBytes, err := base64.RawURLEncoding.DecodeString(jsonWebKey.D)
+	if err != nil {
+		return nil, err
+	}
+
+	var curve elliptic.Curve
+	switch jsonWebKey.Crv {
+	case "P-224":
+		curve = elliptic.P224()
+	case "P-256":
+		curve = elliptic.P256()
+	case "P-384":
+		curve = elliptic.P384()
+	case "P-521":
+		curve = elliptic.P521()
+	default:
+		curve = elliptic.P256()
+	}
+
+	pubKey := ecdsa.PublicKey{
+		Curve: curve,
+		X: big.NewInt(0).SetBytes(xBytes),
+		Y: big.NewInt(0).SetBytes(yBytes),
+	}
+
+	return &ecdsa.PrivateKey{
+		PublicKey: pubKey,
+		D: big.NewInt(0).SetBytes(dBytes),
+	}, nil
+}
+
+func extractJWSHeader(msg string) ([]byte, error) {
 	compactHeader, _, _, err := jws.SplitCompact(strings.NewReader(msg))
 	if err != nil {
 		return nil, err
@@ -51,20 +181,8 @@ func extractHeader(msg string) ([]byte, error) {
 	return header, nil
 }
 
-func extractKeyFromHeader(msg string, id int) (interface{}, error) {
-	set, err := jwk.ParseString(msg)
-	if err != nil {
-		return nil, err
-	}
-	key, err := set.Keys[id].Materialize()
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
-func extractHeaderByName(msg, name string) (interface{}, error) {
-	header, err := extractHeader(msg)
+func extractJWSHeaderByName(msg, name string) (interface{}, error) {
+	header, err := extractJWSHeader(msg)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +194,8 @@ func extractHeaderByName(msg, name string) (interface{}, error) {
 	return headerMap[name], nil
 }
 
-func extractKeyIdFromHeader(msg string) (string, error) {
-	kid, err := extractHeaderByName(msg, jws.KeyIDKey)
+func extractKeyIdFromJWSHeader(msg string) (string, error) {
+	kid, err := extractJWSHeaderByName(msg, jws.KeyIDKey)
 	if err != nil {
 		return "", nil
 	}
@@ -88,10 +206,26 @@ func extractKeyIdFromHeader(msg string) (string, error) {
 	}
 }
 
+func extractPublicJWK(privateKey *JsonWebKey) *JsonWebKey {
+	if privateKey != nil {
+		publicKey := *privateKey
+		publicKey.D = ""
+		publicKey.Kid = strings.Replace(privateKey.Kid, "private:", "public:", 1)
+		if publicKey.Use == "" {
+			publicKey.Use = "sig"
+		}
+		return &publicKey
+	}
+	return nil
+}
+
 // 將 JsonWebKey 轉換成 jwx library 所需的JWK
-func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{}, error) {
+func convertToJwxJWK(key *JsonWebKey, extractPublicKey ...bool) (jwk.Key, interface{}, error) {
 	if key.Kty == "" {
 		key.Kty = "EC"
+	}
+	if key.Use == "" {
+		key.Use = "sig"
 	}
 	switch key.Kty {
 	case "EC":
@@ -124,7 +258,7 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 			Y:     new(big.Int).SetBytes(pY),
 		}
 
-		if !publicKeyOnly && key.D != "" {
+		if key.D != "" {
 			pD, err := base64.RawURLEncoding.DecodeString(key.D)
 			if err != nil {
 				return nil, nil, err
@@ -178,7 +312,7 @@ func convertToJwxJWK(key *JsonWebKey, publicKeyOnly bool) (jwk.Key, interface{},
 			E: intE,
 		}
 
-		if !publicKeyOnly && key.D != "" {
+		if key.D != "" {
 			pD, err := base64.RawURLEncoding.DecodeString(key.D)
 			if err != nil {
 				return nil, nil, err
@@ -265,39 +399,21 @@ func jweEncrypt(content []byte, key crypto.PublicKey, keyId string) ([]byte, err
 	return buf, nil
 }
 
-func LoadJsonWebKeySet(jwksJSON []byte) *JsonWebKeySet {
-	var jwks JsonWebKeySet
-	err := json.Unmarshal(jwksJSON, &jwks)
-	if err != nil {
-		panic("Invalid jwks:" + err.Error())
-	}
-	return &jwks
-}
-
-func LoadJsonWebKey(signingJwkJSON []byte) *JsonWebKey {
-	var signingJwk *JsonWebKey
-	err := json.Unmarshal(signingJwkJSON, &signingJwk)
-	if err != nil {
-		panic("Invalid signing jwk:" + err.Error())
-	}
-	return signingJwk
-}
-
-func getSignedClaim(claim, signedJws, issuer string, authSrvPubJwk *JsonWebKey) ([]byte, error) {
-	keyId, err := extractKeyIdFromHeader(signedJws)
+func getSignedClaim(claim, signedJws, issuer string, publicJwk *JsonWebKey) ([]byte, error) {
+	keyId, err := extractKeyIdFromJWSHeader(signedJws)
 	if err != nil {
 		return nil, err
 	}
-	if keyId != authSrvPubJwk.Kid {
-		return nil, errors.New("invalid auth service public key")
+	if keyId != publicJwk.Kid {
+		return nil, errors.New("JWS verification failed: kid not match")
 	}
-	srvJwk, _, err := convertToJwxJWK(authSrvPubJwk, true)
+	srvJwk, _, err := convertToJwxJWK(publicJwk)
 	if err != nil {
 		return nil, err
 	}
 	claims, err := jws.VerifyWithJWK([]byte(signedJws), srvJwk)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("JWS verification failed: " + err.Error())
 	}
 
 	var claimMap map[string]interface{}
@@ -306,11 +422,137 @@ func getSignedClaim(claim, signedJws, issuer string, authSrvPubJwk *JsonWebKey) 
 		return nil, err
 	}
 	if strings.TrimRight(claimMap["iss"].(string), "/") != strings.TrimRight(issuer, "/") {
-		return nil, errors.New("invalid issuer")
+		return nil, errors.New("JWS verification failed: invalid issuer")
 	}
 	buf, err := json.Marshal(claimMap[claim])
 	if err != nil {
 		return nil, err
 	}
 	return buf, nil
+}
+
+func getJWSContent(compactJws string) (map[string]interface{}, map[string]interface{}, error) {
+	if compactJws == "" {
+		return nil, nil, errors.New("empty JWS")
+	}
+	jwsSegments := strings.Split(compactJws, ".")
+	if len(jwsSegments) != 3 {
+		return nil, nil, errors.New("invalid JWS")
+	}
+
+	var header map[string]interface{}
+	decodedHeader, err := base64.RawURLEncoding.DecodeString(string(jwsSegments[0]))
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(decodedHeader, &header)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var payload map[string]interface{}
+	decodedPayload, err := base64.RawURLEncoding.DecodeString(string(jwsSegments[1]))
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(decodedPayload, &payload)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return header, payload, nil
+}
+
+func IsJWSExpired(compactJWS string) bool {
+	_, claims, err := getJWSContent(compactJWS)
+	if err != nil {
+		return true
+	}
+	if exp, found := claims["exp"]; found {
+		if time.Now().UTC().Unix() >= int64(exp.(float64)) {
+			return true
+		}
+	}
+	return false
+}
+
+func ecdsaSign(msg string, key *ecdsa.PrivateKey) (string, error) {
+	hash := sha256.Sum256([]byte(msg))
+
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
+	if err != nil {
+		return "", err
+	}
+
+	keyBits := key.Curve.Params().BitSize
+	keyBytes := keyBits / 8
+	if keyBits % 8 > 0 {
+		keyBytes += 1
+	}
+
+	rBytes := r.Bytes()
+	rPadded := make([]byte, keyBytes)
+	copy(rPadded[keyBytes-len(rBytes):], rBytes)
+
+	sBytes := s.Bytes()
+	sPadded := make([]byte, keyBytes)
+	copy(sPadded[keyBytes-len(sBytes):], sBytes)
+
+	return hex.EncodeToString(append(rPadded, sPadded...)), nil
+}
+
+func ecdsaVerify(msg, signature string, key *ecdsa.PublicKey) error {
+	sig, err := hex.DecodeString(signature)
+	if err != nil {
+		return errors.New("invalid signature")
+	}
+
+	hash := sha256.Sum256([]byte(msg))
+
+	keySize := len(sig) / 2
+	r := big.NewInt(0).SetBytes(sig[:keySize])
+	s := big.NewInt(0).SetBytes(sig[keySize:])
+
+	pass := ecdsa.Verify(key, hash[:], r, s)
+	if !pass {
+		return errors.New("signature verification failed")
+	}
+	return nil
+}
+
+func getPublicJWKFromJWKS(set *JsonWebKeySet) *JsonWebKey {
+	if set == nil || len(set.Keys) == 0 {
+		return nil
+	}
+	for _, key := range set.Keys {
+		if key.D == "" {
+			return &key
+		}
+	}
+	return nil
+}
+
+func getPrivateJWKFromJWKS(set *JsonWebKeySet) *JsonWebKey {
+	if set == nil || len(set.Keys) == 0 {
+		return nil
+	}
+	for _, key := range set.Keys {
+		if key.D != "" {
+			return &key
+		}
+	}
+	return nil
+}
+
+func getBasicAuthEncodedString(username, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+}
+
+func convertUnixTimestampToString(timestamp int64) string {
+	return strconv.FormatInt(timestamp, 10)
+}
+
+func getHexEncodedHashString(data string) string {
+	sizeBuf := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(sizeBuf[:])
 }

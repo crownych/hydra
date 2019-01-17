@@ -132,6 +132,8 @@ func TestClientSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
+	c.Configuration.PrivateJWK = cPrivJwk
+	c.Configuration.AuthSvcOfflinePublicJwk = authSrvPubJwk
 	handler.IssuerURL = server.URL
 
 	// start mock server
@@ -143,7 +145,7 @@ func TestClientSDK(t *testing.T) {
 		createClient := createTestPublicClient("", cPubJwk)
 
 		// returned client is correct on Create
-		result, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
+		result, response, err := c.PutOAuth2Client(createClient)
 		require.NoError(t, err)
 		require.EqualValues(t, http.StatusCreated, response.StatusCode, "%s", response.Payload)
 		assert.NotEmpty(t, result)
@@ -153,20 +155,20 @@ func TestClientSDK(t *testing.T) {
 		createClient := createTestConfidentialClient("", cPubJwk)
 
 		t.Run("case=create client with invalid user credentials", func(t *testing.T) {
-			c.Configuration.Username = "foo.bar"
-			c.Configuration.Password = "wrong"
+			c.Configuration.ADUsername = "foo.bar"
+			c.Configuration.ADPassword = "wrong"
 
-			_, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
+			_, response, err := c.PutOAuth2Client(createClient)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
 		})
 
 		t.Run("case=create client", func(t *testing.T) {
-			c.Configuration.Username = "foo.bar"
-			c.Configuration.Password = "secret"
+			c.Configuration.ADUsername = "foo.bar"
+			c.Configuration.ADPassword = "secret"
 
 			// returned client is correct on Create (session only)
-			result, response, err := c.PutOAuth2Client(createClient, cPrivJwk, authSrvPubJwk)
+			result, response, err := c.PutOAuth2Client(createClient)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 			assert.NotEmpty(t, result)
@@ -195,7 +197,7 @@ func TestClientSDK(t *testing.T) {
 					updateClient := createClient
 					updateClient.SoftwareVersion = "0.0.2"
 
-					_, response, err := c.PutOAuth2Client(updateClient, cPrivJwk, authSrvPubJwk)
+					_, response, err := c.PutOAuth2Client(updateClient)
 					require.NoError(t, err)
 					require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 
@@ -206,7 +208,7 @@ func TestClientSDK(t *testing.T) {
 					require.NoError(t, err)
 					require.EqualValues(t, http.StatusOK, response.StatusCode)
 
-					c, response, err := c.GetOAuth2Client(updateClient.ClientId, clientSecret)
+					c, response, err := c.GetOAuth2Client(createClient.ClientId, clientSecret)
 					require.NoError(t, err)
 					require.EqualValues(t, http.StatusOK, response.StatusCode)
 					require.EqualValues(t, updateClient.SoftwareVersion, c.SoftwareVersion)

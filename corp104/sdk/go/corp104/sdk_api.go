@@ -48,12 +48,12 @@ type OAuth2API interface {
 	GetLoginRequest(challenge string) (*swagger.LoginRequest, *swagger.APIResponse, error)
 	GetConsentRequest(challenge string) (*swagger.ConsentRequest, *swagger.APIResponse, error)
 
-	PutOAuth2Client(body swagger.OAuth2Client, signingJwk *swagger.JsonWebKey, authSrvPubJwk *swagger.JsonWebKey) (*swagger.PutClientResponse, *swagger.APIResponse, error)
+	PutOAuth2Client(body swagger.OAuth2Client) (*swagger.PutClientResponse, *swagger.APIResponse, error)
 	DeleteOAuth2Client(id string) (*swagger.APIResponse, error)
 	GetOAuth2Client(id, secret string) (*swagger.OAuth2Client, *swagger.APIResponse, error)
-	GetWellKnown(*swagger.JsonWebKey) (*swagger.WellKnown, *swagger.APIResponse, error)
+	GetWellKnown() (*swagger.WellKnown, *swagger.APIResponse, error)
 	IntrospectOAuth2Token(token string, scope string) (*swagger.OAuth2TokenIntrospection, *swagger.APIResponse, error)
-	ListOAuth2Clients(authSrvPubJwk *swagger.JsonWebKey, limit int64, offset int64) ([]swagger.OAuth2Client, *swagger.APIResponse, error)
+	ListOAuth2Clients(limit int64, offset int64) ([]swagger.OAuth2Client, *swagger.APIResponse, error)
 	RevokeOAuth2Token(token string) (*swagger.APIResponse, error)
 	RevokeAllUserConsentSessions(user string) (*swagger.APIResponse, error)
 	RevokeAuthenticationSession(user string) (*swagger.APIResponse, error)
@@ -63,9 +63,9 @@ type OAuth2API interface {
 	ListUserConsentSessions(user string) ([]swagger.PreviousConsentSession, *swagger.APIResponse, error)
 	FlushInactiveOAuth2Tokens(body swagger.FlushInactiveOAuth2TokensRequest) (*swagger.APIResponse, error)
 
-	PutOAuth2Resource(body swagger.OAuth2Resource, signingJwk *swagger.JsonWebKey, authSrvPubJwk *swagger.JsonWebKey) (*swagger.PutResourceResponse, *swagger.APIResponse, error)
+	PutOAuth2Resource(body swagger.OAuth2Resource) (*swagger.PutResourceResponse, *swagger.APIResponse, error)
 	CommitOAuth2Resource(cookies map[string]string, commitCode string) (*swagger.CommitResourceResponse, *swagger.APIResponse, error)
 	DeleteOAuth2Resource(urn string) (*swagger.APIResponse, error)
 	GetOAuth2Resource(urn string) (*swagger.OAuth2Resource, *swagger.APIResponse, error)
-	ListOAuth2Resources(authSrvPubJwk *swagger.JsonWebKey, limit int64, offset int64) ([]swagger.OAuth2Resource, *swagger.APIResponse, error)
+	ListOAuth2Resources(limit int64, offset int64) ([]swagger.OAuth2Resource, *swagger.APIResponse, error)
 }
