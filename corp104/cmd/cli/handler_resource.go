@@ -59,7 +59,7 @@ func (h *ResourceHandler) PutResource(cmd *cobra.Command, args []string) {
 	}
 	m.Configuration.ADUsername = user
 	m.Configuration.ADPassword = pwd
-	m.Configuration.AuthSvcOfflinePublicJwk = getAuthServicePublicJWK(cmd)
+	m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
 	m.Configuration.PrivateJWK = signingJwk
 	result, response, err := m.PutOAuth2Resource(cc)
 	if err != nil {

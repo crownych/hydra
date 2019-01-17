@@ -28,7 +28,7 @@ func _TestOAuth2API(t *testing.T) {
 		D: "G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo",
 	}
 
-	oauth2Api.Configuration.AuthSvcOfflinePublicJwk = &JsonWebKey{
+	oauth2Api.Configuration.AuthSvcOfflinePublicJWK = &JsonWebKey{
 		Crv: "P-256",
 		Alg: "ES256",
 		Use: "sig",

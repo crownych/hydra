@@ -85,7 +85,7 @@ func TestResourceSDK(t *testing.T) {
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
 	c.Configuration.PrivateJWK = cPrivJwk
-	c.Configuration.AuthSvcOfflinePublicJwk = authSrvPubJwk
+	c.Configuration.AuthSvcOfflinePublicJWK = authSrvPubJwk
 	handler.IssuerURL = server.URL
 
 	// start mock server

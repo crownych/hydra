@@ -89,7 +89,7 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		var c hydra.OAuth2Client
 		err = json.NewDecoder(reader).Decode(&c)
 		pkg.Must(err, "Could not parse JSON: %s", err)
-		m.Configuration.AuthSvcOfflinePublicJwk = getAuthServicePublicJWK(cmd)
+		m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
 		result, response, err := m.PutOAuth2Client(c)
 		checkResponse(response, err, http.StatusCreated)
 
@@ -128,7 +128,7 @@ func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 	}
 
 	if getAuthServicePublicJWK(cmd) != nil {
-		m.Configuration.AuthSvcOfflinePublicJwk = getAuthServicePublicJWK(cmd)
+		m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
 	}
 	m.Configuration.PrivateJWK = signingJwk
 	result, response, err := m.PutOAuth2Client(cc)

@@ -60,7 +60,7 @@ type Configuration struct {
 	CacheCleanupInterval 	*time.Duration
 
 	// Auth service's offline public JWK
-	AuthSvcOfflinePublicJwk *JsonWebKey `json:"authSvcOfflinePublicJWK,omitempty"`
+	AuthSvcOfflinePublicJWK *JsonWebKey `json:"authSvcOfflinePublicJWK,omitempty"`
 
 	// Client's JWKS
 	PrivateJWK *JsonWebKey `json:"privateJWK,omitempty"`

@@ -193,8 +193,8 @@ func (a OAuth2Api) AcceptLoginRequest(challenge string, body AcceptLoginRequest)
  * @return *PutClientResponse
  */
 func (a OAuth2Api) PutOAuth2Client(body OAuth2Client) (*PutClientResponse, *APIResponse, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
 
 	var localVarHttpMethod = http.MethodPut
@@ -587,10 +587,10 @@ func (a OAuth2Api) GetOAuth2Client(id, secret string) (*OAuth2Client, *APIRespon
  * @return *WellKnown
  */
 func (a OAuth2Api) GetWellKnown() (*WellKnown, *APIResponse, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
-	authSrvPubJwk := a.Configuration.AuthSvcOfflinePublicJwk
+	authSrvPubJwk := a.Configuration.AuthSvcOfflinePublicJWK
 
 	if authServerMetadata, found := a.Configuration.cacheGet(CacheOAuthServerMetadata); found {
 		return authServerMetadata.(*WellKnown), nil, nil
@@ -757,10 +757,10 @@ func (a OAuth2Api) IntrospectOAuth2Token(token string, scope string) (*OAuth2Tok
  * @return []OAuth2Client
  */
 func (a OAuth2Api) ListOAuth2Clients(limit int64, offset int64) ([]OAuth2Client, *APIResponse, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
-	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJwk
+	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJWK
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -1695,11 +1695,11 @@ func (a OAuth2Api) CommitOAuth2Client(cookies map[string]string, commitCode stri
 }
 
 func (a OAuth2Api) createSoftwareStatement(body OAuth2Client) (string, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return "", errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return "", errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
 
-	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJwk)
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJWK)
 	if err != nil {
 		return "", err
 	}
@@ -1762,8 +1762,8 @@ func (a OAuth2Api) createSoftwareStatement(body OAuth2Client) (string, error) {
  * @return *PutResourceResponse
  */
 func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource) (*PutResourceResponse, *APIResponse, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
 
 	var localVarHttpMethod = http.MethodPut
@@ -1838,10 +1838,10 @@ func (a OAuth2Api) PutOAuth2Resource(body OAuth2Resource) (*PutResourceResponse,
 }
 
 func (a OAuth2Api) createResourceStatement(body OAuth2Resource) (string, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return "", errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return "", errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
-	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJwk)
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJWK)
 	if err != nil {
 		return "", err
 	}
@@ -2111,10 +2111,10 @@ func (a OAuth2Api) GetOAuth2Resource(urn string) (*OAuth2Resource, *APIResponse,
  * @return []OAuth2Resource
  */
 func (a OAuth2Api) ListOAuth2Resources(limit int64, offset int64) ([]OAuth2Resource, *APIResponse, error) {
-	if a.Configuration.AuthSvcOfflinePublicJwk == nil {
-		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJwk' must be set")
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
 	}
-	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJwk
+	authSvcOfflinePubKey := a.Configuration.AuthSvcOfflinePublicJWK
 
 	var localVarHttpMethod = http.MethodGet
 	// create path and map variables
