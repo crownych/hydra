@@ -40,6 +40,7 @@ Class | Method | HTTP request | Description
 *OAuth2Api* | [**GetConsentRequest**](docs/OAuth2Api.md#getconsentrequest) | **Get** /oauth2/auth/requests/consent/{challenge} | Get consent request information
 *OAuth2Api* | [**GetLoginRequest**](docs/OAuth2Api.md#getloginrequest) | **Get** /oauth2/auth/requests/login/{challenge} | Get an login request
 *OAuth2Api* | [**GetOAuth2Client**](docs/OAuth2Api.md#getoauth2client) | **Get** /clients/{id} | Get an OAuth 2.0 Client.
+*OAuth2Api* | [**GetOAuth2Token**](docs/OAuth2Api.md#getoauth2token) | **Post** /token | Get an OAuth 2.0 access token.
 *OAuth2Api* | [**GetWellKnown**](docs/OAuth2Api.md#getwellknown) | **Get** /.well-known/oauth-authorization-server | Server well known configuration
 *OAuth2Api* | [**IntrospectOAuth2Token**](docs/OAuth2Api.md#introspectoauth2token) | **Post** /oauth2/introspect | Introspect OAuth2 tokens
 *OAuth2Api* | [**ListOAuth2Clients**](docs/OAuth2Api.md#listoauth2clients) | **Get** /clients | List OAuth 2.0 Clients

@@ -55,7 +55,19 @@ type Configuration struct {
 	Transport     http.RoundTripper
 	Timeout       *time.Duration `json:"timeout,omitempty"`
 
-	Cache         *cache.Cache
+	cache         			*cache.Cache
+	CacheDefaultExpiration	*time.Duration
+	CacheCleanupInterval 	*time.Duration
+
+	// Auth service's offline public JWK
+	AuthSvcOfflinePublicJWK *JsonWebKey `json:"authSvcOfflinePublicJWK,omitempty"`
+
+	// Client's JWKS
+	PrivateJWK *JsonWebKey `json:"privateJWK,omitempty"`
+
+	// AD credentials
+	ADUsername string `json:"adUserName,omitempty"`
+	ADPassword string `json:"adPassword,omitempty"`
 }
 
 func NewConfiguration() *Configuration {
@@ -66,8 +78,9 @@ func NewConfiguration() *Configuration {
 		APIKeyPrefix:  make(map[string]string),
 		UserAgent:     "Swagger-Codegen/1.0.0/go",
 		APIClient:     &APIClient{},
-		Cache:         cache.New(5*time.Minute, 10*time.Minute),
 	}
+	// 預設開啟 cache
+	cfg.EnableCache(true)
 
 	cfg.APIClient.config = cfg
 	return cfg
@@ -87,4 +100,49 @@ func (c *Configuration) GetAPIKeyWithPrefix(APIKeyIdentifier string) string {
 	}
 
 	return c.APIKey[APIKeyIdentifier]
+}
+
+func (c *Configuration) EnableCache(enable bool) {
+	if enable {
+		if c.IsCacheEnabled() {
+			return
+		}
+
+		if c.CacheDefaultExpiration == nil {
+			defaultExpiration := 5 * time.Minute
+			c.CacheDefaultExpiration = &defaultExpiration
+		}
+		if c.CacheCleanupInterval == nil {
+			cleanupInterval := 10 * time.Minute
+			c.CacheCleanupInterval = &cleanupInterval
+		}
+		c.cache = cache.New(*c.CacheDefaultExpiration, *c.CacheCleanupInterval)
+	} else {
+		c.cache = nil
+	}
+}
+
+func (c *Configuration) IsCacheEnabled() bool {
+	if c.cache != nil {
+		return true
+	}
+	return false
+}
+
+// Add an item to the cache, replacing any existing item. If the duration is 0
+// (DefaultExpiration), the cache's default expiration time is used. If it is -1
+// (NoExpiration), the item never expires.
+func (c *Configuration) cacheSet(key string, value interface{}, expiration time.Duration) {
+	if c.IsCacheEnabled() {
+		c.cache.Set(key, value, expiration)
+	}
+}
+
+// Get an item from the cache. Returns the item or nil, and a bool indicating
+// whether the key was found.
+func (c *Configuration) cacheGet(key string) (interface{}, bool) {
+	if c.IsCacheEnabled() {
+		return c.cache.Get(key)
+	}
+	return nil, false
 }

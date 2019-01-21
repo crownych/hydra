@@ -84,6 +84,8 @@ func TestResourceSDK(t *testing.T) {
 	n.UseHandler(router)
 	server := httptest.NewServer(n)
 	c := hydra.NewOAuth2ApiWithBasePath(server.URL)
+	c.Configuration.PrivateJWK = cPrivJwk
+	c.Configuration.AuthSvcOfflinePublicJWK = authSrvPubJwk
 	handler.IssuerURL = server.URL
 
 	// start mock server
@@ -108,20 +110,20 @@ func TestResourceSDK(t *testing.T) {
 			createResource := tc.resource
 
 			t.Run("case=create resource with invalid user credentials", func(t *testing.T) {
-				c.Configuration.Username = "foo.bar"
-				c.Configuration.Password = "wrong"
+				c.Configuration.ADUsername = "foo.bar"
+				c.Configuration.ADPassword = "wrong"
 
-				_, response, err := c.PutOAuth2Resource(createResource, cPrivJwk, authSrvPubJwk)
+				_, response, err := c.PutOAuth2Resource(createResource)
 				require.NoError(t, err)
 				require.EqualValues(t, http.StatusUnauthorized, response.StatusCode)
 			})
 
 			t.Run("case=create resource", func(t *testing.T) {
-				c.Configuration.Username = "foo.bar"
-				c.Configuration.Password = "secret"
+				c.Configuration.ADUsername = "foo.bar"
+				c.Configuration.ADPassword = "secret"
 
 				// returned resource is correct on Create (session only)
-				result, response, err := c.PutOAuth2Resource(createResource, cPrivJwk, authSrvPubJwk)
+				result, response, err := c.PutOAuth2Resource(createResource)
 				require.NoError(t, err)
 				require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 				assert.NotEmpty(t, result)
@@ -149,7 +151,7 @@ func TestResourceSDK(t *testing.T) {
 						updateResource.Scopes = append(updateResource.Scopes, )
 						updateResource.Description = updateResource.Description+"-updated"
 
-						_, response, err := c.PutOAuth2Resource(updateResource, cPrivJwk, authSrvPubJwk)
+						_, response, err := c.PutOAuth2Resource(updateResource)
 						require.NoError(t, err)
 						require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 

@@ -81,6 +81,7 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		fmt.Println("Invalid signing jwk:", err.Error())
 		return
 	}
+	m.Configuration.PrivateJWK = signingJwk
 
 	for _, path := range args {
 		reader, err := os.Open(path)
@@ -88,8 +89,8 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		var c hydra.OAuth2Client
 		err = json.NewDecoder(reader).Decode(&c)
 		pkg.Must(err, "Could not parse JSON: %s", err)
-
-		result, response, err := m.PutOAuth2Client(c, signingJwk, getAuthServicePublicJWK(cmd))
+		m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
+		result, response, err := m.PutOAuth2Client(c)
 		checkResponse(response, err, http.StatusCreated)
 
 		/*
@@ -122,11 +123,15 @@ func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 			err := errors.New("AD user credentials required")
 			pkg.Must(err, "Error: Required flag(s) \"user\" or \"pwd\" have/has not been set")
 		}
-		m.Configuration.Username = user
-		m.Configuration.Password = pwd
+		m.Configuration.ADUsername = user
+		m.Configuration.ADPassword = pwd
 	}
 
-	result, response, err := m.PutOAuth2Client(cc, signingJwk, getAuthServicePublicJWK(cmd))
+	if getAuthServicePublicJWK(cmd) != nil {
+		m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
+	}
+	m.Configuration.PrivateJWK = signingJwk
+	result, response, err := m.PutOAuth2Client(cc)
 	if err != nil {
 		pkg.Must(err, "Error: "+err.Error())
 	}

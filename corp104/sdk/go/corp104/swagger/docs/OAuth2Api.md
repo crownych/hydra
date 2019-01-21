@@ -33,6 +33,7 @@ Method | HTTP request | Description
 [**GetOAuth2Resource**](OAuth2Api.md#GetOAuth2Resource) | **Get** /resources/{urn} | Get an OAuth 2.0 Resource
 [**ListOAuth2Resources**](OAuth2Api.md#ListOAuth2Resources) | **Get** /resources | List OAuth 2.0 Resources
 [**PutOAuth2Resource**](OAuth2Api.md#PutOAuth2Resource) | **Put** /resources | Create or update an OAuth 2.0 Resource
+[**GetOAuth2Token**](OAuth2Api.md#OauthToken) | **Post** /token | Get OAuth 2.0 token
 
 
 
@@ -240,7 +241,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **GetOAuth2Client**
-> OAuth2Client GetOAuth2Client($id)
+> OAuth2Client GetOAuth2Client($id, $secret)
 
 Get an OAuth 2.0 Client.
 
@@ -326,7 +327,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **ListOAuth2Clients**
-> []OAuth2Client ListOAuth2Clients($authSrvPubJwk, $limit, $offset)
+> []OAuth2Client ListOAuth2Clients$limit, $offset)
 
 List OAuth 2.0 Clients
 
@@ -337,7 +338,6 @@ This endpoint lists all clients in the database, and never returns client secret
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **authSrvPubJwk** | **JsonWebKey**| The public key of the auth service. |
  **limit** | **int64**| The maximum amount of policies returned. | [optional] 
  **offset** | **int64**| The offset from where to start looking. | [optional] 
 
@@ -412,7 +412,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **OauthToken**
-> OauthTokenResponse OauthToken()
+> OauthTokenResponse OauthToken($clientAssertion, $resource, $scope)
 
 The OAuth 2.0 token endpoint
 
@@ -420,7 +420,13 @@ This endpoint is not documented here because you should never use your own imple
 
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **$clientAssertion** | **string** | client assertion JWT |
+ **resource** | **string** | resource 參數必須是空白（' '即 ASCII 0x20）分隔 Resource 的 URI 或 URN |
+ **scope** | **string** | scope 可以是任何 resouce 的 scope |
+
 
 ### Return type
 
@@ -450,9 +456,7 @@ OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. Usuall
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **body** | [**OAuth2Client**](OAuth2Client.md)|  |
- **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing software statement |
- **authSrvPubJwk** | [**JsonWebKey**](JsonWebKey.md)| Auth Service's public JWK | 
-
+ 
 ### Return type
 
 [**PutClientResponse**](PutClientResponse.md)
@@ -809,7 +813,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **ListOAuth2Resources**
-> []OAuth2Resource ListOAuth2Resources($authSrvPubJwk, $limit, $offset)
+> []OAuth2Resource ListOAuth2Resources($limit, $offset)
 
 List OAuth 2.0 Resources
 
@@ -820,7 +824,6 @@ This endpoint lists all resources in the database.
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **authSrvPubJwk** | **JsonWebKey**| The public key of the auth service. |
  **limit** | **int64**| The maximum amount of policies returned. | [optional] 
  **offset** | **int64**| The offset from where to start looking. | [optional] 
  
@@ -840,7 +843,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **PutOAuth2Resource**
-> PutResourceResponse PutOAuth2Resource($body, $signingJwk, $authSrvPubJwk)
+> PutResourceResponse PutOAuth2Resource($body)
 
 Create or update an OAuth 2.0 resource.
 
@@ -849,9 +852,7 @@ Create or update an OAuth 2.0 resource.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **body** | [**OAuth2Resource**](OAuth2Resource.md)|  |
- **signingJwk** | [**JsonWebKey**](JsonWebKey.md)| JWK for signing resource statement |
- **authSrvPubJwk** | [**JsonWebKey**](JsonWebKey.md)| Auth Service's public JWK | 
-
+ 
 ### Return type
 
 [**PutResourceResponse**](PutResourceResponse.md)
@@ -867,3 +868,29 @@ AD user credentials required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **GetOAuth2Token**
+> OauthTokenResponse GetOAuth2Token($resource, $scope)
+
+Get an OAuth 2.0 access token.
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **resource** | **string** | space-separated list of resource URNs |
+ **scope** | **string** | space-separated list of scope values |
+ 
+### Return type
+
+[**OauthTokenResponse**](oauthTokenResponse.md)
+
+### Authorization
+
+Client assertion required 
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
