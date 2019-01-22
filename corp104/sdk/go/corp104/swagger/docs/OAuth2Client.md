@@ -26,6 +26,7 @@ Name | Type | Description | Notes
 **TokenEndpointAuthMethod** | **string** | Requested Client Authentication method for the Token Endpoint. The options are client_secret_post, client_secret_basic, private_key_jwt, and none. | [optional] [default to null]
 **TosUri** | **string** | TermsOfServiceURI is a URL string that points to a human-readable terms of service document for the client that describes a contractual relationship between the end-user and the client that the end-user accepts when authorizing the client. | [optional] [default to null]
 **UserinfoSignedResponseAlg** | **string** | JWS alg algorithm [JWA] REQUIRED for signing UserInfo Responses. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is for the UserInfo Response to return the Claims as a UTF-8 encoded JSON object using the application/json content-type. | [optional] [default to null]
+**ClientProfile** | **string** | Client Profile. Supported public client profiles are `user-agent-based` & `native`; Supported confidential client profiles are `web` & `batch`.  | [default to null]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 
