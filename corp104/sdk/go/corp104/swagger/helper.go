@@ -220,7 +220,7 @@ func extractPublicJWK(privateKey *JsonWebKey) *JsonWebKey {
 }
 
 // 將 JsonWebKey 轉換成 jwx library 所需的JWK
-func convertToJwxJWK(key *JsonWebKey, extractPublicKey ...bool) (jwk.Key, interface{}, error) {
+func convertToJwxJWK(key *JsonWebKey) (jwk.Key, interface{}, error) {
 	if key.Kty == "" {
 		key.Kty = "EC"
 	}

@@ -120,14 +120,16 @@ var sharedMigrations = []*migrate.Migration{
 	{
 		Id: "9",
 		Up: []string{
-			`ALTER TABLE hydra_client ADD software_id TEXT NOT NULL`,
-			`ALTER TABLE hydra_client ADD software_version TEXT NOT NULL`,
-			`ALTER TABLE hydra_client ADD id_token_signed_response_alg VARCHAR(10) NOT NULL DEFAULT ''`,
+			`ALTER TABLE hydra_client ADD software_id TEXT`,
+			`ALTER TABLE hydra_client ADD software_version TEXT`,
+			`ALTER TABLE hydra_client ADD id_token_signed_response_alg VARCHAR(10) DEFAULT ''`,
+			`ALTER TABLE hydra_client ADD client_profile TEXT`,
 		},
 		Down: []string{
 			`ALTER TABLE hydra_client DROP COLUMN software_id`,
 			`ALTER TABLE hydra_client DROP COLUMN software_version`,
 			`ALTER TABLE hydra_client DROP COLUMN id_token_signed_response_alg`,
+			`ALTER TABLE hydra_client DROP COLUMN client_profile`,
 		},
 	},
 }
@@ -167,6 +169,20 @@ var Migrations = map[string]*migrate.MemoryMigrationSource{
 			},
 		},
 		sharedMigrations[6],
+		{
+			Id: "10",
+			Up: []string{
+				`UPDATE hydra_client SET software_id='', software_version='', client_profile=''`,
+				`ALTER TABLE hydra_client MODIFY software_id TEXT NOT NULL`,
+				`ALTER TABLE hydra_client MODIFY software_version TEXT NOT NULL`,
+				`ALTER TABLE hydra_client MODIFY client_profile TEXT NOT NULL`,
+			},
+			Down: []string{
+				`ALTER TABLE hydra_client MODIFY software_id TEXT`,
+				`ALTER TABLE hydra_client MODIFY software_version TEXT`,
+				`ALTER TABLE hydra_client MODIFY client_profile TEXT`,
+			},
+		},
 	}},
 	"postgres": {Migrations: []*migrate.Migration{
 		sharedMigrations[0],
@@ -202,6 +218,20 @@ var Migrations = map[string]*migrate.MemoryMigrationSource{
 			},
 		},
 		sharedMigrations[6],
+		{
+			Id: "10",
+			Up: []string{
+				`UPDATE hydra_client SET software_id='', software_version='', client_profile=''`,
+				`ALTER TABLE hydra_client ALTER COLUMN software_id SET NOT NULL`,
+				`ALTER TABLE hydra_client ALTER COLUMN software_version SET NOT NULL`,
+				`ALTER TABLE hydra_client ALTER COLUMN client_profile SET NOT NULL`,
+			},
+			Down: []string{
+				`ALTER TABLE hydra_client ALTER COLUMN software_id DROP NOT NULL`,
+				`ALTER TABLE hydra_client ALTER COLUMN software_version DROP NOT NULL`,
+				`ALTER TABLE hydra_client ALTER COLUMN client_profile DROP NOT NULL`,
+			},
+		},
 	}},
 }
 
@@ -237,6 +267,7 @@ type sqlData struct {
 	SoftwareId                     string `db:"software_id"`
 	SoftwareVersion                string `db:"software_version"`
 	IdTokenSignedResponseAlgorithm string `db:"id_token_signed_response_alg"`
+	ClientProfile				   string `db:"client_profile"`
 }
 
 var sqlParams = []string{
@@ -266,6 +297,7 @@ var sqlParams = []string{
 	"software_id",
 	"software_version",
 	"id_token_signed_response_alg",
+	"client_profile",
 }
 
 func sqlDataFromClient(d *Client) (*sqlData, error) {
@@ -306,6 +338,7 @@ func sqlDataFromClient(d *Client) (*sqlData, error) {
 		SoftwareId:                     d.SoftwareId,
 		SoftwareVersion:                d.SoftwareVersion,
 		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
+		ClientProfile:					d.ClientProfile,
 	}, nil
 }
 
@@ -336,6 +369,7 @@ func (d *sqlData) ToClient() (*Client, error) {
 		SoftwareId:                     d.SoftwareId,
 		SoftwareVersion:                d.SoftwareVersion,
 		IdTokenSignedResponseAlgorithm: d.IdTokenSignedResponseAlgorithm,
+		ClientProfile:					d.ClientProfile,
 	}
 
 	if d.JSONWebKeys != "" {

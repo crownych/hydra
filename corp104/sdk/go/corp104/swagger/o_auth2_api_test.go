@@ -129,7 +129,7 @@ func _TestOAuth2API(t *testing.T) {
 	t.Run("case=send get request", func(t *testing.T) {
 		// Note: register resource first
 		oauth2Api.Configuration.Username = "fa3030d2-9e16-4b7d-b27f-381e840175cb"
-		apiResp, err := oauth2Api.SendHttpGet("http://localhost:4444/resources/urn:104:v3:resource:rest:jobs", nil)
+		apiResp, err := oauth2Api.SendHttpGet("http://localhost:4444/resources/urn:104:v3:resource:rest:jobs", map[string]string{"104-Token-Chain":"TokenA,TokenB"})
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, apiResp.StatusCode)
 		assert.NotEmpty(t, apiResp.Payload)
