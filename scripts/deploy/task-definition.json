@@ -1,0 +1,275 @@
+{
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "1024",
+    "containerDefinitions": [
+        {
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "entryPoint": [],
+            "portMappings": [
+                {
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "containerPort": 80
+                }
+            ],
+            "command": [
+                "/bin/sh",
+                "-c",
+                "./start-all.sh"
+            ],
+            "linuxParameters": null,
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "AD_LOGIN_URL",
+                    "value": "https://integration.vip3.104-dev.com.tw/ad/login"
+                },
+                {
+                    "name": "BY_PASS_ROUTES",
+                    "value": "/clients,/forgotPassword,/resetPassword"
+                },
+                {
+                    "name": "CORP_INTERNAL_API_URL",
+                    "value": "https://integration.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "CORS_ALLOWED_CREDENTIALS",
+                    "value": "true"
+                },
+                {
+                    "name": "CORS_ALLOWED_METHODS",
+                    "value": "GET,POST,PUT,OPTIONS"
+                },
+                {
+                    "name": "CORS_ALLOWED_ORIGINS",
+                    "value": "https://vip3.104-dev.com.tw,https://biz.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "CORS_ENABLED",
+                    "value": "true"
+                },
+                {
+                    "name": "DATABASE_URL",
+                    "value": "postgres://hydra:secret@localhost:5432/hydra?sslmode=disable"
+                },
+                {
+                    "name": "DISABLE_CONSENT_FLOW",
+                    "value": "1"
+                },
+                {
+                    "name": "DISABLE_TELEMETRY",
+                    "value": "1"
+                },
+                {
+                    "name": "EMAIL_SERVICE_URL",
+                    "value": "http://localhost:10025"
+                },
+                {
+                    "name": "GRAPHQL_API_URL",
+                    "value": "https://biz.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "debug"
+                },
+                {
+                    "name": "OAUTH2_ACCESS_TOKEN_STRATEGY",
+                    "value": "jwt"
+                },
+                {
+                    "name": "OAUTH2_CONSENT_URL",
+                    "value": "https://auth.vip3.104-dev.com.tw/consent"
+                },
+                {
+                    "name": "OAUTH2_ISSUER_URL",
+                    "value": "https://auth.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "OAUTH2_LOGIN_URL",
+                    "value": "https://vip3.104-dev.com.tw/login"
+                },
+                {
+                    "name": "OAUTH2_LOGOUT_REDIRECT_URL",
+                    "value": "https://vip3.104-dev.com.tw/logout-callback"
+                },
+                {
+                    "name": "OAUTH2_SHARE_ERROR_DEBUG",
+                    "value": "1"
+                },
+                {
+                    "name": "OFFLINE_PRIVATE_JWK",
+                    "value": "{\"use\":\"sig\",\"kty\":\"EC\",\"kid\":\"private:a7ff59a7-f1a1-4271-a0e1-7fd8ff7fbcbc\",\"crv\":\"P-256\",\"alg\":\"ES256\",\"x\":\"DTg9ZW4tZt-MJGTHw2pKE-FtThCUDg9JVLZBXqCKPw0\",\"y\":\"pL1rAIHXqVru0kygBuv4WF3yFrwsm2lLDQnfBhhvcO0\",\"d\":\"gY5HLJ2aQmRY0exHDnPHs0V6f58A5FNbRARWmYzchPY\"}"
+                },
+                {
+                    "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
+                    "value": "v3AuthODICSubjectTypePairwiseSalt"
+                },
+                {
+                    "name": "PUBLIC_PORT",
+                    "value": "80"
+                },
+                {
+                    "name": "RESET_PASSWORD_ROUTE",
+                    "value": "https://vip3.104-dev.com.tw/reset-password"
+                },
+                {
+                    "name": "SYSTEM_SECRET",
+                    "value": "v3AuthServiceSystemSecret"
+                },
+                {
+                    "name": "TEST_MODE",
+                    "value": "1"
+                }
+            ],
+            "ulimits": null,
+            "dnsServers": [],
+            "mountPoints": [],
+            "workingDirectory": null,
+            "secrets": null,
+            "dockerSecurityOptions": [],
+            "memory": null,
+            "memoryReservation": null,
+            "volumesFrom": [],
+            "image": "$$ECR_URI_TAG_CUSTOM$$",
+            "disableNetworking": null,
+            "interactive": null,
+            "healthCheck": null,
+            "essential": true,
+            "links": [],
+            "hostname": null,
+            "extraHosts": null,
+            "pseudoTerminal": null,
+            "user": null,
+            "readonlyRootFilesystem": null,
+            "dockerLabels": null,
+            "systemControls": null,
+            "privileged": null,
+            "name": "$$ECS_SERVICE$$"
+        },
+        {
+            "dnsSearchDomains": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "entryPoint": [],
+            "portMappings": [
+                {
+                    "hostPort": 5432,
+                    "protocol": "tcp",
+                    "containerPort": 5432
+                }
+            ],
+            "command": [],
+            "linuxParameters": null,
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "POSTGRES_DB",
+                    "value": "hydra"
+                },
+                {
+                    "name": "POSTGRES_PASSWORD",
+                    "value": "secret"
+                },
+                {
+                    "name": "POSTGRES_USER",
+                    "value": "hydra"
+                }
+            ],
+            "ulimits": null,
+            "dnsServers": [],
+            "mountPoints": [],
+            "workingDirectory": null,
+            "secrets": null,
+            "dockerSecurityOptions": [],
+            "memory": null,
+            "memoryReservation": null,
+            "volumesFrom": [],
+            "image": "postgres:9.6-alpine",
+            "disableNetworking": null,
+            "interactive": null,
+            "healthCheck": null,
+            "essential": true,
+            "links": [],
+            "hostname": null,
+            "extraHosts": null,
+            "pseudoTerminal": null,
+            "user": null,
+            "readonlyRootFilesystem": null,
+            "dockerLabels": {},
+            "systemControls": null,
+            "privileged": null,
+            "name": "postgresd"
+        },
+        {
+            "dnsSearchDomains": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "entryPoint": [],
+            "portMappings": [],
+            "command": [],
+            "linuxParameters": null,
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-west-2"
+                },
+                {
+                    "name": "PORT",
+                    "value": "10025"
+                },
+                {
+                    "name": "SENDERS",
+                    "value": "jobbank@104.com.tw"
+                }
+            ],
+            "ulimits": null,
+            "dnsServers": [],
+            "mountPoints": [],
+            "workingDirectory": null,
+            "secrets": null,
+            "dockerSecurityOptions": [],
+            "memory": null,
+            "memoryReservation": null,
+            "volumesFrom": [],
+            "image": "clifflu/ses-wrapper:latest",
+            "disableNetworking": null,
+            "interactive": null,
+            "healthCheck": null,
+            "essential": true,
+            "links": [],
+            "hostname": null,
+            "extraHosts": null,
+            "pseudoTerminal": null,
+            "user": null,
+            "readonlyRootFilesystem": null,
+            "dockerLabels": {},
+            "systemControls": null,
+            "privileged": null,
+            "name": "mta"
+        }
+    ]
+}
