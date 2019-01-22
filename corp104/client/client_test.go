@@ -36,6 +36,7 @@ func TestClient(t *testing.T) {
 		RedirectURIs:            []string{"foo"},
 		Scope:                   "foo bar",
 		TokenEndpointAuthMethod: "private_key_jwt+session",
+		ClientProfile:			 WebClientProfile,
 	}
 
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
@@ -46,4 +47,5 @@ func TestClient(t *testing.T) {
 	assert.True(t, c.IsPublic())
 	assert.Len(t, c.GetScopes(), 2)
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
+	assert.EqualValues(t, c.ClientProfile, c.GetClientProfile())
 }

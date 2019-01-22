@@ -154,6 +154,10 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 		if c.RequestObjectSigningAlgorithm != "ES256" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field request_object_signing_alg should be \"ES256\"."))
 		}
+
+		if !stringslice.Has(PublicClientProfiles, c.ClientProfile) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(PublicClientProfiles, " or ", `"`))))
+		}
 	} else {
 		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil {
 			return errors.New("Field jwks or jwks_uri must be set.")
@@ -172,6 +176,10 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 
 		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "client_credentials" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"client_credentials\" only."))
+		}
+
+		if !stringslice.Has(ConfidentialClientProfiles, c.ClientProfile) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(ConfidentialClientProfiles, " or ", `"`))))
 		}
 	}
 

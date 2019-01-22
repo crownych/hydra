@@ -50,7 +50,7 @@ func TestValidate(t *testing.T) {
 		v         *Validator
 	}{
 		{
-			// public client
+			// public client (user-agent-based application)
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
@@ -65,6 +65,7 @@ func TestValidate(t *testing.T) {
 				RequestObjectSigningAlgorithm:  "ES256",
 				TokenEndpointAuthMethod:        "private_key_jwt+session",
 				Scope: 							"openid",
+				ClientProfile:					UserAgentBasedClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)
@@ -73,7 +74,31 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			// confidential client
+			// public client (native application)
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				ResponseTypes:                  []string{"token", "id_token"},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					NativeClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.NotEmpty(t, c.ClientID)
+				assert.NotEmpty(t, c.GetID())
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+		},
+		{
+			// confidential client (web application)
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -93,6 +118,34 @@ func TestValidate(t *testing.T) {
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
 				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
 				SoftwareVersion:         "0.0.1",
+				ClientProfile:			 WebClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+		},
+		{
+			// confidential client (batch application)
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"client_credentials"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				ClientProfile:			 BatchClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.Equal(t, c.GetID(), c.ClientID)
@@ -114,6 +167,7 @@ func TestValidate(t *testing.T) {
 				RequestObjectSigningAlgorithm:  "ES256",
 				TokenEndpointAuthMethod:        "private_key_jwt+session",
 				Scope: 							"openid openid",
+				ClientProfile:					UserAgentBasedClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.NotEmpty(t, c.ClientID)
@@ -144,8 +198,86 @@ func TestValidate(t *testing.T) {
 				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
 				SoftwareVersion:         "0.0.1",
 				Scope:                   "undefined",
+				ClientProfile:			 WebClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {},
+			expectErr: true,
+		},
+		{
+			// fail with empty client profile
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				ResponseTypes:                  []string{"token", "id_token"},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.NotEmpty(t, c.ClientID)
+				assert.NotEmpty(t, c.GetID())
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+			expectErr: true,
+		},
+		{
+			// fail when public client with wrong client profile
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				ResponseTypes:                  []string{"token", "id_token"},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					WebClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.NotEmpty(t, c.ClientID)
+				assert.NotEmpty(t, c.GetID())
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+			expectErr: true,
+		},
+		{
+			// fail when confidential client with wrong client profile
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"client_credentials"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				ClientProfile:			 UserAgentBasedClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
 			expectErr: true,
 		},
 	} {
