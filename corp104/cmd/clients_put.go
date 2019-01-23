@@ -54,7 +54,8 @@ Example:
      --id-token-signed-response-alg "ES256" \
      --request-object-signing-alg "ES256" \
 	 --token-endpoint-auth-method "private_key_jwt+session" \
-     --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
+	 --client-profile "user-agent-based" \
+	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}'
 
@@ -69,6 +70,7 @@ Example:
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
 	 --software-version "0.0.1" \
      --token-endpoint-auth-method "private_key_jwt" \
+	 --client-profile "web" \
 	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \ 
      --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \ 
      --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \ 
@@ -107,6 +109,7 @@ func init() {
 	clientsPutCmd.Flags().String("auth-public-jwk", "", "Give the public key of the Auth Service")
 	clientsPutCmd.Flags().String("user", "", "Give the AD account")
 	clientsPutCmd.Flags().String("pwd", "", "Give the AD account password")
+	clientsPutCmd.Flags().String("client-profile", "", "Give the client profile")
 	// Mark required flags
 	clientsPutCmd.MarkFlagRequired("id")
 	clientsPutCmd.MarkFlagRequired("name")
@@ -118,4 +121,5 @@ func init() {
 	clientsPutCmd.MarkFlagRequired("signing-jwk")
 	clientsPutCmd.MarkFlagRequired("auth-public-jwk")
 	clientsPutCmd.MarkFlagRequired("token-endpoint-auth-method")
+	clientsPutCmd.MarkFlagRequired("client-profile")
 }

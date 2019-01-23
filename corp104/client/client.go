@@ -28,6 +28,15 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
+// client profiles
+const WebClientProfile = "web"
+const UserAgentBasedClientProfile = "user-agent-based"
+const NativeClientProfile = "native"
+const BatchClientProfile = "batch"
+
+var PublicClientProfiles = []string{UserAgentBasedClientProfile, NativeClientProfile}
+var ConfidentialClientProfiles = []string{WebClientProfile, BatchClientProfile}
+
 // Client represents an OAuth 2.0 Client.
 //
 // swagger:model oAuth2Client
@@ -158,6 +167,9 @@ type Client struct {
 	SoftwareVersion string `json:"software_version"`
 
 	IdTokenSignedResponseAlgorithm string `json:"id_token_signed_response_alg,omitempty"`
+
+	// Client Profile
+	ClientProfile string `json:"client_profile"`
 }
 
 func (c *Client) GetID() string {
@@ -238,4 +250,8 @@ func (c *Client) GetTokenEndpointAuthMethod() string {
 
 func (c *Client) GetRequestURIs() []string {
 	return c.RequestURIs
+}
+
+func (c *Client) GetClientProfile() string {
+	return c.ClientProfile
 }

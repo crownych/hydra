@@ -2218,8 +2218,7 @@ func (a OAuth2Api) GetOAuth2Token(resource, scope string) (*OauthTokenResponse, 
 	}
 
 	//  create PoP Key pair
-	popKeyId := uuid.New()
-	popJWKS, err := a.GetPoPKeyPair(popKeyId)
+	popJWKS, err := a.GetPoPKeyPair(uuid.New())
 	if err != nil {
 		return nil, nil, errors.New("create PoP key failed:" + err.Error())
 	}
@@ -2269,9 +2268,9 @@ func (a OAuth2Api) isTokenValid(tokenResponse OauthTokenResponse) (*ecdsa.Privat
 				cnf := cnf.(map[string]interface{})
 				cnfJwk := cnf["jwk"].(map[string]interface{})
 				cnfJwkId := cnfJwk["kid"].(string)
-				popJWKS, popJWKSExists := a.Configuration.cacheGet(CachePoPJWKSPrefix + strings.Replace(cnfJwkId, "pop:public:", "", 1))
-				if popJWKSExists {
-					popPrivKey := getPrivateJWKFromJWKS(popJWKS.(*JsonWebKeySet))
+				popJWKS, _ := a.GetPoPKeyPair(strings.Replace(cnfJwkId, "pop:public:", "", 1))
+				if popJWKS != nil {
+					popPrivKey := getPrivateJWKFromJWKS(popJWKS)
 					if popPrivKey.X == cnfJwk["x"].(string) && popPrivKey.Y == cnfJwk["y"].(string) {
 						popECPrivKey, err := LoadECPrivateKeyFromJsonWebKey(popPrivKey)
 						if err == nil {
@@ -2303,29 +2302,22 @@ func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, 
 		return "", err
 	}
 
-	var popPrivJwk, popPubJwk JsonWebKey
-	for _, popJwk := range popJWKS.Keys {
-		if strings.Contains(popJwk.Kid, "private:") {
-			popPrivJwk = popJwk
-		} else if strings.Contains(popJwk.Kid, "public:") {
-			popPubJwk = popJwk
-		}
-	}
-
+	popPrivJwk := getPrivateJWKFromJWKS(popJWKS)
+	popPubJwk := getPublicJWKFromJWKS(popJWKS)
 	if popPrivJwk.Kid == "" || popPubJwk.Kid == "" {
 		return "", errors.New("PoP JWKS must contain both private and public keys")
 	}
-
-	_, popPrivECKey, err := convertToJwxJWK(&popPrivJwk)
+	_, popPrivECKey, err := convertToJwxJWK(popPrivJwk)
 	if err != nil {
-		return "", err
+		return "", errors.New("get PoP EC private key failed: " + err.Error())
 	}
 
 	// JWS Header
-	jwsHeaders := make(map[string]interface{})
-	jwsHeaders["alg"] = pubJwk.Algorithm()
-	jwsHeaders["typ"] = "client-assertion+jwt"
-	jwsHeaders["kid"] = pubJwk.KeyID()
+	jwsHeaders := map[string]interface{}{
+		"alg": pubJwk.Algorithm(),
+		"typ": "client-assertion+jwt",
+		"kid": pubJwk.KeyID(),
+	}
 
 	// JWS Payload
 	iat := time.Now().UTC()
@@ -2338,7 +2330,7 @@ func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, 
 		"exp": exp.Unix(),
 		"iat": iat.Unix(),
 		"jti": uuid.New(),
-		"pop_cnf": map[string]JsonWebKey{
+		"pop_cnf": map[string]*JsonWebKey{
 			"jwk": popPubJwk,
 		},
 	}
@@ -2439,12 +2431,7 @@ func (a OAuth2Api) SendHttpRequest(
 	localVarHeaderParams["104-PoP-Timestamp"] = convertUnixTimestampToString(time.Now().UTC().Unix())
 
 	// set "104-PoP-Signature" header
-	reqUrl, err := url.Parse(localVarPath)
-	if err != nil {
-		return nil, err
-	}
-
-	popSignature, err := a.CreatePoPSignature(popPrivKey, localVarHttpMethod, reqUrl.Path, reqUrl.Host, localVarHeaderParams["104-Track-Id"], localVarHeaderParams["104-Token-Chain"], localVarHeaderParams["104-PoP-Timestamp"], localVarPostBody)
+	popSignature, err := a.CreatePoPSignature(popPrivKey, localVarHttpMethod, localVarPath, localVarHeaderParams["104-Track-Id"], localVarHeaderParams["104-Token-Chain"], localVarHeaderParams["104-PoP-Timestamp"], localVarPostBody)
 	if err != nil {
 		return nil, err
 	}
@@ -2475,22 +2462,29 @@ func (a OAuth2Api) GetPoPKeyPair(keyId string) (*JsonWebKeySet, error) {
 	return popJWKS, err
 }
 
-func (a OAuth2Api) CreatePoPNonce(method, path, host, trackId, tokenChain, popTimestamp, payload string) string {
+func (a OAuth2Api) CreatePoPNonce(method, requestURL, trackId, tokenChain, popTimestamp, payload string) (string, error) {
+	reqUrl, err := url.Parse(requestURL)
+	if err != nil {
+		return "", err
+	}
 	return method + "\n" +
-		path + "\n" +
-		host + "\n" +
+		reqUrl.Path + "\n" +
+		reqUrl.Host + "\n" +
 		trackId + "\n" +
 		tokenChain + "\n" +
 		popTimestamp + "\n" +
-		payload
+		payload, nil
 }
 
-func (a OAuth2Api) CreatePoPSignature(popPrivateKey *ecdsa.PrivateKey, method, path, host, trackId, tokenChain, popTimestamp, payload string) (string, error) {
+func (a OAuth2Api) CreatePoPSignature(popPrivateKey *ecdsa.PrivateKey, method, requestURL, trackId, tokenChain, popTimestamp, payload string) (string, error) {
 	if popPrivateKey == nil {
 		return "", errors.New("PoP private key must be set")
 	}
 
-	nonce := a.CreatePoPNonce(method, path, host, trackId, tokenChain, popTimestamp, payload)
+	nonce, err := a.CreatePoPNonce(method, requestURL, trackId, tokenChain, popTimestamp, payload)
+	if err != nil {
+		return "", errors.New("create PoP nonce failed: " + err.Error())
+	}
 
 	hash := sha256.Sum256([]byte(nonce))
 	signature, err := ecdsaSign(string(hash[:]), popPrivateKey)

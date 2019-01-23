@@ -207,6 +207,7 @@ func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Cli
 	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
 	idTokenSignedResponseAlg, _ := cmd.Flags().GetString("id-token-signed-response-alg")
 	requestObjectSigningAlg, _ := cmd.Flags().GetString("request-object-signing-alg")
+	clientProfile, _ := cmd.Flags().GetString("client-profile")
 
 	cc := hydra.OAuth2Client{
 		ClientId:                id,
@@ -227,6 +228,7 @@ func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Cli
 		SoftwareVersion:          softwareVersion,
 		IdTokenSignedResponseAlg: idTokenSignedResponseAlg,
 		RequestObjectSigningAlg:  requestObjectSigningAlg,
+		ClientProfile:			  clientProfile,
 	}
 
 	if jwksJSON != "" {

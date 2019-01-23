@@ -19,6 +19,20 @@ func hasStrings(s1 []string, s2 ...string) bool {
 	return true
 }
 
+func joinStringsWithQuotes(a []string, sep string, leftQuote string, rightQuote ...string) string {
+	result := ""
+	for i, v := range a {
+		if i > 0 {
+			result += sep
+		}
+		if len(rightQuote) == 0 {
+			rightQuote = []string{leftQuote}
+		}
+		result += leftQuote + v + rightQuote[0]
+	}
+	return result
+}
+
 func sendCommitCode(recipient, commitCode string) {
 	if recipient == "foo.bar" {
 		return

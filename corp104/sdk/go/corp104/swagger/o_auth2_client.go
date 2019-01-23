@@ -89,6 +89,9 @@ type OAuth2Client struct {
 
 	// JWS alg algorithm [JWA] REQUIRED for signing the ID Token issued to this Client. The value none MUST NOT be used as the ID Token alg value unless the Client uses only Response Types that return no ID Token from the Authorization Endpoint (such as when only using the Authorization Code Flow).
 	IdTokenSignedResponseAlg string `json:"id_token_signed_response_alg,omitempty"`
+
+	// Client Profile
+	ClientProfile string `json:"client_profile,omitempty"`
 }
 
 func (c OAuth2Client) IsPublic() bool {
