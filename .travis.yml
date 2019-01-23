@@ -31,9 +31,6 @@ script:
   - goveralls -coverprofile="coverage.txt"
 
 before_deploy:
-  - export AWS_DEFAULT_REGION=ap-northeast-1
-  - export ECS_SERVICE="authservice"
-  - export IMAGE_TAG=${TRAVIS_COMMIT}
   # Set deploy/demo branch variables
   - if [[ $TRAVIS_BRANCH == "deploy/demo" ]]; then
       export AWS_ACCESS_KEY_ID=${DEV_AWS_ACCESS_KEY_ID};
