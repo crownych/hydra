@@ -3,7 +3,6 @@
 
 # Vaiables
 export ECS_CLUSTER="Cluster-${ECS_SERVICE}"
-export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/task-definition.json"
 export TASK_DEFINITION_FAMILY="${ECS_SERVICE}-TaskDefinition"
 export TASK_DEFINITION_EXECUTION_ROLE_ARN="${ECS_SERVICE}-ExecutionRole"
 export TASK_DEFINITION_TASK_ROLE_ARN="${ECS_SERVICE}-TaskRole"
@@ -11,6 +10,11 @@ export ECR_URI="${AWS_ACCOUNTID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${E
 export ECR_URI_TAG_LATEST=${ECR_URI}:latest
 export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
 export CLW_LOG_GROUP="/ecs/${TASK_DEFINITION_FAMILY}"
+if [[ -z ${TASK_DESIRED_COUNT} ]]; then 
+    export TASK_DESIRED_COUNT_CLI="--desired-count 1"
+else 
+    export TASK_DESIRED_COUNT_CLI="--desired-count "${TASK_DESIRED_COUNT}
+fi
 
 if [[ ${TRAVIS_REPO_SLUG} != "104corp/hydra" ]]; then
     exit 0
@@ -63,4 +67,5 @@ aws ecs register-task-definition \
 aws ecs update-service \
     --cluster ${ECS_CLUSTER} \
     --service ${ECS_SERVICE} \
+    ${TASK_DESIRED_COUNT_CLI} \
     --task-definition ${TASK_DEFINITION_FAMILY}
