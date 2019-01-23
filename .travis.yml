@@ -35,23 +35,27 @@ before_deploy:
   - if [[ $TRAVIS_BRANCH == "deploy/demo" ]]; then
       export AWS_ACCESS_KEY_ID=${DEV_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${DEV_AWS_SECRET_ACCESS_KEY};
-      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/task-definition.json"
-      export TASK_DESIRED_COUNT="1"
     fi
   # Set deploy/develope branch variables
   - if [[ $TRAVIS_BRANCH == "deploy/develope" ]]; then
       export AWS_ACCESS_KEY_ID=${DEV_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${DEV_AWS_SECRET_ACCESS_KEY};
+      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/develope-task-definition.json"
+      export TASK_DESIRED_COUNT="1"
     fi
   # Set deploy/staging branch variables
   - if [[ $TRAVIS_BRANCH == "deploy/staging" ]]; then
       export AWS_ACCESS_KEY_ID=${STAGING_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${STAGING_AWS_SECRET_ACCESS_KEY};
+      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/staging-task-definition.json"
+      export TASK_DESIRED_COUNT="1"
     fi
   # Set deplopy/production branch variables
   - if [[ $TRAVIS_BRANCH == "deploy/production" ]]; then
       export AWS_ACCESS_KEY_ID=${PRODUCTION_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${PRODUCTION_AWS_SECRET_ACCESS_KEY};
+      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/production-task-definition.json"
+      export TASK_DESIRED_COUNT="1"
     fi  
 
 deploy:
