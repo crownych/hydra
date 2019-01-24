@@ -1,0 +1,91 @@
+{
+  "uri": "https://v3ms.104.com.tw/jobs",
+  "name": "jobs",
+  "type": "rest",
+  "auth_service": "https://v3auth.104.com.tw",
+  "default_scope_auth_type": "company",
+  "grant_types": [
+    "urn:ietf:params:oauth:grant-type:jwt-bearer",
+    "client_credentials"
+  ],
+  "scopes": [
+    {
+      "name": "rest:jobs:read",
+      "scope_auth_type": "",
+      "description": "關於rest:jobs:read"
+    },
+    {
+      "name": "rest:jobs:write",
+      "scope_auth_type": "",
+      "description": "關於rest:jobs:write"
+    }
+  ],
+  "paths": [
+    {
+      "name": "/",
+      "methods": [
+        {
+          "name": "GET",
+          "description": "取得 job 列表",
+          "scopes": [
+            "rest:jobs:read",
+            "rest:jobs:write"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "/",
+      "methods": [
+        {
+          "name": "POST",
+          "description": "取得 job 列表",
+          "scopes": [
+            "rest:jobs:write"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "/{jobNo}",
+      "methods": [
+        {
+          "name": "GET",
+          "description": "取得 job 資料",
+          "scopes": [
+            "rest:jobs:read",
+            "rest:jobs:write"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "/{jobNo}",
+      "methods": [
+        {
+          "name": "DELETE",
+          "description": "刪除 job 資料",
+          "scopes": [
+            "rest:jobs:write"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "/{jobNo}",
+      "methods": [
+        {
+          "name": "PATCH",
+          "description": "修改 job 資料",
+          "scopes": [
+            "rest:jobs:write"
+          ]
+        }
+      ]
+    }
+  ],
+  "contacts": [
+    "someone@104.com.tw"
+  ],
+  "description": "公司資料"
+}
