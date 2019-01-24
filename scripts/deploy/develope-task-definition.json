@@ -7,7 +7,7 @@
     "memory": "1024",
     "containerDefinitions": [
         {
-            "name": "$$ECS_SERVICE$$",
+            "name": "entry_point",
             "image": "$$ECR_URI_TAG_CUSTOM$$",
             "essential": true,
             "logConfiguration": {
