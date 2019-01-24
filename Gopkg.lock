@@ -2,15 +2,22 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:734744c66c90419ae74b6c206e211eb0f385790b74667ca21b8bdb07152adf73"
+  digest = "1:ead4ee463cd35b030e8c52dffa0832b571a7eaab0bce41bc7a90617a6f234f34"
   name = "github.com/104corp/vip3-go-auth"
   packages = [
     "vip3auth",
+    "vip3auth/client",
+    "vip3auth/di",
+    "vip3auth/grant",
+    "vip3auth/helper",
     "vip3auth/jwt",
+    "vip3auth/provider",
+    "vip3auth/scope",
+    "vip3auth/token",
+    "vip3auth/token/pop",
   ]
   pruneopts = ""
-  revision = "67b27817df638eae96324760e6b8bdf6b6f28c81"
+  revision = "76fe4771659ae000a1f08314e126689f493030b7"
 
 [[projects]]
   branch = "master"
@@ -1026,6 +1033,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/104corp/vip3-go-auth/vip3auth",
+    "github.com/104corp/vip3-go-auth/vip3auth/token",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/api/types/container",
