@@ -31,6 +31,12 @@
                 "./start-all.sh"
             ],
             "cpu": 0,
+            "secrets": [
+                {
+                    "name" : "OFFLINE_PRIVATE_JWK",
+                    "valueFrom" : "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/offline_private_jwk"
+                }
+            ],
             "environment": [
                 {
                     "name": "AD_LOGIN_URL",
@@ -107,10 +113,6 @@
                 {
                     "name": "OAUTH2_SHARE_ERROR_DEBUG",
                     "value": "1"
-                },
-                {
-                    "name": "OFFLINE_PRIVATE_JWK",
-                    "value": "{\"use\":\"sig\",\"kty\":\"EC\",\"kid\":\"private:a7ff59a7-f1a1-4271-a0e1-7fd8ff7fbcbc\",\"crv\":\"P-256\",\"alg\":\"ES256\",\"x\":\"DTg9ZW4tZt-MJGTHw2pKE-FtThCUDg9JVLZBXqCKPw0\",\"y\":\"pL1rAIHXqVru0kygBuv4WF3yFrwsm2lLDQnfBhhvcO0\",\"d\":\"gY5HLJ2aQmRY0exHDnPHs0V6f58A5FNbRARWmYzchPY\"}"
                 },
                 {
                     "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
