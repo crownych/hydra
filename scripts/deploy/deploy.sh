@@ -1,8 +1,13 @@
 #!/bin/bash 
--e -o pipefail
+set -e -o pipefail
+
+print_fun_name(){
+        echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
+}
 
 set_env_var() {
-    # Vaiables
+    print_fun_name
+    # Set ENV Variables
     export ECS_CLUSTER="Cluster-${ECS_SERVICE}"
     export TASK_DEFINITION_FAMILY="${ECS_SERVICE}-TaskDefinition"
     export TASK_DEFINITION_EXECUTION_ROLE_ARN="${ECS_SERVICE}-ExecutionRole"
@@ -19,6 +24,7 @@ set_env_var() {
 }
 
 ecs_register_task_definition() {
+    print_fun_name
     # Register new version task definition
     aws ecs register-task-definition \
         --cli-input-json file://${TASK_DEFINITION_TEMPLATE} \
@@ -28,6 +34,7 @@ ecs_register_task_definition() {
 }
 
 ecs_update_service() {
+    print_fun_name
     # Update service with new version task definition
     aws ecs update-service \
         --cluster ${ECS_CLUSTER} \
@@ -37,11 +44,13 @@ ecs_update_service() {
 }
 
 install_tools() {
+    print_fun_name
     pip install --user awscli jq
     export PATH=$PATH:$HOME/.local/bin
 }
 
 get_sts(){
+    print_fun_name
     if [[ ${AWS_ACCESS_KEY_ID} == "" ]]; then
         echo "empty AWS_ACCESS_KEY_ID"
         exit 1
@@ -50,10 +59,12 @@ get_sts(){
 }
 
 ecr_login() {
+    print_fun_name
     eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
 }
 
 docker_build_tag_push() {
+    print_fun_name
     # Build, tag and push image 
     docker build -t hydra .
     docker tag hydra:latest ${ECR_URI_TAG_LATEST}
@@ -63,6 +74,7 @@ docker_build_tag_push() {
 }
 
 replace_var_in_taskdefinition(){
+    print_fun_name
     # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with envirement variable
     # Example
     # $$ECR_URI_TAG_CUSTOM$$ : Image with commit sha
@@ -72,7 +84,9 @@ replace_var_in_taskdefinition(){
     while [[ $str =~ ('$$'([[:alnum:]_]+)'$$') ]]; do
         str=${str//${BASH_REMATCH[1]}/${!BASH_REMATCH[2]}}
     done
-    echo "$str" | jq > ${TASK_DEFINITION_TEMPLATE}    
+    echo "$str" > ${TASK_DEFINITION_TEMPLATE}
+
+    #cat ${TASK_DEFINITION_TEMPLATE} | jq || echo 'Error, json fmt error';cat ${TASK_DEFINITION_TEMPLATE};exit 1
 }
 
 # Main
@@ -84,8 +98,8 @@ main() {
     cd ${TRAVIS_BUILD_DIR}
 
     install_tools
-    set_env_var
     get_sts
+    set_env_var
     ecr_login
     docker_build_tag_push
     replace_var_in_taskdefinition

@@ -7,6 +7,9 @@
     "memory": "1024",
     "containerDefinitions": [
         {
+            "name": "$$ECS_SERVICE$$",
+            "image": "$$ECR_URI_TAG_CUSTOM$$",
+            "essential": true,
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
@@ -15,7 +18,6 @@
                     "awslogs-stream-prefix": "ecs"
                 }
             },
-            "entryPoint": [],
             "portMappings": [
                 {
                     "hostPort": 80,
@@ -28,7 +30,6 @@
                 "-c",
                 "./start-all.sh"
             ],
-            "linuxParameters": null,
             "cpu": 0,
             "environment": [
                 {
@@ -131,34 +132,12 @@
                     "name": "TEST_MODE",
                     "value": "1"
                 }
-            ],
-            "ulimits": null,
-            "dnsServers": [],
-            "mountPoints": [],
-            "workingDirectory": null,
-            "secrets": null,
-            "dockerSecurityOptions": [],
-            "memory": null,
-            "memoryReservation": null,
-            "volumesFrom": [],
-            "image": "$$ECR_URI_TAG_CUSTOM$$",
-            "disableNetworking": null,
-            "interactive": null,
-            "healthCheck": null,
-            "essential": true,
-            "links": [],
-            "hostname": null,
-            "extraHosts": null,
-            "pseudoTerminal": null,
-            "user": null,
-            "readonlyRootFilesystem": null,
-            "dockerLabels": null,
-            "systemControls": null,
-            "privileged": null,
-            "name": "$$ECS_SERVICE$$"
+            ]
         },
         {
-            "dnsSearchDomains": [],
+            "image": "postgres:9.6-alpine",
+            "essential": true,
+            "name": "postgresd",
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
@@ -167,7 +146,6 @@
                     "awslogs-stream-prefix": "ecs"
                 }
             },
-            "entryPoint": [],
             "portMappings": [
                 {
                     "hostPort": 5432,
@@ -175,8 +153,6 @@
                     "containerPort": 5432
                 }
             ],
-            "command": [],
-            "linuxParameters": null,
             "cpu": 0,
             "environment": [
                 {
@@ -191,34 +167,12 @@
                     "name": "POSTGRES_USER",
                     "value": "hydra"
                 }
-            ],
-            "ulimits": null,
-            "dnsServers": [],
-            "mountPoints": [],
-            "workingDirectory": null,
-            "secrets": null,
-            "dockerSecurityOptions": [],
-            "memory": null,
-            "memoryReservation": null,
-            "volumesFrom": [],
-            "image": "postgres:9.6-alpine",
-            "disableNetworking": null,
-            "interactive": null,
-            "healthCheck": null,
-            "essential": true,
-            "links": [],
-            "hostname": null,
-            "extraHosts": null,
-            "pseudoTerminal": null,
-            "user": null,
-            "readonlyRootFilesystem": null,
-            "dockerLabels": {},
-            "systemControls": null,
-            "privileged": null,
-            "name": "postgresd"
+            ]
         },
         {
-            "dnsSearchDomains": [],
+            "name": "mta",
+            "image": "clifflu/ses-wrapper:latest",
+            "essential": true,
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
@@ -227,10 +181,6 @@
                     "awslogs-stream-prefix": "ecs"
                 }
             },
-            "entryPoint": [],
-            "portMappings": [],
-            "command": [],
-            "linuxParameters": null,
             "cpu": 0,
             "environment": [
                 {
@@ -245,31 +195,7 @@
                     "name": "SENDERS",
                     "value": "jobbank@104.com.tw"
                 }
-            ],
-            "ulimits": null,
-            "dnsServers": [],
-            "mountPoints": [],
-            "workingDirectory": null,
-            "secrets": null,
-            "dockerSecurityOptions": [],
-            "memory": null,
-            "memoryReservation": null,
-            "volumesFrom": [],
-            "image": "clifflu/ses-wrapper:latest",
-            "disableNetworking": null,
-            "interactive": null,
-            "healthCheck": null,
-            "essential": true,
-            "links": [],
-            "hostname": null,
-            "extraHosts": null,
-            "pseudoTerminal": null,
-            "user": null,
-            "readonlyRootFilesystem": null,
-            "dockerLabels": {},
-            "systemControls": null,
-            "privileged": null,
-            "name": "mta"
+            ]
         }
     ]
 }
