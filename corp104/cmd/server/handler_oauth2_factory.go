@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/104corp/vip3-go-auth/vip3auth"
+	"github.com/104corp/vip3-go-auth/vip3auth/token"
 	"github.com/gorilla/sessions"
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/fosite"
@@ -81,12 +82,12 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 		TokenURL:                       strings.TrimRight(c.Issuer, "/") + oauth2.TokenPath,
 	}
 
-	jwtStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, oauth2.OpenIDConnectKeyName)
-	if err != nil {
-		c.GetLogger().WithError(err).Fatalf("Unable to refresh OpenID Connect signing keys.")
-	}
+	oidcJWTStrategy := &token.Vip3ES256JWTStrategy{KeyStore: c.Context().KeyManager, Set: oauth2.OpenIDConnectKeyName}
+	oauth2JWTStrategy := &token.Vip3ES256JWTStrategy{KeyStore: c.Context().KeyManager, Set: oauth2.OAuth2JWTKeyName}
+	commonJWTStrategy := oidcJWTStrategy
+
 	oidcStrategy := &openid.DefaultStrategy{
-		JWTStrategy: jwtStrategy,
+		JWTStrategy: oidcJWTStrategy,
 		Expiry:      c.GetIDTokenLifespan(),
 		Issuer:      c.Issuer,
 	}
@@ -103,13 +104,10 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 			c.GetLogger().WithError(err).Fatalf(`Could not fetch public signing key for OAuth 2.0 Access Tokens - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 		}
 
-		jwtStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, oauth2.OAuth2JWTKeyName)
-		if err != nil {
-			c.GetLogger().WithError(err).Fatalf("Unable to refresh Access Token signing keys.")
-		}
+		commonJWTStrategy = oauth2JWTStrategy
 
 		coreStrategy = &foauth2.DefaultJWTStrategy{
-			JWTStrategy:     jwtStrategy,
+			JWTStrategy:     oauth2JWTStrategy,
 			HMACSHAStrategy: hmacStrategy,
 		}
 	} else if c.OAuth2AccessTokenStrategy == "opaque" {
@@ -125,7 +123,7 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 	commonStrategy := &compose.CommonStrategy{
 		CoreStrategy:               coreStrategy,
 		OpenIDConnectTokenStrategy: oidcStrategy,
-		JWTStrategy:                jwtStrategy,
+		JWTStrategy:                commonJWTStrategy,
 	}
 
 	oriProvider := compose.Compose(
@@ -145,9 +143,25 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 		compose.OAuth2TokenRevocationFactory,
 		compose.OAuth2TokenIntrospectionFactory,
 	)
-	tokenJwtStrategy := vip3auth.NewProxyJWTStrategy(jwtStrategy.ES256JWTStrategy)
-	provider := vip3auth.ComposeWithFosite(oriProvider.(*fosite.Fosite), fc, store, commonStrategy, tokenJwtStrategy)
-	return provider
+
+	// JwtBearerGrantHandler 和 ClientCredentialsGrantHandler 簽發 Access Token 所需要的 HandleHelper
+	accessTokenHelper := &foauth2.HandleHelper{
+		AccessTokenStrategy: token.NewVip3AccessTokenStrategy(coreStrategy, fc.TokenURL, oauth2JWTStrategy),
+		AccessTokenStorage:  store,
+		AccessTokenLifespan: fc.AccessTokenLifespan,
+	}
+
+	// Vip3JwtBearerAssertionValidator 查驗 Id token 所需要的 KeySet 設定
+	keyStoreConfig := vip3auth.KeyStoreConfig{
+		KeyStore:          c.Context().KeyManager,
+		IdTokenKeySetName: oauth2.OpenIDConnectKeyName,
+	}
+
+	// TODO 前端 SDK 完成 user id-token 重簽發為 company user id-token 時移除
+	vip3auth.SetSkipAssertionsSignatureVerify(true)
+
+	oauth2Provider := vip3auth.ComposeOAuth2Provider(fc, oriProvider.(*fosite.Fosite), accessTokenHelper, keyStoreConfig, pkg.GetSessionValue)
+	return oauth2Provider
 }
 
 func setDefaultConsentURL(s string, c *config.Config, path string) string {
