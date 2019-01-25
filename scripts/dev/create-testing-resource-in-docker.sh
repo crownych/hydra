@@ -8,7 +8,7 @@ if [[ "help" == "$1" ]] || [[ "" == "$1" ]]; then
     exit 0
 fi
 if [[ "" == "$2" ]]; then
-    resource_meta=$(awk '{printf "%s", $0}' $(dirname ${0})'/default-testing-resource-meta.json')
+    resource_meta=$(awk '{printf "%s", $0}' $(dirname ${0})'/json/default-testing-resource-meta.json')
 elif [[ -f "$2" ]]; then
     resource_meta=$(awk '{printf "%s", $0}' ${2})
 else
@@ -16,8 +16,8 @@ else
 fi
 
 
-resource_meta=$(awk '{printf "%s", $0}' $(dirname ${0})'/default-testing-resource-meta.json')
-signing_jwk=$(awk '{printf "%s", $0}' $(dirname ${0})'/signing-jwk.json')
+resource_meta=$(awk '{printf "%s", $0}' $(dirname ${0})'/json/default-testing-resource-meta.json')
+signing_jwk=$(awk '{printf "%s", $0}' $(dirname ${0})'/json/signing-jwk.json')
 
 r=$(docker exec -it `docker ps -f name=hydra_hydra_1 -q` \
 hydra resources put \
