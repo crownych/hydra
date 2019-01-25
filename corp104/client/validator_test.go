@@ -98,7 +98,35 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			// confidential client (web application)
+			// confidential client (web application with "urn:ietf:params:oauth:grant-type:jwt-bearer" grant type)
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				RedirectURIs:            []string{"https://localhost/oauth/cb"},
+				ClientProfile:			 WebClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+		},
+		{
+			// confidential client (web application with "client_credentials" grant type)
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -118,6 +146,34 @@ func TestValidate(t *testing.T) {
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
 				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
 				SoftwareVersion:         "0.0.1",
+				ClientProfile:			 WebClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+		},
+		{
+			// confidential client (web application with "urn:ietf:params:oauth:grant-type:jwt-bearer" and "client_credentials" grant types)
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer", "client_credentials"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				RedirectURIs:            []string{"https://localhost/oauth/cb"},
 				ClientProfile:			 WebClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
@@ -274,6 +330,34 @@ func TestValidate(t *testing.T) {
 				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
 				SoftwareVersion:         "0.0.1",
 				ClientProfile:			 UserAgentBasedClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+			expectErr: true,
+		},
+		{
+			// fail when batch client with "urn:ietf:params:oauth:grant-type:jwt-bearer" grant type
+			in: &Client{
+				ClientID: uuid.New(),
+				JSONWebKeys: &jose.JSONWebKeySet{
+					Keys: []jose.JSONWebKey{
+						{
+							Key:       &ecTestKey256.PublicKey,
+							KeyID:     "public:" + uuid.New(),
+							Algorithm: "ES256",
+							Use:       "sig",
+						},
+					},
+				},
+				TokenEndpointAuthMethod: "private_key_jwt",
+				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer", "client_credentials"},
+				Name:                    "foo",
+				ClientURI:               "https://localhost/client",
+				Contacts:                []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:         "0.0.1",
+				ClientProfile:			 BatchClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
 				assert.Equal(t, c.GetID(), c.ClientID)
