@@ -34,7 +34,7 @@
             "secrets": [
                 {
                     "name" : "OFFLINE_PRIVATE_JWK",
-                    "valueFrom" : "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/offline_private_jwk"
+                    "valueFrom" : "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/$$ECS_SERVICE$$/offline_private_jwk"
                 }
             ],
             "environment": [
