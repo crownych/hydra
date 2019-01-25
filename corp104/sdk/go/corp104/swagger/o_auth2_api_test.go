@@ -1,6 +1,8 @@
 package swagger_test
 
 import (
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jws"
 	. "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +40,16 @@ func _TestOAuth2API(t *testing.T) {
 		Y:   "-RlN-Kk9VtncQ4Oev5rQGNTvruZ63mz_2XSACU2Jpt8",
 	}
 
+	oauth2Api.Configuration.AuthSvcOfflinePublicJWK = &JsonWebKey{
+		Crv: "P-256",
+		Alg: "ES256",
+		Use: "sig",
+		Kty: "EC",
+		Kid: "public:a7ff59a7-f1a1-4271-a0e1-7fd8ff7fbcbc",
+		X:   "DTg9ZW4tZt-MJGTHw2pKE-FtThCUDg9JVLZBXqCKPw0",
+		Y:   "pL1rAIHXqVru0kygBuv4WF3yFrwsm2lLDQnfBhhvcO0",
+	}
+
 	t.Run("case=get oauth authorization server metadata", func(t *testing.T) {
 		wellKnown, _, err := oauth2Api.GetWellKnown()
 		assert.NoError(t, err)
@@ -71,6 +83,10 @@ func _TestOAuth2API(t *testing.T) {
 		clientAssertion, err := oauth2Api.CreateOAuth2ClientAssertion(popJWKS)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, clientAssertion)
+		// 使用 client 的 public key 驗證 assertion
+		ecPubKey, err := LoadECPublicKeyFromJsonWebKey(oauth2Api.Configuration.PrivateJWK)
+		_, err = jws.Verify([]byte(clientAssertion), jwa.ES256, ecPubKey)
+		assert.NoError(t, err)
 	})
 
 	t.Run("case=get oauth 2.0 access token", func(t *testing.T) {
