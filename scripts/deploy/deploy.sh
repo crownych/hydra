@@ -13,6 +13,7 @@ set_env_var() {
 
     # Set ENV Variables
     # Stack.Outputs[].OutputKey==Cluster
+    # Stack.Outputs[].OutputKey==Service
     # Stack.Outputs[].OutputKey==ExecutionRole
     # Stack.Outputs[].OutputKey==TaskRole
     # Stack.Outputs[].OutputKey==ElasticContainerRegistry
@@ -20,6 +21,7 @@ set_env_var() {
     # Stack.Outputs[].OutputKey==TaskDefinition
 
     export ECS_CLUSTER=$( echo $outputs | jq -r '.| select(.OutputKey=="Cluster") | .OutputValue' )
+    export ECS_SERVICE=$( echo $outputs | jq -r '.| select(.OutputKey=="Service") | .OutputValue' | awk -F "/" '{print $NF}' )
     export TASK_DEFINITION_EXECUTION_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="ExecutionRole") | .OutputValue' )
     export TASK_DEFINITION_TASK_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskRole") | .OutputValue' )
     export ECR_URI=$( echo $outputs | jq -r '.| select(.OutputKey=="ElasticContainerRegistry") | .OutputValue' )
@@ -37,6 +39,7 @@ set_env_var() {
 
 ecs_register_task_definition() {
     print_fun_name
+
     # Register new version task definition
     aws ecs register-task-definition \
         --cli-input-json file://${TASK_DEFINITION_TEMPLATE} \
@@ -47,6 +50,7 @@ ecs_register_task_definition() {
 
 ecs_update_service() {
     print_fun_name
+
     # Update service with new version task definition
     aws ecs update-service \
         --cluster ${ECS_CLUSTER} \
@@ -57,12 +61,14 @@ ecs_update_service() {
 
 install_tools() {
     print_fun_name
+
     pip install --user awscli jq
     export PATH=$PATH:$HOME/.local/bin
 }
 
 get_sts(){
     print_fun_name
+
     if [[ ${AWS_ACCESS_KEY_ID} == "" ]]; then
         echo "empty AWS_ACCESS_KEY_ID"
         exit 1
@@ -72,11 +78,13 @@ get_sts(){
 
 ecr_login() {
     print_fun_name
+
     eval $( aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} )
 }
 
 docker_build_tag_push() {
     print_fun_name
+
     # Build, tag and push image 
     docker build -t hydra .
     docker tag hydra:latest ${ECR_URI_TAG_LATEST}
@@ -87,6 +95,7 @@ docker_build_tag_push() {
 
 replace_var_in_taskdefinition(){
     print_fun_name
+
     # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with envirement variable
     # Example :
     # $$ECR_URI_TAG_CUSTOM$$ : Image with commit sha
