@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:545111d1e236d22c1f6d810ea952a82400c149ea322b581b914a3b53cd28771b"
+  digest = "1:4cbaf710d643a29c78167383ef5db4a02037ae67af97d3f2e6af1a02d4003233"
   name = "github.com/104corp/vip3-go-auth"
   packages = [
     "vip3auth",
@@ -17,7 +17,7 @@
     "vip3auth/token/pop",
   ]
   pruneopts = ""
-  revision = "6a944c572007fc3c71ed6deabe5055ebbce687f4"
+  revision = "aa54c4778e6a57f17ebc0e7cd6ec9c8493fa1774"
 
 [[projects]]
   branch = "master"
