@@ -648,23 +648,6 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request, _ httprout
 		authorizeRequest.GrantScope(scope)
 	}
 
-	openIDKeyID, err := h.OpenIDJWTStrategy.GetPublicKeyID(r.Context())
-	if err != nil {
-		pkg.LogError(err, h.L)
-		h.writeAuthorizeError(w, authorizeRequest, err)
-		return
-	}
-
-	var accessTokenKeyID string
-	if h.AccessTokenStrategy == "jwt" {
-		accessTokenKeyID, err = h.AccessTokenJWTStrategy.GetPublicKeyID(r.Context())
-		if err != nil {
-			pkg.LogError(err, h.L)
-			h.writeAuthorizeError(w, authorizeRequest, err)
-			return
-		}
-	}
-
 	authorizeRequest.SetID(session.Challenge)
 
 	// done
@@ -683,13 +666,13 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request, _ httprout
 				Extra:       session.Session.IDToken,
 			},
 			// required for lookup on jwk endpoint
-			Headers: &jwt.Headers{Extra: map[string]interface{}{"kid": openIDKeyID}},
+			Headers: &jwt.Headers{Extra: map[string]interface{}{"typ": "id-token+jwt"}},
 			Subject: session.ConsentRequest.Subject,
 		},
 		Extra: session.Session.AccessToken,
 		// Here, we do not include the client because it's typically not the audience.
 		Audience: []string{},
-		KID:      accessTokenKeyID,
+		KID:      "",
 		ClientID: authorizeRequest.GetClient().GetID(),
 	})
 	if err != nil {
