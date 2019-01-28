@@ -7,15 +7,27 @@ print_fun_name(){
 
 set_env_var() {
     print_fun_name
+
+    # Get CFN stack outputs
+    outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
+
     # Set ENV Variables
-    export ECS_CLUSTER="Cluster-${ECS_SERVICE}"
-    export TASK_DEFINITION_FAMILY="${ECS_SERVICE}-TaskDefinition"
-    export TASK_DEFINITION_EXECUTION_ROLE_ARN="${ECS_SERVICE}-ExecutionRole"
-    export TASK_DEFINITION_TASK_ROLE_ARN="${ECS_SERVICE}-TaskRole"
-    export ECR_URI="${AWS_ACCOUNTID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${ECS_SERVICE}"
+    # Stack.Outputs[].OutputKey==Cluster
+    # Stack.Outputs[].OutputKey==ExecutionRole
+    # Stack.Outputs[].OutputKey==TaskRole
+    # Stack.Outputs[].OutputKey==ElasticContainerRegistry
+    # Stack.Outputs[].OutputKey==LogGroup
+    # Stack.Outputs[].OutputKey==TaskDefinition
+
+    export ECS_CLUSTER=$( echo $outputs | jq -r '.| select(.OutputKey=="Cluster") | .OutputValue' )
+    export TASK_DEFINITION_EXECUTION_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="ExecutionRole") | .OutputValue' )
+    export TASK_DEFINITION_TASK_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskRole") | .OutputValue' )
+    export ECR_URI=$( echo $outputs | jq -r '.| select(.OutputKey=="ElasticContainerRegistry") | .OutputValue' )
+    export CLW_LOG_GROUP=$( echo $outputs | jq -r '.| select(.OutputKey=="LogGroup") | .OutputValue' )
+    export TASK_DEFINITION_FAMILY=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskDefinition") | .OutputValue'| awk -F "/" '{print $(NF)}' | awk -F ":" '{print $1}' )
     export ECR_URI_TAG_LATEST=${ECR_URI}:latest
     export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
-    export CLW_LOG_GROUP="/ecs/${TASK_DEFINITION_FAMILY}"
+    
     if [[ -z ${TASK_DESIRED_COUNT} ]]; then 
         export TASK_DESIRED_COUNT_CLI="--desired-count 1"
     else 
@@ -60,7 +72,7 @@ get_sts(){
 
 ecr_login() {
     print_fun_name
-    eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
+    eval $( aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} )
 }
 
 docker_build_tag_push() {
@@ -76,7 +88,7 @@ docker_build_tag_push() {
 replace_var_in_taskdefinition(){
     print_fun_name
     # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with envirement variable
-    # Example
+    # Example :
     # $$ECR_URI_TAG_CUSTOM$$ : Image with commit sha
     # $$CLW_LOG_GROUP$$ : log group
 
