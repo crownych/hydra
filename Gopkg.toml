@@ -183,6 +183,5 @@
   version = "0.2.3"
 
 [[constraint]]
-#  branch = "master"
   name = "github.com/104corp/vip3-go-auth"
-  revision = "76fe4771659ae000a1f08314e126689f493030b7"
+  revision = "6a944c572007fc3c71ed6deabe5055ebbce687f4"
