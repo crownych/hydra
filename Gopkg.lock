@@ -17,7 +17,7 @@
     "vip3auth/token/pop",
   ]
   pruneopts = ""
-  revision = "fc194801386d5bcaa14f0bc7e6409b7bcc7efc97"
+  revision = "d50e26b4757ddfe534a98153d0823e0efea0697f"
 
 [[projects]]
   branch = "master"
