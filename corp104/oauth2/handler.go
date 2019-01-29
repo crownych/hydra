@@ -650,13 +650,17 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request, _ httprout
 
 	authorizeRequest.SetID(session.Challenge)
 
+	var idTokenSubject string
+	if sub, ok := session.Session.IDToken["sub"].(string); ok {
+		idTokenSubject = sub
+	}
 	// done
 	response, err := h.OAuth2.NewAuthorizeResponse(ctx, authorizeRequest, &Session{
 		DefaultSession: &openid.DefaultSession{
 			Claims: &jwt.IDTokenClaims{
 				// We do not need to pass the audience because it's included directly by ORY Fosite
 				Audience: []string{authorizeRequest.GetClient().GetID(), h.IssuerURL},
-				Subject:  session.ConsentRequest.SubjectIdentifier,
+				Subject:  idTokenSubject,
 				Issuer:   strings.TrimRight(h.IssuerURL, "/") + "/",
 				IssuedAt: time.Now().UTC(),
 				// This is set by the fosite strategy
