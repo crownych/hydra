@@ -1,0 +1,18 @@
+{
+  "keys": [
+    {
+      "kty": "EC",
+      "kid": "public:d3a2e6bc-5610-494c-81eb-dd9bb03a55ba",
+      "crv": "P-256",
+      "x": "uuaOWaHqUwD5xkDILB87Uns3c87_KqFKhR4eJo6-0rw",
+      "y": "XD3nAW6pJtJd0AZ84R_F_oC89jXY8zDWua3ZWii4HZk"
+    },
+    {
+      "kty": "EC",
+      "kid": "public:a62ebc0e-81a8-40e8-ad72-3afb460a0874",
+      "crv": "P-256",
+      "x": "esl79Vxjdb1zBqaIYFf8gB5vg7EeoJpeaZLjJiZKkaM",
+      "y": "_snYKbjwdpmhv2Rr9OIbdEwIDV5mm7t8Xmu9gqSsvGM"
+    }
+  ]
+}

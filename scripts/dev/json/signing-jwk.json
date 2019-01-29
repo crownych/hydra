@@ -1,0 +1,8 @@
+{
+  "crv": "P-256",
+  "d": "pkqyJjicW1KgT8ZDjBkUF59kN80MUQ5VbTmH_NJJKdw",
+  "kty": "EC",
+  "x": "BeaMrniBTO1lQ1TSy756Hyl6TU3Vl6zKWf3soUA64oA",
+  "y": "Y-2INFm9uA9K_-MEn-ePNWHxJTn4juoE1sKY-JF_MbI",
+  "kid": "3a8f231d-60fd-4b2a-970f-0d3237b8831e"
+}

@@ -600,6 +600,7 @@ func (s *DefaultStrategy) verifyConsent(w http.ResponseWriter, r *http.Request, 
 			return nil, err
 		}
 		if id != "" {
+			session.Session.IDToken["sub"] = id
 			session.Session.IDToken["urn:104:v3:entity:pid"] = id
 			list, err := s.getCompanyList(id)
 			if err != nil {
