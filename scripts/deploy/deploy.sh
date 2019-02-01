@@ -2,14 +2,14 @@
 set -e -o pipefail
 
 print_fun_name(){
-        echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
+    echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
 }
 
 set_env_var() {
     print_fun_name
 
     # Get CFN stack outputs
-    outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
+    local outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
 
     # Set ENV Variables
     # Stack.Outputs[].OutputKey==Cluster
@@ -41,29 +41,37 @@ ecs_register_task_definition() {
     print_fun_name
 
     # Register new version task definition
-    aws ecs register-task-definition \
+    local outputs=$(aws ecs register-task-definition \
         --cli-input-json file://${TASK_DEFINITION_TEMPLATE} \
         --family ${TASK_DEFINITION_FAMILY} \
         --execution-role-arn ${TASK_DEFINITION_EXECUTION_ROLE_ARN} \
-        --task-role-arn ${TASK_DEFINITION_TASK_ROLE_ARN}
+        --task-role-arn ${TASK_DEFINITION_TASK_ROLE_ARN} )
+    echo $( echo $outputs | jq -r '.taskDefinition|"Registered taskdefinition : "+.family+":"+(.revision|tostring)' )
 }
 
 ecs_update_service() {
     print_fun_name
 
     # Update service with new version task definition
-    aws ecs update-service \
+    local outputs=$( aws ecs update-service \
         --cluster ${ECS_CLUSTER} \
         --service ${ECS_SERVICE} \
         ${TASK_DESIRED_COUNT_CLI} \
-        --task-definition ${TASK_DEFINITION_FAMILY}
+        --task-definition ${TASK_DEFINITION_FAMILY} )
+    echo $( echo $outputs | jq -r '.service.deployments' ) | jq -r '.'
+    
+}
+
+ecs_wait_services_stable() {
+    print_fun_name
+
+    aws ecs wait services-stable --services "${ECS_SERVICE}"  --cluster  ${ECS_CLUSTER}
 }
 
 install_tools() {
     print_fun_name
 
-    pip install --user awscli jq
-    export PATH=$PATH:$HOME/.local/bin
+    pip install -q --user awscli 
 }
 
 get_sts(){
@@ -86,9 +94,9 @@ docker_build_tag_push() {
     print_fun_name
 
     # Build, tag and push image 
-    docker build -t hydra .
-    docker tag hydra:latest ${ECR_URI_TAG_LATEST}
-    docker tag hydra:latest ${ECR_URI_TAG_CUSTOM}
+    docker build -t image .
+    docker tag image:latest ${ECR_URI_TAG_LATEST}
+    docker tag image:latest ${ECR_URI_TAG_CUSTOM}
     docker push ${ECR_URI_TAG_LATEST}
     docker push ${ECR_URI_TAG_CUSTOM}
 }
@@ -96,7 +104,7 @@ docker_build_tag_push() {
 replace_var_in_taskdefinition(){
     print_fun_name
 
-    # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with envirement variable
+    # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with environment variable
     # Example :
     # $$ECR_URI_TAG_CUSTOM$$ : Image with commit sha
     # $$CLW_LOG_GROUP$$ : log group
@@ -126,6 +134,7 @@ main() {
     replace_var_in_taskdefinition
     ecs_register_task_definition
     ecs_update_service
+    ecs_wait_services_stable
 }
 
 main
