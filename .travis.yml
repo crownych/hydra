@@ -38,11 +38,11 @@ before_deploy:
       export AWS_ACCESS_KEY_ID=${DEV_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${DEV_AWS_SECRET_ACCESS_KEY};
     fi
-  # Set deploy/develope branch variables
-  - if [[ $TRAVIS_BRANCH == "deploy/develope" ]]; then
+  # Set deploy/develop branch variables
+  - if [[ $TRAVIS_BRANCH == "deploy/develop" ]]; then
       export AWS_ACCESS_KEY_ID=${DEV_AWS_ACCESS_KEY_ID};
       export AWS_SECRET_ACCESS_KEY=${DEV_AWS_SECRET_ACCESS_KEY};
-      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/develope-task-definition.json";
+      export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/develop-task-definition.json";
       export TASK_DESIRED_COUNT="1";
     fi
   # Set deploy/staging branch variables
@@ -66,6 +66,6 @@ deploy:
     script: bash ${TRAVIS_BUILD_DIR}/scripts/deploy/deploy.sh
     on:
       branch:
-        - deploy/develope
+        - deploy/develop
         - deploy/staging
         - deploy/production
