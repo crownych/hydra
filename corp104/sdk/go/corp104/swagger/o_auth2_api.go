@@ -2297,6 +2297,10 @@ func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, 
 		return "", errors.New("PoP JWKS must be set")
 	}
 
+	_, privECKey, err := convertToJwxJWK(a.Configuration.PrivateJWK)
+	if err != nil {
+		return "", errors.New("get private EC Key failed:" + err.Error())
+	}
 	pubJwk, _, err := convertToJwxJWK(extractPublicJWK(a.Configuration.PrivateJWK))
 	if err != nil {
 		return "", err
@@ -2304,12 +2308,11 @@ func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, 
 
 	popPrivJwk := getPrivateJWKFromJWKS(popJWKS)
 	popPubJwk := getPublicJWKFromJWKS(popJWKS)
-	if popPrivJwk.Kid == "" || popPubJwk.Kid == "" {
-		return "", errors.New("PoP JWKS must contain both private and public keys")
+	if popPrivJwk == nil || popPubJwk == nil {
+		return "", errors.New("PoP public JWK must be set")
 	}
-	_, popPrivECKey, err := convertToJwxJWK(popPrivJwk)
-	if err != nil {
-		return "", errors.New("get PoP EC private key failed: " + err.Error())
+	if popPrivJwk.X != popPubJwk.X && popPrivJwk.Y != popPubJwk.Y {
+		return "", errors.New("invalid PoP key pair")
 	}
 
 	// JWS Header
@@ -2339,7 +2342,7 @@ func (a OAuth2Api) CreateOAuth2ClientAssertion(popJWKS *JsonWebKeySet) (string, 
 		return "", err
 	}
 
-	jwsMsg, err := jwsSign(jwsHeaders, payload, popPrivECKey)
+	jwsMsg, err := jwsSign(jwsHeaders, payload, privECKey)
 	if err != nil {
 		return "", err
 	}

@@ -196,8 +196,14 @@ func (c *Client) GetGrantTypes() fosite.Arguments {
 	if len(c.GrantTypes) == 0 {
 		if c.IsPublic() {
 			return fosite.Arguments{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"}
-		} else {
-			return fosite.Arguments{"urn:ietf:params:oauth:grant-type:jwt-bearer"}
+		} else if c.GetClientProfile() == WebClientProfile {
+			if len(c.RedirectURIs) == 0 {
+				return fosite.Arguments{"client_credentials"}
+			} else {
+				return fosite.Arguments{"urn:ietf:params:oauth:grant-type:jwt-bearer"}
+			}
+		} else if c.GetClientProfile() == BatchClientProfile {
+			return fosite.Arguments{"client_credentials"}
 		}
 	}
 	return fosite.Arguments(c.GrantTypes)

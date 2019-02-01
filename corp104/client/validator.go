@@ -68,6 +68,7 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 		"software_id":                c.SoftwareId,
 		"software_version":           c.SoftwareVersion,
 		"token_endpoint_auth_method": c.TokenEndpointAuthMethod,
+		"client_profile":			  c.ClientProfile,
 	}
 	for k, fv := range checkFields {
 		if err := v.checkRequired(k, fv); err != nil {
@@ -130,8 +131,12 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 			return err
 		}
 
-		if !(len(c.GrantTypes) == 2 && hasStrings(c.GrantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
+		if !stringslice.Has(PublicClientProfiles, c.ClientProfile) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(PublicClientProfiles, " or ", `"`))))
+		}
+
+		if err := v.validateGrantTypes(c.ClientProfile, c.GrantTypes); err != nil {
+			return err
 		}
 
 		if err := v.checkRequired("response_types", c.ResponseTypes); err != nil {
@@ -154,11 +159,15 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 		if c.RequestObjectSigningAlgorithm != "ES256" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field request_object_signing_alg should be \"ES256\"."))
 		}
-
-		if !stringslice.Has(PublicClientProfiles, c.ClientProfile) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(PublicClientProfiles, " or ", `"`))))
-		}
 	} else {
+		if !stringslice.Has(ConfidentialClientProfiles, c.ClientProfile) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(ConfidentialClientProfiles, " or ", `"`))))
+		}
+
+		if err := v.validateGrantTypes(c.ClientProfile, c.GrantTypes); err != nil {
+			return err
+		}
+
 		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil {
 			return errors.New("Field jwks or jwks_uri must be set.")
 		}
@@ -172,14 +181,6 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 
 		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil && c.TokenEndpointAuthMethod == "private_key_jwt" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
-		}
-
-		if len(c.GrantTypes) > 1 || c.GrantTypes[0] != "client_credentials" {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"client_credentials\" only."))
-		}
-
-		if !stringslice.Has(ConfidentialClientProfiles, c.ClientProfile) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field client_profile should be %s.", joinStringsWithQuotes(ConfidentialClientProfiles, " or ", `"`))))
 		}
 	}
 
@@ -223,6 +224,36 @@ func (v *Validator) validateSectorIdentifierURL(location string, redirectURIs []
 func validateClientSecret(secret string) error {
 	if len(secret) > 0 && len(secret) < 6 {
 		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field client_secret must contain a secret that is at least 6 characters long."))
+	}
+	return nil
+}
+
+func (v *Validator) validateGrantTypes(clientProfile string, grantTypes []string) error {
+	if found, dup := hasDuplicates(grantTypes); found {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate grant_type: %s", dup)))
+	}
+
+	switch clientProfile {
+	case WebClientProfile:
+		allowedTypes := []string{"client_credentials", "urn:ietf:params:oauth:grant-type:jwt-bearer"}
+		if !hasStrings(allowedTypes, grantTypes...) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field grant_types should be %s.", joinStringsWithQuotes(allowedTypes, " or ", `"`))))
+		}
+	case UserAgentBasedClientProfile:
+		if !(len(grantTypes) == 2 && hasStrings(grantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
+		}
+	case NativeClientProfile:
+		if !(len(grantTypes) == 2 && hasStrings(grantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
+		}
+	case BatchClientProfile:
+		allowedTypes := []string{"client_credentials"}
+		if !hasStrings(allowedTypes, grantTypes...) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"client_credentials\" only."))
+		}
+	default:
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Invalid client_profile."))
 	}
 	return nil
 }

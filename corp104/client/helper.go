@@ -33,6 +33,18 @@ func joinStringsWithQuotes(a []string, sep string, leftQuote string, rightQuote 
 	return result
 }
 
+func hasDuplicates(a []string) (bool, string) {
+	vm := map[string]int{}
+	for _, v := range a {
+		if vm[v] == 0 {
+			vm[v] = 1
+		} else {
+			return true, v
+		}
+	}
+	return false, ""
+}
+
 func sendCommitCode(recipient, commitCode string) {
 	if recipient == "foo.bar" {
 		return
