@@ -31,6 +31,16 @@
                 "./start-all.sh"
             ],
             "cpu": 0,
+            "secrets": [
+                {
+                    "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/$$ECS_SERVICE$$/OIDC_SUBJECT_TYPE_PAIRWISE_SALT"
+                },
+                {
+                    "name": "SYSTEM_SECRET",
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/$$ECS_SERVICE$$/SYSTEM_SECRET"
+                }
+            ],
             "environment": [
                 {
                     "name": "AD_LOGIN_URL",
@@ -38,7 +48,7 @@
                 },
                 {
                     "name": "BY_PASS_ROUTES",
-                    "value": "/clients,/forgotPassword,/resetPassword"
+                    "value": "/clients,/forgotPassword,/resetPassword,/resources,/keys"
                 },
                 {
                     "name": "CORP_INTERNAL_API_URL",
@@ -109,10 +119,6 @@
                     "value": "1"
                 },
                 {
-                    "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
-                    "value": "v3AuthODICSubjectTypePairwiseSalt"
-                },
-                {
                     "name": "PUBLIC_PORT",
                     "value": "80"
                 },
@@ -121,8 +127,8 @@
                     "value": "https://vip3.104-dev.com.tw/reset-password"
                 },
                 {
-                    "name": "SYSTEM_SECRET",
-                    "value": "v3AuthServiceSystemSecret"
+                    "name": "ADMIN_USERS",
+                    "value": "auth.admin,angus.lee"
                 },
                 {
                     "name": "TEST_MODE",
