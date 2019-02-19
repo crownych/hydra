@@ -155,9 +155,6 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 	// TODO 前端 SDK 完成 user id-token 重簽發為 company user id-token 時移除
 	vip3auth.SetSkipAssertionsSignatureVerify(true)
 
-	// TODO 前端 SDK 完成 token request with credentials 時移除
-	vip3auth.SetSkipClientSessionVerificationToggle(true)
-
 	oauth2Provider := vip3auth.ComposeOAuth2Provider(fc, oriProvider.(*fosite.Fosite), accessTokenHelper, keyStoreConfig, pkg.GetSessionValue)
 	return oauth2Provider
 }
