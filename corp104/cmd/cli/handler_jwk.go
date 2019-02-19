@@ -21,21 +21,20 @@
 package cli
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-
 	"github.com/mendsley/gojwk"
 	"github.com/ory/hydra/corp104/config"
-	"github.com/ory/hydra/pkg"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/spf13/cobra"
 	"gopkg.in/square/go-jose.v2"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
 )
 
 type JWKHandler struct {
@@ -65,27 +64,8 @@ func newJWKHandler(c *config.Config) *JWKHandler {
 	return &JWKHandler{Config: c}
 }
 
-func (h *JWKHandler) CreateKeys(cmd *cobra.Command, args []string) {
-	m := h.newJwkManager(cmd)
-	if len(args) < 1 || len(args) > 2 {
-		fmt.Println(cmd.UsageString())
-		return
-	}
-
-	kid := ""
-	if len(args) == 2 {
-		kid = args[1]
-	}
-
-	alg, _ := cmd.Flags().GetString("alg")
-	use, _ := cmd.Flags().GetString("use")
-	keys, response, err := m.CreateJsonWebKeySet(args[0], hydra.JsonWebKeySetGeneratorRequest{Alg: alg, Kid: kid, Use: use})
-	checkResponse(response, err, http.StatusCreated)
-	fmt.Printf("%s\n", formatResponse(keys))
-}
-
-func toSDKFriendlyJSONWebKey(key interface{}, kid string, use string, public bool) jose.JSONWebKey {
-	if jwk, ok := key.(*jose.JSONWebKey); ok {
+func toSDKFriendlyJSONWebKey(key interface{}, kid string, use string, nbf, exp *int64, public bool) hydra.JsonWebKey {
+	if jwk, ok := key.(*pkg.JSONWebKey); ok {
 		key = jwk.Key
 		if jwk.KeyID != "" {
 			kid = jwk.KeyID
@@ -93,6 +73,8 @@ func toSDKFriendlyJSONWebKey(key interface{}, kid string, use string, public boo
 		if jwk.Use != "" {
 			use = jwk.Use
 		}
+		nbf = jwk.NotBefore
+		exp = jwk.ExpiresAt
 	}
 
 	var err error
@@ -105,12 +87,18 @@ func toSDKFriendlyJSONWebKey(key interface{}, kid string, use string, public boo
 		pkg.Must(err, "Unable to convert private key to JSON Web Key because %s", err)
 	}
 
-	return jose.JSONWebKey{
-		KeyID:     kid,
-		Use:       use,
-		Algorithm: jwk.Alg,
-		Key:       key,
+	pkgJwk := pkg.JSONWebKey{
+		JSONWebKey: jose.JSONWebKey{
+			KeyID:     kid,
+			Use:       use,
+			Algorithm: jwk.Alg,
+			Key:       key,
+		},
+		NotBefore: nbf,
+		ExpiresAt: exp,
 	}
+
+	return hydraJsonWebKeyFromPkgJSONWebKey(pkgJwk)
 }
 
 func (h *JWKHandler) ImportKeys(cmd *cobra.Command, args []string) {
@@ -121,40 +109,25 @@ func (h *JWKHandler) ImportKeys(cmd *cobra.Command, args []string) {
 
 	id := args[0]
 	use, _ := cmd.Flags().GetString("use")
-	client := &http.Client{}
 
-	if skipTLSTermination, _ := cmd.Flags().GetBool("skip-tls-verify"); skipTLSTermination {
-		client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSTermination}}
-	}
-
-	u := h.Config.GetClusterURLWithoutTailingSlashOrFail(cmd) + "/keys/" + id
-	request, err := http.NewRequest("GET", u, nil)
-	pkg.Must(err, "Unable to initialize HTTP request")
-
-	if term, _ := cmd.Flags().GetBool("fake-tls-termination"); term {
-		request.Header.Set("X-Forwarded-Proto", "https")
-	}
-
-	if token, _ := cmd.Flags().GetString("access-token"); token != "" {
-		request.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	response, err := client.Do(request)
-	pkg.Must(err, "Unable to fetch data from %s because %s", u, err)
-	defer response.Body.Close()
-
+	m := h.newJwkManager(cmd)
+	h.setADCredentials(cmd, m)
+	set, response, err := m.GetJsonWebKeySet(id)
+	pkg.Must(err, "Unable to fetch data from auth service because %s", err)
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound {
-		fmt.Printf("Expected status code 200 or 404 but got %d while fetching data from %s.\n", response.StatusCode, u)
+		fmt.Printf("Expected status code 200 or 404 but got %d while fetching data from auth service.\n", response.StatusCode)
 		os.Exit(1)
 	}
 
-	var set jose.JSONWebKeySet
-	pkg.Must(json.NewDecoder(response.Body).Decode(&set), "Unable to decode payload to JSON")
+	if set == nil {
+		set = &hydra.JsonWebKeySet{}
+	}
 
 	for _, path := range args[1:] {
 		file, err := ioutil.ReadFile(path)
 		pkg.Must(err, "Unable to read file %s", path)
 
+		var hydraJWK hydra.JsonWebKey
 		if key, privateErr := pkg.LoadPrivateKey(file); privateErr != nil {
 			key, publicErr := pkg.LoadPublicKey(file)
 			if publicErr != nil {
@@ -162,56 +135,140 @@ func (h *JWKHandler) ImportKeys(cmd *cobra.Command, args []string) {
 				os.Exit(1)
 			}
 
-			set.Keys = append(set.Keys, toSDKFriendlyJSONWebKey(key, "public:"+uuid.New(), use, true))
+			hydraJWK = toSDKFriendlyJSONWebKey(key, "public:"+uuid.New(), use, nil, nil, true)
 		} else {
-			set.Keys = append(set.Keys, toSDKFriendlyJSONWebKey(key, "private:"+uuid.New(), use, false))
+			hydraJWK = toSDKFriendlyJSONWebKey(key, "private:"+uuid.New(), use, nil, nil, false)
+		}
+
+		keyExists := false
+		for idx, key := range set.Keys {
+			if key.Kid == hydraJWK.Kid {
+				keyExists = true
+				set.Keys[idx] = hydraJWK
+				break
+			}
+		}
+		if !keyExists {
+			set.Keys = append(set.Keys, hydraJWK)
 		}
 
 		fmt.Printf("Successfully loaded key from file %s\n", path)
 	}
 
-	body, err := json.Marshal(&set)
-	pkg.Must(err, "Unable to encode JSON Web Keys to JSON")
+	//_, response, err = m.UpdateJsonWebKeySet(id, *set)
+	//checkResponse(response, err, http.StatusOK)
+	//
+	//fmt.Println("Keys successfully imported!")
 
-	request, err = http.NewRequest("PUT", u, bytes.NewReader(body))
-	pkg.Must(err, "Unable to initialize HTTP request")
+	signingJwk := getSigningJWKFromCmd(cmd)
 
-	if term, _ := cmd.Flags().GetBool("fake-tls-termination"); term {
-		request.Header.Set("X-Forwarded-Proto", "https")
-	}
-
-	if token, _ := cmd.Flags().GetString("access-token"); token != "" {
-		request.Header.Set("Authorization", "Bearer "+token)
-	}
-	request.Header.Set("Content-Type", "application/json")
-
-	response, err = client.Do(request)
-	pkg.Must(err, "Unable to post data to %s because %s", u, err)
-	defer response.Body.Close()
-
-	fmt.Println("Keys successfully imported!")
+	m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
+	m.Configuration.PrivateJWK = signingJwk
+	h.putKeys(m, id, set)
 }
 
 func (h *JWKHandler) GetKeys(cmd *cobra.Command, args []string) {
-	m := h.newJwkManager(cmd)
-	if len(args) != 1 {
+	if len(args) < 1 || len(args) > 2 {
 		fmt.Println(cmd.UsageString())
 		return
 	}
 
-	keys, response, err := m.GetJsonWebKeySet(args[0])
-	checkResponse(response, err, http.StatusOK)
-	fmt.Printf("%s\n", formatResponse(keys))
+	m := h.newJwkManager(cmd)
+	h.setADCredentials(cmd, m)
+
+	if len(args) == 1 {
+		keys, response, err := m.GetJsonWebKeySet(args[0])
+		checkResponse(response, err, http.StatusOK)
+		fmt.Printf("%s\n", formatResponse(keys))
+	} else {
+		key, response, err := m.GetJsonWebKey(args[1], args[0])
+		checkResponse(response, err, http.StatusOK)
+		fmt.Printf("%s\n", formatResponse(key))
+	}
 }
 
 func (h *JWKHandler) DeleteKeys(cmd *cobra.Command, args []string) {
-	m := h.newJwkManager(cmd)
-	if len(args) != 1 {
+	if len(args) < 1 || len(args) > 2 {
 		fmt.Println(cmd.UsageString())
 		return
 	}
 
-	response, err := m.DeleteJsonWebKeySet(args[0])
-	checkResponse(response, err, http.StatusNoContent)
-	fmt.Printf("Key set %s deleted.\n", args[0])
+	m := h.newJwkManager(cmd)
+	h.setADCredentials(cmd, m)
+
+	if len(args) == 1 {
+		// delete a JSON Web Key Set
+		response, err := m.DeleteJsonWebKeySet(args[0])
+		checkResponse(response, err, http.StatusNoContent)
+		fmt.Printf("Key set %s deleted.\n", args[0])
+	} else {
+		// delete a JSON Web Key pair
+		if strings.HasPrefix(args[1], "public:") || strings.HasPrefix(args[1], "private:") {
+			fmt.Println(cmd.Long)
+			return
+		}
+		response, err := m.DeleteJsonWebKey("public:"+args[1], args[0])
+		checkResponse(response, err, http.StatusNoContent)
+		response, err = m.DeleteJsonWebKey("private:"+args[1], args[0])
+		checkResponse(response, err, http.StatusNoContent)
+		fmt.Printf("Key pair %s deleted.\n", args[1])
+	}
+}
+
+func (h *JWKHandler) PutKeys(cmd *cobra.Command, args []string) {
+	if len(args) < 1 {
+		fmt.Println(cmd.UsageString())
+		return
+	}
+
+	set := args[0]
+
+	m := h.newJwkManager(cmd)
+
+	h.setADCredentials(cmd, m)
+	m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
+	m.Configuration.PrivateJWK = getSigningJWKFromCmd(cmd)
+	h.putKeys(m, set, getJWKSFromCmd(cmd))
+}
+
+func (h *JWKHandler) putKeys(m *hydra.JsonWebKeyApi, set string, jwks *hydra.JsonWebKeySet) {
+	endpoint := m.Configuration.BasePath
+	result, response, err := m.PutJsonWebKeySet(set, *jwks)
+	if err != nil {
+		pkg.Must(err, "Error: "+err.Error())
+	}
+	fmt.Printf("Signed Keys: %s\n", result.SignedKeys)
+
+	checkResponse(response, err, http.StatusAccepted)
+	storeCookies(set, response.Cookies(), getEndpointHostname(endpoint))
+	fmt.Printf("\nRun \"hydra keys commit %s --endpoint %s --commit-code <COMMIT_CODE>\" to commit JSON Web Key Set\n", set, endpoint)
+}
+
+func (h *JWKHandler) CommitKeys(cmd *cobra.Command, args []string) {
+	if len(args) < 1 {
+		fmt.Println(cmd.UsageString())
+		return
+	}
+
+	set := args[0]
+
+	var err error
+	m := h.newJwkManager(cmd)
+	commitCode, _ := cmd.Flags().GetString("commit-code")
+	result, response, err := m.CommitJsonWebKeySet(getStoredCookies(set), commitCode)
+	checkResponse(response, err, http.StatusOK)
+
+	fmt.Printf("JSON Web Key Set location: %s\n", result.Location)
+	deleteCookies(set)
+}
+
+func (h *JWKHandler) setADCredentials(cmd *cobra.Command, m *hydra.JsonWebKeyApi) {
+	user, _ := cmd.Flags().GetString("user")
+	pwd, _ := cmd.Flags().GetString("pwd")
+	if user == "" || pwd == "" {
+		err := errors.New("AD user credentials required")
+		pkg.Must(err, "Error: Required flag(s) \"user\" or \"pwd\" have/has not been set")
+	}
+	m.Configuration.ADUsername = user
+	m.Configuration.ADPassword = pwd
 }

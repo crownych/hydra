@@ -56,7 +56,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func newCookieJar() http.CookieJar {
@@ -170,7 +169,7 @@ func _TestAuthCodeWithDefaultStrategy(t *testing.T) {
 						},
 					)
 
-					jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+					jm := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 					keys, err := (&jwk.RS256Generator{}).Generate("", "sig")
 					require.NoError(t, err)
 					require.NoError(t, jm.AddKeySet(context.TODO(), OpenIDConnectKeyName, keys))
@@ -201,7 +200,7 @@ func _TestAuthCodeWithDefaultStrategy(t *testing.T) {
 						return h
 					})
 
-					apiHandler := consent.NewHandler(herodot.NewJSONWriter(l), cm, cookieStore, "", jm)
+					apiHandler := consent.NewHandler(herodot.NewJSONWriter(l), cm, cookieStore, "", jm, "auth.offline")
 					apiRouter := httprouter.New()
 					apiHandler.SetRoutes(apiRouter, apiRouter, func(h http.Handler) http.Handler {
 						return h
@@ -717,7 +716,7 @@ func _TestAuthCodeWithMockStrategy(t *testing.T) {
 			l := logrus.New()
 			l.Level = logrus.DebugLevel
 
-			jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+			jm := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 			keys, err := (&jwk.RS256Generator{}).Generate("", "sig")
 			require.NoError(t, err)
 			require.NoError(t, jm.AddKeySet(context.TODO(), OpenIDConnectKeyName, keys))

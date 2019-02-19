@@ -273,10 +273,11 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request) {
 	}).ToMapClaims()
 
 	metaStrategy := h.OAuthServerMetadataStrategy
+	jwtHeader := &jwt.Headers{}
 	extraHeaders := make(map[string]interface{})
 	pubKeyId, _ := metaStrategy.GetPublicKeyID(r.Context())
 	extraHeaders["kid"] = pubKeyId
-	token, _, _ := metaStrategy.Generate(r.Context(), claims, &jwt.Headers{Extra: extraHeaders})
+	token, _, _ := metaStrategy.Generate(r.Context(), claims, jwtHeader)
 
 	h.H.Write(w, r, &SignedMetadata{token})
 }

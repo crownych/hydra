@@ -88,6 +88,45 @@ type sqlData struct {
 	Key       string    `db:"keydata"`
 }
 
+func (m *SQLManager) sqlDataFromJSONWebKey(set string, key *pkg.JSONWebKey, cipher *AEAD) (*sqlData, error) {
+	out, err := json.Marshal(key)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	if cipher == nil {
+		cipher = m.Cipher
+	}
+
+	encrypted, err := cipher.Encrypt(out)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	data := &sqlData{
+		Set:     set,
+		KID:     key.KeyID,
+		Version: 0,
+		Key:     encrypted,
+	}
+
+	return data, nil
+}
+
+func (m *SQLManager) sqlDataToJSONWebKey(d sqlData) (*pkg.JSONWebKey, error) {
+	key, err := m.Cipher.Decrypt(d.Key)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var c pkg.JSONWebKey
+	if err := json.Unmarshal(key, &c); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &c, nil
+}
+
 func (m *SQLManager) CreateSchemas() (int, error) {
 	migrate.SetTable("hydra_jwk_migration")
 	n, err := migrate.Exec(m.DB.DB, m.DB.DriverName(), Migrations, migrate.Up)
@@ -97,29 +136,19 @@ func (m *SQLManager) CreateSchemas() (int, error) {
 	return n, nil
 }
 
-func (m *SQLManager) AddKey(ctx context.Context, set string, key *jose.JSONWebKey) error {
-	out, err := json.Marshal(key)
+func (m *SQLManager) AddKey(ctx context.Context, set string, key *pkg.JSONWebKey) error {
+	data, err := m.sqlDataFromJSONWebKey(set, key, m.Cipher)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
-	encrypted, err := m.Cipher.Encrypt(out)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if _, err = m.DB.NamedExec(`INSERT INTO hydra_jwk (sid, kid, version, keydata) VALUES (:sid, :kid, :version, :keydata)`, &sqlData{
-		Set:     set,
-		KID:     key.KeyID,
-		Version: 0,
-		Key:     encrypted,
-	}); err != nil {
+	if _, err = m.DB.NamedExec(`INSERT INTO hydra_jwk (sid, kid, version, keydata) VALUES (:sid, :kid, :version, :keydata)`, data); err != nil {
 		return sqlcon.HandleError(err)
 	}
 	return nil
 }
 
-func (m *SQLManager) AddKeySet(ctx context.Context, set string, keys *jose.JSONWebKeySet) error {
+func (m *SQLManager) AddKeySet(ctx context.Context, set string, keys *pkg.JSONWebKeySet) error {
 	tx, err := m.DB.Beginx()
 	if err != nil {
 		return errors.WithStack(err)
@@ -141,24 +170,14 @@ func (m *SQLManager) AddKeySet(ctx context.Context, set string, keys *jose.JSONW
 	return nil
 }
 
-func (m *SQLManager) addKeySet(ctx context.Context, tx *sqlx.Tx, cipher *AEAD, set string, keys *jose.JSONWebKeySet) error {
+func (m *SQLManager) addKeySet(ctx context.Context, tx *sqlx.Tx, cipher *AEAD, set string, keys *pkg.JSONWebKeySet) error {
 	for _, key := range keys.Keys {
-		out, err := json.Marshal(key)
+		data, err := m.sqlDataFromJSONWebKey(set, &key, cipher)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
-		encrypted, err := cipher.Encrypt(out)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		if _, err = tx.NamedExec(`INSERT INTO hydra_jwk (sid, kid, version, keydata) VALUES (:sid, :kid, :version, :keydata)`, &sqlData{
-			Set:     set,
-			KID:     key.KeyID,
-			Version: 0,
-			Key:     encrypted,
-		}); err != nil {
+		if _, err = tx.NamedExec(`INSERT INTO hydra_jwk (sid, kid, version, keydata) VALUES (:sid, :kid, :version, :keydata)`, data); err != nil {
 			return sqlcon.HandleError(err)
 		}
 	}
@@ -167,27 +186,40 @@ func (m *SQLManager) addKeySet(ctx context.Context, tx *sqlx.Tx, cipher *AEAD, s
 }
 
 func (m *SQLManager) GetKey(ctx context.Context, set, kid string) (*jose.JSONWebKeySet, error) {
+	jwks, err := m.GetActualKey(ctx, set, kid)
+	if err != nil {
+		return nil, err
+	}
+
+	return jwks.ToJoseJSONWebKeySet(), nil
+}
+
+func (m *SQLManager) GetActualKey(ctx context.Context, set, kid string) (*pkg.JSONWebKeySet, error) {
 	var d sqlData
 	if err := m.DB.Get(&d, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE sid=? AND kid=? ORDER BY created_at DESC"), set, kid); err != nil {
 		return nil, sqlcon.HandleError(err)
 	}
 
-	key, err := m.Cipher.Decrypt(d.Key)
+	key, err := m.sqlDataToJSONWebKey(d)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	var c jose.JSONWebKey
-	if err := json.Unmarshal(key, &c); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{c},
+	return &pkg.JSONWebKeySet{
+		Keys: []pkg.JSONWebKey{*key},
 	}, nil
 }
 
 func (m *SQLManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWebKeySet, error) {
+	jwks, err := m.GetActualKeySet(ctx, set, ActiveJWKFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	return jwks.ToJoseJSONWebKeySet(), nil
+}
+
+func (m *SQLManager) GetActualKeySet(ctx context.Context, set string, filter... func(pkg.JSONWebKey) bool) (*pkg.JSONWebKeySet, error) {
 	var ds []sqlData
 	if err := m.DB.Select(&ds, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE sid=? ORDER BY created_at DESC"), set); err != nil {
 		return nil, sqlcon.HandleError(err)
@@ -197,18 +229,20 @@ func (m *SQLManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWebKe
 		return nil, errors.Wrap(pkg.ErrNotFound, "")
 	}
 
-	keys := &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{}}
+	keys := &pkg.JSONWebKeySet{Keys: []pkg.JSONWebKey{}}
 	for _, d := range ds {
-		key, err := m.Cipher.Decrypt(d.Key)
+		key, err := m.sqlDataToJSONWebKey(d)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
-		var c jose.JSONWebKey
-		if err := json.Unmarshal(key, &c); err != nil {
-			return nil, errors.WithStack(err)
+		if len(filter) > 0 {
+			if filter[0](*key) {
+				keys.Keys = append(keys.Keys, *key)
+			}
+		} else {
+			keys.Keys = append(keys.Keys, *key)
 		}
-		keys.Keys = append(keys.Keys, c)
 	}
 
 	if len(keys.Keys) == 0 {
@@ -260,9 +294,9 @@ func (m *SQLManager) RotateKeys(new *AEAD) error {
 		return sqlcon.HandleError(err)
 	}
 
-	sets := make([]jose.JSONWebKeySet, 0)
+	sets := make([]pkg.JSONWebKeySet, 0)
 	for _, sid := range sids {
-		set, err := m.GetKeySet(context.TODO(), sid)
+		set, err := m.GetActualKeySet(context.TODO(), sid)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -297,35 +331,4 @@ func (m *SQLManager) RotateKeys(new *AEAD) error {
 		return sqlcon.HandleError(err)
 	}
 	return nil
-}
-
-func (m *SQLManager) GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error) {
-	var ds []sqlData
-	if err := m.DB.Select(&ds, m.DB.Rebind("SELECT * FROM hydra_jwk WHERE kid=? ORDER BY created_at DESC"), kid); err != nil {
-		return nil, sqlcon.HandleError(err)
-	}
-
-	if len(ds) == 0 {
-		return nil, errors.Wrap(pkg.ErrNotFound, "")
-	}
-
-	setKeys := make(map[string][]jose.JSONWebKey)
-	for _, d := range ds {
-		key, err := m.Cipher.Decrypt(d.Key)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		var c jose.JSONWebKey
-		if err := json.Unmarshal(key, &c); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		setKeys[d.Set] = append(setKeys[d.Set], c)
-	}
-
-	if len(setKeys) == 0 {
-		return nil, errors.WithStack(pkg.ErrNotFound)
-	}
-
-	return setKeys, nil
 }

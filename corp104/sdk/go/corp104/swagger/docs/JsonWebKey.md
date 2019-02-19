@@ -20,6 +20,9 @@ Name | Type | Description | Notes
 **X** | **string** |  | [optional] [default to null]
 **X5c** | **[]string** | The \&quot;x5c\&quot; (X.509 certificate chain) parameter contains a chain of one or more PKIX certificates [RFC5280].  The certificate chain is represented as a JSON array of certificate value strings.  Each string in the array is a base64-encoded (Section 4 of [RFC4648] -- not base64url-encoded) DER [ITU.X690.1994] PKIX certificate value. The PKIX certificate containing the key value MUST be the first certificate. | [optional] [default to null]
 **Y** | **string** |  | [optional] [default to null]
+**Nbf** | ***int64** | The `nbf` (not before) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key is not to be used before | [default to null]
+**Exp** | ***int64** | The `exp` (expires at) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key will expire | [default to null]
+
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

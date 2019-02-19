@@ -21,24 +21,22 @@
 package server
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
-
-	"context"
 
 	"github.com/ory/hydra/corp104/config"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/pkg"
 	"github.com/pkg/errors"
-	"gopkg.in/square/go-jose.v2"
 )
 
-func createOrGetJWK(c *config.Config, set string, kid string, prefix string) (key *jose.JSONWebKey, err error) {
+func createOrGetJWK(c *config.Config, set string, kid string, prefix string) (key *pkg.JSONWebKey, err error) {
 	ctx := c.Context()
 
 	expectDependency(c.GetLogger(), ctx.KeyManager)
 
-	keys, err := ctx.KeyManager.GetKeySet(context.TODO(), set)
+	keys, err := ctx.KeyManager.GetActualKeySet(context.TODO(), set, jwk.ActiveJWKFilter)
 	if errors.Cause(err) == pkg.ErrNotFound || keys != nil && len(keys.Keys) == 0 {
 		c.GetLogger().Infof("JSON Web Key Set %s does not exist yet, generating new key pair...", set)
 		keys, err = createJWKS(ctx, set, kid)
@@ -67,7 +65,7 @@ func createOrGetJWK(c *config.Config, set string, kid string, prefix string) (ke
 	return key, nil
 }
 
-func createJWKS(ctx *config.Context, set, kid string) (*jose.JSONWebKeySet, error) {
+func createJWKS(ctx *config.Context, set, kid string) (*pkg.JSONWebKeySet, error) {
 	generator := jwk.ECDSA256Generator{}
 	keys, err := generator.Generate(kid, "sig")
 	if err != nil {
@@ -96,19 +94,4 @@ func publicKey(key interface{}) interface{} {
 	default:
 		return nil
 	}
-}
-
-func getJWKS(c *config.Config, set string) (*jose.JSONWebKeySet, error) {
-	ctx := c.Context()
-	expectDependency(c.GetLogger(), ctx.KeyManager)
-	return ctx.KeyManager.GetKeySet(context.TODO(), set)
-}
-
-func addJWK(c *config.Config, set string, key *jose.JSONWebKey) error {
-	ctx := c.Context()
-	expectDependency(c.GetLogger(), ctx.KeyManager)
-	if oKey, _ := ctx.KeyManager.GetKey(context.TODO(), set, key.KeyID); oKey != nil {
-		return nil
-	}
-	return ctx.KeyManager.AddKey(context.TODO(), set, key)
 }

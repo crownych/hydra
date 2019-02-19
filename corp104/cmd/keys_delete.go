@@ -26,11 +26,31 @@ import (
 
 // deleteCmd represents the delete command
 var keysDeleteCmd = &cobra.Command{
-	Use:   "delete <set>",
-	Short: "Delete a new JSON Web Key Set",
+	Use:   "delete <set> <key>",
+	Short: "Delete a JSON Web Key Set or a JSON Web Key pair",
+	Long: `This command delete a JSON Web Key Set or a JSON Web Key pair.
+	
+Examples:
+
+  # delete a JSON Web Key Set
+    hydra keys delete openid.id-token \
+     --endpoint "http://localhost:4445" \
+     --user auth.admin \
+     --pwd secret
+
+  # delete a JSON Web Key pair by key id (without "private:" or "public:" prefix)
+    hydra keys delete openid.id-token 4cd83e5a-51f7-4b99-99fa-1fdaff1a18a1 \
+     --endpoint "http://localhost:4445" \
+     --user auth.admin \
+     --pwd secret
+`,
 	Run:   cmdHandler.Keys.DeleteKeys,
 }
 
 func init() {
 	keysCmd.AddCommand(keysDeleteCmd)
+	keysDeleteCmd.Flags().String("user", "", "Give the AD account")
+	keysDeleteCmd.Flags().String("pwd", "", "Give the AD account password")
+	keysDeleteCmd.MarkFlagRequired("user")
+	keysDeleteCmd.MarkFlagRequired("pwd")
 }

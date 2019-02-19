@@ -62,22 +62,22 @@ func CreateECKeyPair(kid, kidPrefix string) (*JsonWebKeySet, error) {
 	return jwks, nil
 }
 
-func LoadJsonWebKeySet(jwksJSON []byte) *JsonWebKeySet {
+func LoadJsonWebKeySet(jwksJSON []byte) (*JsonWebKeySet, error) {
 	var jwks JsonWebKeySet
 	err := json.Unmarshal(jwksJSON, &jwks)
 	if err != nil {
-		panic("Invalid jwks:" + err.Error())
+		return nil, err
 	}
-	return &jwks
+	return &jwks, nil
 }
 
-func LoadJsonWebKey(jwkJSON []byte) *JsonWebKey {
+func LoadJsonWebKey(jwkJSON []byte) (*JsonWebKey, error) {
 	var jsonWebKey *JsonWebKey
 	err := json.Unmarshal(jwkJSON, &jsonWebKey)
 	if err != nil {
-		panic("Invalid jwk:" + err.Error())
+		return nil, err
 	}
-	return jsonWebKey
+	return jsonWebKey, nil
 }
 
 func LoadECPublicKeyFromJsonWebKey(jsonWebKey *JsonWebKey) (*ecdsa.PublicKey, error) {
@@ -167,6 +167,27 @@ func LoadECPrivateKeyFromJsonWebKey(jsonWebKey *JsonWebKey) (*ecdsa.PrivateKey, 
 		PublicKey: pubKey,
 		D: big.NewInt(0).SetBytes(dBytes),
 	}, nil
+}
+
+func GetClientSecretFromSignedCredentials(signedCredentials string) (string, error) {
+	_, payload, err := getJWSContent(signedCredentials)
+	if err != nil {
+		return "", nil
+	}
+	clientSecret := payload["client_secret"]
+	if clientSecret == "" {
+		return "", errors.New("empty client secret")
+	}
+	return clientSecret.(string), nil
+}
+
+func GetCookieFromAPIResponse(response *APIResponse) map[string]string {
+	respCookies := response.Cookies()
+	sessionCookie := map[string]string{}
+	for _, respCookie := range respCookies {
+		sessionCookie[respCookie.Name] = respCookie.Value
+	}
+	return sessionCookie
 }
 
 func extractJWSHeader(msg string) ([]byte, error) {

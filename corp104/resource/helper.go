@@ -3,11 +3,13 @@ package resource
 import (
 	"fmt"
 	"github.com/ory/hydra/pkg"
+	"github.com/spf13/viper"
 	"log"
+	"strings"
 )
 
 func sendCommitCode(recipient, commitCode string) {
-	if recipient == "foo.bar" {
+	if recipient == "foo.bar" || strings.Contains(viper.GetString("ADMIN_USERS"), recipient) {
 		return
 	}
 	_, err := pkg.SendTextMail(recipient+"@104.com.tw", "Resource註冊確認碼", "commit_code: "+commitCode)

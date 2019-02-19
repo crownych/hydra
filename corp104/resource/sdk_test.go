@@ -15,12 +15,12 @@ import (
 	"github.com/ory/hydra/corp104/resource"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
 	"github.com/ory/hydra/mock-dep"
+	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/negroni"
-	"gopkg.in/square/go-jose.v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,10 +30,10 @@ func TestResourceSDK(t *testing.T) {
 	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
 	viper.Set("TEST_MODE", true)
 	webSessionName := "web_sid"
-	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+	keyManager := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
 	require.NoError(t, err)
-	require.NoError(t, keyManager.AddKeySet(context.TODO(), "jwk.offline", authSrvJwks))
+	require.NoError(t, keyManager.AddKeySet(context.TODO(), "auth.offline", authSrvJwks))
 	ecAuthSrvPubJwk := authSrvJwks.Keys[1].Key.(*ecdsa.PublicKey)
 	authSrvPubJwk := &hydra.JsonWebKey{
 		Kid: authSrvJwks.Keys[1].KeyID,
@@ -66,7 +66,7 @@ func TestResourceSDK(t *testing.T) {
 	}
 
 	manager := resource.NewMemoryManager()
-	handler := resource.NewHandler(manager, herodot.NewJSONWriter(nil), keyManager, "http://localhost:4444", "jwk.offline")
+	handler := resource.NewHandler(manager, herodot.NewJSONWriter(nil), keyManager, "http://localhost:4444", "auth.offline")
 
 	router := httprouter.New()
 	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {

@@ -10,6 +10,12 @@
 
 package swagger
 
+import (
+	"encoding/json"
+	"gopkg.in/square/go-jose.v2"
+	"time"
+)
+
 type JsonWebKey struct {
 
 	// The \"alg\" (algorithm) parameter identifies the algorithm intended for use with the key.  The values used should either be registered in the IANA \"JSON Web Signature and Encryption Algorithms\" registry established by [JWA] or be a value that contains a Collision- Resistant Name.
@@ -50,4 +56,41 @@ type JsonWebKey struct {
 	X5c []string `json:"x5c,omitempty"`
 
 	Y string `json:"y,omitempty"`
+
+	// The \"Nbf\" (Not Before) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key is not to be used before.
+	Nbf *int64 `json:"nbf,omitempty"`
+
+	// The \"Exp\" (Expires At) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key will expire.
+	Exp *int64 `json:"exp,omitempty"`
+}
+
+func (k *JsonWebKey) IsActive() bool {
+	if k.Nbf != nil && *k.Nbf > time.Now().UTC().Unix() {
+		return false
+	}
+	if k.IsExpired() {
+		return false
+	}
+	return true
+}
+
+func (k *JsonWebKey) IsExpired() bool {
+	if k.Exp != nil && *k.Exp <= time.Now().UTC().Unix() {
+		return true
+	}
+	return false
+}
+
+// return crypto key
+func (k *JsonWebKey) Key() (interface{}, error) {
+	buf, err := json.Marshal(k)
+	if err != nil {
+		return nil, err
+	}
+	var joseJwk jose.JSONWebKey
+	err = joseJwk.UnmarshalJSON(buf)
+	if err != nil {
+		return nil, err
+	}
+	return joseJwk.Key, nil
 }

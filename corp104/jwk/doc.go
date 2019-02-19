@@ -27,7 +27,9 @@
 
 package jwk
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // swagger:model jsonWebKeySetGeneratorRequest
 type createRequest struct {
@@ -45,6 +47,14 @@ type createRequest struct {
 	// The kid of the key to be created
 	// required: true
 	KeyID string `json:"kid"`
+
+	// NotBefore is an integer timestamp, measured in the number of seconds since January 1 1970 UTC,
+	// indicating when this key is not to be used before.
+	NotBefore *int64 `json:"nbf,omitempty"`
+
+	// ExpiresAt is an integer timestamp, measured in the number of seconds since January 1 1970 UTC,
+	// indicating when this key will expire.
+	ExpiresAt *int64 `json:"exp,omitempty"`
 }
 
 type joseWebKeySetRequest struct {
@@ -184,4 +194,12 @@ type swaggerJSONWebKey struct {
 	Dp string `json:"dp,omitempty"`
 	Dq string `json:"dq,omitempty"`
 	Qi string `json:"qi,omitempty"`
+
+	// NotBefore is an integer timestamp, measured in the number of seconds since January 1 1970 UTC,
+	// indicating when this key is not to be used before.
+	NotBefore *int64 `json:"nbf,omitempty"`
+
+	// ExpiresAt is an integer timestamp, measured in the number of seconds since January 1 1970 UTC,
+	// indicating when this key will expire.
+	ExpiresAt *int64 `json:"exp,omitempty"`
 }

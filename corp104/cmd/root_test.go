@@ -59,6 +59,7 @@ func init() {
 }
 
 func TestExecute(t *testing.T) {
+	viper.Set("ADMIN_USERS", "auth.admin")
 	viper.Set("TEST_MODE", true)
 	// start mock server
 	err := mock_dep.StartMockServer()
@@ -106,23 +107,26 @@ func TestExecute(t *testing.T) {
 				return false
 			},
 		},
-		{args: []string{"clients", "put", "--endpoint", frontend, "--id", "foobarbaz", "--secret", "secret", "--name", "foobarbaz", "-g", "client_credentials", "--client-uri", "http://foobarbaz.org", "--contacts", "admin@foobarbaz.org", "--software-id", "4d51529c-37cd-424c-ba19-cba742d60903", "--software-version", "0.0.1", "--token-endpoint-auth-method", "private_key_jwt", "--client-profile", "web", "--jwks", `{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}`, "--signing-jwk", `{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
+		{args: []string{"clients", "put", "--endpoint", frontend, "--id", "foobarbaz", "--secret", "secret", "--name", "foobarbaz", "-g", "client_credentials", "--client-uri", "http://foobarbaz.org", "--contacts", "admin@foobarbaz.org", "--software-id", "4d51529c-37cd-424c-ba19-cba742d60903", "--software-version", "0.0.1", "--token-endpoint-auth-method", "private_key_jwt", "--client-profile", "web", "--jwks", `{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
 		{args: []string{"clients", "commit", "--endpoint", frontend, "--id", "foobarbaz", "--commit-code", "env:COMMIT_CODE"}},
 		{args: []string{"clients", "get", "--endpoint", frontend, "foobarbaz", "--secret", "secret"}},
 		{args: []string{"clients", "delete", "--endpoint", backend, "foobarbaz"}},
-		{args: []string{"keys", "create", "foo", "--endpoint", backend, "-a", "HS256"}},
-		{args: []string{"keys", "get", "--endpoint", backend, "foo"}},
+		{args: []string{"keys", "put", "--endpoint", frontend, "foo", "--jwks", `{"keys":[{"alg":"ES256","crv":"P-256","kid":"public:487f8461-5cfc-4ed5-9e40-78b496b1c5d7","kty":"EC","use":"sig","x":"1ZWO7twIWsGNYEnb8DXzFst02_oibc7zkVY5GNHYPI0","y":"4ZxzYZeTowbOjsZRK3GlJUHBD2ufewq4PDyBbpFFJAA","nbf":1550000000,"exp":1560000000},{"alg":"ES256","crv":"P-256","d":"T8klJ70zcr3nS2ooQnD4I7-x3MQDvtsgQF7BO-7dEh0","kid":"private:487f8461-5cfc-4ed5-9e40-78b496b1c5d7","kty":"EC","use":"sig","x":"1ZWO7twIWsGNYEnb8DXzFst02_oibc7zkVY5GNHYPI0","y":"4ZxzYZeTowbOjsZRK3GlJUHBD2ufewq4PDyBbpFFJAA","nbf":1550000000,"exp":1560000000}]}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "auth.admin", "--pwd", "secret"}},
+		{args: []string{"keys", "commit", "--endpoint", frontend, "foo", "--commit-code", "env:COMMIT_CODE"}},
+		{args: []string{"keys", "get", "--endpoint", frontend, "foo", "--user", "auth.admin", "--pwd", "secret"}},
 		//{args: []string{"keys", "rotate", "--endpoint", backend, "foo"}},
-		{args: []string{"keys", "get", "--endpoint", backend, "foo"}},
-		{args: []string{"keys", "delete", "--endpoint", backend, "foo"}},
-		{args: []string{"keys", "import", "--endpoint", backend, "import-1", "../../test/stub/ecdh.key", "../../test/stub/ecdh.pub"}},
-		{args: []string{"keys", "import", "--endpoint", backend, "import-2", "../../test/stub/rsa.key", "../../test/stub/rsa.pub"}},
+		//{args: []string{"keys", "get", "--endpoint", frontend, "foo", "--user", "auth.admin", "--pwd", "secret"}},
+		{args: []string{"keys", "delete", "--endpoint", backend, "foo", "--user", "auth.admin", "--pwd", "secret"}},
+		{args: []string{"keys", "import", "--endpoint", frontend, "import-1", "../../test/stub/jwk.key", "../../test/stub/jwk.pub", "--use", "sig", "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "auth.admin", "--pwd", "secret"}},
+		{args: []string{"keys", "commit", "--endpoint", frontend, "import-1", "--commit-code", "env:COMMIT_CODE"}},
+		{args: []string{"keys", "get", "--endpoint", frontend, "import-1", "--user", "auth.admin", "--pwd", "secret"}},
+		{args: []string{"keys", "delete", "--endpoint", backend, "import-1", "--user", "auth.admin", "--pwd", "secret"}},
 		//{args: []string{"token", "revoke", "--endpoint", frontend, "--client-secret", "foobar", "--client-id", "foobarbaz", "foo"}},
 		//{args: []string{"token", "client", "--endpoint", frontend, "--client-secret", "foobar", "--client-id", "foobarbaz"}},
 		//{args: []string{"help", "migrate", "sql"}},
 		{args: []string{"version"}},
 		{args: []string{"token", "flush", "--endpoint", backend}},
-		{args: []string{"resources", "put", "--endpoint", frontend, "--resource-metadata", `{"uri":"https://v3ms.104.com.tw/graphql","name":"resumes","type":"graphql","auth_service":"https://v3auth.104.com.tw","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"graphql:resumes:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"graphql:resumes:edu:read","scope_auth_type":"","description":"關於rest:jobs:edu:read"},{"name":"graphql:resumes:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"graphql_operations":[{"name":"resumes","type":"query","scopes":["graphql:resumes:read","graphql:resumes:write"],"description":"查詢履歷"},{"name":"resumes/edu","type":"query","scopes":["graphql:resumes:edu:read","graphql:resumes:write"],"description":"查詢履歷的教育程度"},{"name":"createResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"新增履歷"},{"name":"deleteResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"刪除履歷"}],"contacts":["someone@104.com.tw"],"description":"歷履表"}`, "--signing-jwk", `{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
+		{args: []string{"resources", "put", "--endpoint", frontend, "--resource-metadata", `{"uri":"https://v3ms.104.com.tw/graphql","name":"resumes","type":"graphql","auth_service":"https://v3auth.104.com.tw","default_scope_auth_type":"company","grant_types":["urn:ietf:params:oauth:grant-type:jwt-bearer"],"scopes":[{"name":"graphql:resumes:read","scope_auth_type":"","description":"關於rest:jobs:read"},{"name":"graphql:resumes:edu:read","scope_auth_type":"","description":"關於rest:jobs:edu:read"},{"name":"graphql:resumes:write","scope_auth_type":"","description":"關於rest:jobs:write"}],"graphql_operations":[{"name":"resumes","type":"query","scopes":["graphql:resumes:read","graphql:resumes:write"],"description":"查詢履歷"},{"name":"resumes/edu","type":"query","scopes":["graphql:resumes:edu:read","graphql:resumes:write"],"description":"查詢履歷的教育程度"},{"name":"createResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"新增履歷"},{"name":"deleteResume","type":"mutation","scopes":["graphql:resumes:write"],"description":"刪除履歷"}],"contacts":["someone@104.com.tw"],"description":"歷履表"}`, "--auth-public-jwk", "env:OFFLINE_PUBLIC_KEY", "--user", "foo.bar", "--pwd", "secret"}},
 		{args: []string{"resources", "commit", "--endpoint", frontend, "--urn", "urn:104:v3:resource:graphql:resumes", "--commit-code", "env:COMMIT_CODE"}},
 		{args: []string{"resources", "get", "--endpoint", frontend, "urn:104:v3:resource:graphql:resumes"}},
 		{args: []string{"resources", "delete", "--endpoint", backend, "urn:104:v3:resource:graphql:resumes"}},

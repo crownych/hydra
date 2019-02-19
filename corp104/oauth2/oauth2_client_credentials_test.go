@@ -23,6 +23,7 @@ package oauth2_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/ory/hydra/pkg"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -43,7 +44,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2/clientcredentials"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func _TestClientCredentials(t *testing.T) {
@@ -84,7 +84,7 @@ func _TestClientCredentials(t *testing.T) {
 			l.Level = logrus.DebugLevel
 			store := NewFositeMemoryStore(hc.NewMemoryManager(hasher), time.Second)
 
-			jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+			jm := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 			keys, err := (&jwk.RS256Generator{}).Generate("", "sig")
 			require.NoError(t, err)
 			require.NoError(t, jm.AddKeySet(context.TODO(), OpenIDConnectKeyName, keys))

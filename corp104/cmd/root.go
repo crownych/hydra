@@ -239,6 +239,9 @@ func initConfig() {
 	viper.BindEnv("RESET_PASSWORD_ROUTE")
 	viper.SetDefault("RESET_PASSWORD_ROUTE", "")
 
+	viper.BindEnv("ADMIN_USERS")
+	viper.SetDefault("ADMIN_USERS", "")
+
 	viper.BindEnv("TEST_MODE")
 	viper.SetDefault("TEST_MODE", false)
 

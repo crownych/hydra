@@ -22,6 +22,7 @@ package jwk_test
 
 import (
 	"encoding/json"
+	"github.com/ory/hydra/pkg"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,11 +34,10 @@ import (
 	. "github.com/ory/hydra/corp104/jwk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 var testServer *httptest.Server
-var IDKS *jose.JSONWebKeySet
+var IDKS *pkg.JSONWebKeySet
 
 func init() {
 	router := httprouter.New()
@@ -48,10 +48,12 @@ func init() {
 		nil,
 		herodot.NewJSONWriter(nil),
 		[]string{},
+		"http://localhost:4444",
+		"auth.offline",
 	)
 	h.Manager.AddKeySet(context.TODO(), IDTokenKeyName, IDKS)
 	offlineKS, _ := testGenerator.Generate("test-offline-jwk", "sig")
-	h.Manager.AddKeySet(context.TODO(), "jwk.offline", offlineKS)
+	h.Manager.AddKeySet(context.TODO(), "auth.offline", offlineKS)
 	h.SetRoutes(router, router, func(h http.Handler) http.Handler {
 		return h
 	})
@@ -65,7 +67,7 @@ func TestHandlerWellKnown(t *testing.T) {
 	require.NoError(t, err, "problem in http request")
 	defer res.Body.Close()
 
-	var known jose.JSONWebKeySet
+	var known pkg.JSONWebKeySet
 	err = json.NewDecoder(res.Body).Decode(&known)
 	require.NoError(t, err, "problem in decoding response")
 

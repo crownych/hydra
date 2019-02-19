@@ -48,7 +48,7 @@ func (h *ResourceHandler) PutResource(cmd *cobra.Command, args []string) {
 	m := h.newResourceManager(cmd)
 
 	endpoint, _ := cmd.Flags().GetString("endpoint")
-	cc, signingJwk := h.getResourceFromPutCmd(cmd)
+	cc := h.getResourceFromPutCmd(cmd)
 
 	// authentication
 	user, _ := cmd.Flags().GetString("user")
@@ -60,7 +60,7 @@ func (h *ResourceHandler) PutResource(cmd *cobra.Command, args []string) {
 	m.Configuration.ADUsername = user
 	m.Configuration.ADPassword = pwd
 	m.Configuration.AuthSvcOfflinePublicJWK = getAuthServicePublicJWK(cmd)
-	m.Configuration.PrivateJWK = signingJwk
+	m.Configuration.PrivateJWK = getSigningJWKFromCmd(cmd)
 	result, response, err := m.PutOAuth2Resource(cc)
 	if err != nil {
 		pkg.Must(err, "Error: "+err.Error())
@@ -111,9 +111,8 @@ func (h *ResourceHandler) GetResource(cmd *cobra.Command, args []string) {
 	fmt.Printf("%s\n", formatResponse(resource))
 }
 
-func (h *ResourceHandler) getResourceFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Resource, *hydra.JsonWebKey) {
+func (h *ResourceHandler) getResourceFromPutCmd(cmd *cobra.Command) hydra.OAuth2Resource {
 	resourceMetadata, _ := cmd.Flags().GetString("resource-metadata")
-	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
 
 	var cc hydra.OAuth2Resource
 
@@ -127,9 +126,7 @@ func (h *ResourceHandler) getResourceFromPutCmd(cmd *cobra.Command) (hydra.OAuth
 		pkg.Must(err, "Error: "+err.Error())
 	}
 
-	signingJwk := hydra.LoadJsonWebKey([]byte(signingJwkJSON))
-
-	return cc, signingJwk
+	return cc
 }
 
 func (h *ResourceHandler) getCookieFileName(urn string) string {

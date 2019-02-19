@@ -25,6 +25,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/ory/hydra/pkg"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -49,7 +50,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 var lifespan = time.Hour
@@ -145,7 +145,7 @@ func TestUserinfo(t *testing.T) {
 	op := NewMockOAuth2Provider(ctrl)
 	defer ctrl.Finish()
 
-	jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+	jm := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 	keys, err := (&jwk.ECDSA256Generator{}).Generate("signing", "sig")
 	require.NoError(t, err)
 	require.NoError(t, jm.AddKeySet(context.TODO(), oauth2.OpenIDConnectKeyName, keys))
@@ -362,8 +362,8 @@ func TestUserinfo(t *testing.T) {
 
 func TestHandlerWellKnown(t *testing.T) {
 	jwkManager := new(jwk.MemoryManager)
-	keySet := "jwk.offline"
-	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-offline-jks", "sig")
+	keySet := "auth.offline"
+	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-offline-jwks", "sig")
 	jwkManager.AddKeySet(context.TODO(), keySet, keys)
 	metadataStrategy, _ := jwk.NewES256JWTStrategy(jwkManager, keySet)
 

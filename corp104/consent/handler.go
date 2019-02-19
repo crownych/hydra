@@ -49,6 +49,7 @@ type Handler struct {
 	RequestMaxAge     time.Duration
 	CookieStore       sessions.Store
 	KeyManager        jwk.Manager
+	offlineJWKSName   string
 }
 
 const (
@@ -68,6 +69,7 @@ func NewHandler(
 	c sessions.Store,
 	u string,
 	k jwk.Manager,
+	offlineJWKSName string,
 ) *Handler {
 	return &Handler{
 		H:                 h,
@@ -75,6 +77,7 @@ func NewHandler(
 		LogoutRedirectURL: u,
 		CookieStore:       c,
 		KeyManager:        k,
+		offlineJWKSName:   offlineJWKSName,
 	}
 }
 
@@ -860,13 +863,13 @@ func (h *Handler) verifyJWS(w http.ResponseWriter, r *http.Request, field string
 		return nil, err
 	}
 	// Extract key set
-	keySet, err := h.KeyManager.GetKeysById(r.Context(), kid)
+	keySet, err := h.KeyManager.GetActualKey(r.Context(), h.offlineJWKSName, kid)
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return nil, err
 	}
 	// Get private key of oauth server
-	authSrvPrivateKey, err := pkg.GetElementFromKeySet(keySet, kid)
+	authSrvPrivateKey, err := jwk.FindKeyByPrefix(keySet, "private")
 	if err != nil {
 		h.H.WriteError(w, r, errors.WithStack(err))
 		return nil, err

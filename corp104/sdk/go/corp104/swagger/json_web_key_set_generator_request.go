@@ -12,7 +12,7 @@ package swagger
 
 type JsonWebKeySetGeneratorRequest struct {
 
-	// The algorithm to be used for creating the key. Supports \"RS256\", \"ES512\", \"HS512\", and \"HS256\"
+	// The algorithm to be used for creating the key. Supports \"RS256\", \"ES512\", \"ES256\", \"HS512\", and \"HS256\"
 	Alg string `json:"alg"`
 
 	// The kid of the key to be created
@@ -20,4 +20,10 @@ type JsonWebKeySetGeneratorRequest struct {
 
 	// The \"use\" (public key use) parameter identifies the intended use of the public key. The \"use\" parameter is employed to indicate whether a public key is used for encrypting data or verifying the signature on data. Valid values are \"enc\" and \"sig\".
 	Use string `json:"use"`
+
+	// The \"nbf\" (not before) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key is not to be used before.
+	Nbf *int64 `json:"nbf,omitempty"`
+
+	// The \"exp\" (expires at) parameter is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key will expire.
+	Exp *int64 `json:"exp,omitempty"`
 }

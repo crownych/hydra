@@ -65,8 +65,10 @@ services:
       - CORS_DEBUG=true
       - CORP_INTERNAL_API_URL=http://mock-dep:8080
       - AD_LOGIN_URL=http://mock-dep:8080/ad/login
+      # 管理者 AD 帳戶，多筆時以逗號分隔
+      - ADMIN_USERS=auth.admin
+      # 開啟測試模式
       - TEST_MODE=1
-      - OFFLINE_PRIVATE_JWK=${OFFLINE_PRIVATE_JWK}
     restart: on-failure
 
   hydra:
@@ -110,8 +112,10 @@ services:
       - GRAPHQL_API_URL=http://mbs:4000
       - EMAIL_SERVICE_URL=http://mta:10025
       - RESET_PASSWORD_ROUTE=http://localhost:4200/reset-password
+      # 管理者 AD 帳戶，多筆時以逗號分隔
+      - ADMIN_USERS=auth.admin
+      # 開啟測試模式
       - TEST_MODE=1
-      - OFFLINE_PRIVATE_JWK=${OFFLINE_PRIVATE_JWK}
     restart: on-failure
 
   consent:

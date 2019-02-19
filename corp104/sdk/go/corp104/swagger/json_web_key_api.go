@@ -12,9 +12,12 @@ package swagger
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type JsonWebKeyApi struct {
@@ -35,70 +38,6 @@ func NewJsonWebKeyApiWithBasePath(basePath string) *JsonWebKeyApi {
 	return &JsonWebKeyApi{
 		Configuration: configuration,
 	}
-}
-
-/**
- * Generate a new JSON Web Key
- * This endpoint is capable of generating JSON Web Key Sets for you. There a different strategies available, such as symmetric cryptographic keys (HS256, HS512) and asymetric cryptographic keys (RS256, ECDSA). If the specified JSON Web Key Set does not exist, it will be created.  A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. A JWK Set is a JSON data structure that represents a set of JWKs. A JSON Web Key is identified by its set and key id. ORY Hydra uses this functionality to store cryptographic keys used for TLS and JSON Web Tokens (such as OpenID Connect ID tokens), and allows storing user-defined keys as well.
- *
- * @param set The set
- * @param body
- * @return *JsonWebKeySet
- */
-func (a JsonWebKeyApi) CreateJsonWebKeySet(set string, body JsonWebKeySetGeneratorRequest) (*JsonWebKeySet, *APIResponse, error) {
-
-	var localVarHttpMethod = strings.ToUpper("Post")
-	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/keys/{set}"
-	localVarPath = strings.Replace(localVarPath, "{"+"set"+"}", fmt.Sprintf("%v", set), -1)
-
-	localVarHeaderParams := make(map[string]string)
-	localVarQueryParams := url.Values{}
-	localVarFormParams := make(map[string]string)
-	var localVarPostBody interface{}
-	var localVarFileName string
-	var localVarFileBytes []byte
-	// add default headers if any
-	for key := range a.Configuration.DefaultHeader {
-		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
-	}
-
-	// to determine the Content-Type header
-	localVarHttpContentTypes := []string{"application/json"}
-
-	// set Content-Type header
-	localVarHttpContentType := a.Configuration.APIClient.SelectHeaderContentType(localVarHttpContentTypes)
-	if localVarHttpContentType != "" {
-		localVarHeaderParams["Content-Type"] = localVarHttpContentType
-	}
-	// to determine the Accept header
-	localVarHttpHeaderAccepts := []string{
-		"application/json",
-	}
-
-	// set Accept header
-	localVarHttpHeaderAccept := a.Configuration.APIClient.SelectHeaderAccept(localVarHttpHeaderAccepts)
-	if localVarHttpHeaderAccept != "" {
-		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
-	}
-	// body params
-	localVarPostBody = &body
-	var successPayload = new(JsonWebKeySet)
-	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
-
-	var localVarURL, _ = url.Parse(localVarPath)
-	localVarURL.RawQuery = localVarQueryParams.Encode()
-	var localVarAPIResponse = &APIResponse{Operation: "CreateJsonWebKeySet", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
-	if localVarHttpResponse != nil {
-		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
-		localVarAPIResponse.Payload = localVarHttpResponse.Body()
-	}
-
-	if err != nil {
-		return successPayload, localVarAPIResponse, err
-	}
-	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
-	return successPayload, localVarAPIResponse, err
 }
 
 /**
@@ -127,6 +66,13 @@ func (a JsonWebKeyApi) DeleteJsonWebKey(kid string, set string) (*APIResponse, e
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
+
+	// set Authorization header
+	authzHeader, err := a.checkADCredentials()
+	if err != nil {
+		return nil, err
+	}
+	localVarHeaderParams["Authorization"] = authzHeader
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -186,6 +132,13 @@ func (a JsonWebKeyApi) DeleteJsonWebKeySet(set string) (*APIResponse, error) {
 	for key := range a.Configuration.DefaultHeader {
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
+
+	// set Authorization header
+	authzHeader, err := a.checkADCredentials()
+	if err != nil {
+		return nil, err
+	}
+	localVarHeaderParams["Authorization"] = authzHeader
 
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
@@ -248,6 +201,13 @@ func (a JsonWebKeyApi) GetJsonWebKey(kid string, set string) (*JsonWebKeySet, *A
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
 
+	// set Authorization header
+	authzHeader, err := a.checkADCredentials()
+	if err != nil {
+		return nil, nil, err
+	}
+	localVarHeaderParams["Authorization"] = authzHeader
+
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
 
@@ -309,6 +269,13 @@ func (a JsonWebKeyApi) GetJsonWebKeySet(set string) (*JsonWebKeySet, *APIRespons
 		localVarHeaderParams[key] = a.Configuration.DefaultHeader[key]
 	}
 
+	// set Authorization header
+	authzHeader, err := a.checkADCredentials()
+	if err != nil {
+		return nil, nil, err
+	}
+	localVarHeaderParams["Authorization"] = authzHeader
+
 	// to determine the Content-Type header
 	localVarHttpContentTypes := []string{"application/json"}
 
@@ -346,21 +313,20 @@ func (a JsonWebKeyApi) GetJsonWebKeySet(set string) (*JsonWebKeySet, *APIRespons
 }
 
 /**
- * Update a JSON Web Key
- * Use this method if you do not want to let Hydra generate the JWKs for you, but instead save your own.  A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. A JWK Set is a JSON data structure that represents a set of JWKs. A JSON Web Key is identified by its set and key id. ORY Hydra uses this functionality to store cryptographic keys used for TLS and JSON Web Tokens (such as OpenID Connect ID tokens), and allows storing user-defined keys as well.
+ * Create or update an JSON Web Key Set
  *
- * @param kid The kid of the desired key
- * @param set The set
+ * @param set
  * @param body
- * @return *JsonWebKey
+ * @return *PutResourceResponse
  */
-func (a JsonWebKeyApi) UpdateJsonWebKey(kid string, set string, body JsonWebKey) (*JsonWebKey, *APIResponse, error) {
+func (a JsonWebKeyApi) PutJsonWebKeySet(set string, body JsonWebKeySet) (*PutKeysResponse, *APIResponse, error) {
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return nil, nil, errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
+	}
 
-	var localVarHttpMethod = strings.ToUpper("Put")
+	var localVarHttpMethod = http.MethodPut
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/keys/{set}/{kid}"
-	localVarPath = strings.Replace(localVarPath, "{"+"kid"+"}", fmt.Sprintf("%v", kid), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"set"+"}", fmt.Sprintf("%v", set), -1)
+	localVarPath := a.Configuration.BasePath + "/keys"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -391,14 +357,32 @@ func (a JsonWebKeyApi) UpdateJsonWebKey(kid string, set string, body JsonWebKey)
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+
+	// set Cookie header
+	localVarHttpHeaderCookies := make(map[string]string)
+
+	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
+	if localVarHttpHeaderCookie != "" {
+		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
+	}
+
+	statement, err := a.createKeysStatement(set, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create resource_statement payload
+	payload := make(map[string]interface{})
+	payload["keys_statement"] = statement
+
 	// body params
-	localVarPostBody = &body
-	var successPayload = new(JsonWebKey)
+	localVarPostBody = &payload
+	var successPayload = new(PutKeysResponse)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
 	var localVarURL, _ = url.Parse(localVarPath)
 	localVarURL.RawQuery = localVarQueryParams.Encode()
-	var localVarAPIResponse = &APIResponse{Operation: "UpdateJsonWebKey", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	var localVarAPIResponse = &APIResponse{Operation: "PutJsonWebKeySet", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
 	if localVarHttpResponse != nil {
 		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
 		localVarAPIResponse.Payload = localVarHttpResponse.Body()
@@ -411,20 +395,83 @@ func (a JsonWebKeyApi) UpdateJsonWebKey(kid string, set string, body JsonWebKey)
 	return successPayload, localVarAPIResponse, err
 }
 
-/**
- * Update a JSON Web Key Set
- * Use this method if you do not want to let Hydra generate the JWKs for you, but instead save your own.  A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. A JWK Set is a JSON data structure that represents a set of JWKs. A JSON Web Key is identified by its set and key id. ORY Hydra uses this functionality to store cryptographic keys used for TLS and JSON Web Tokens (such as OpenID Connect ID tokens), and allows storing user-defined keys as well.
- *
- * @param set The set
- * @param body
- * @return *JsonWebKeySet
- */
-func (a JsonWebKeyApi) UpdateJsonWebKeySet(set string, body JsonWebKeySet) (*JsonWebKeySet, *APIResponse, error) {
+func (a JsonWebKeyApi) createKeysStatement(set string, body JsonWebKeySet) (string, error) {
+	if a.Configuration.AuthSvcOfflinePublicJWK == nil {
+		return "", errors.New("'Configuration.AuthSvcOfflinePublicJWK' must be set")
+	}
+	serverPubJwk, serverPubKey, err := convertToJwxJWK(a.Configuration.AuthSvcOfflinePublicJWK)
+	if err != nil {
+		return "", err
+	}
 
-	var localVarHttpMethod = strings.ToUpper("Put")
+	// client's keys
+	signingJwk := a.Configuration.PrivateJWK
+	if signingJwk == nil {
+		return "", errors.New("signing key is required")
+	}
+	pubJwk, _, err := convertToJwxJWK(extractPublicJWK(signingJwk))
+	if err != nil {
+		return "", err
+	}
+	_, signingKey, err := convertToJwxJWK(signingJwk)
+	if err != nil {
+		return "", err
+	}
+
+	if a.Configuration.ADUsername == "" || a.Configuration.ADPassword == "" {
+		return "", errors.New("AD user credentials required")
+	}
+
+	// create and sign JWS of client's software statement
+	jwsHeaders := make(map[string]interface{})
+	jwsHeaders["alg"] = pubJwk.Algorithm()
+	jwsHeaders["typ"] = "keys-metadata+jwt"
+	jwsHeaders["jwk"] = pubJwk
+	bodyMap := map[string]interface{}{
+		"aud": a.Configuration.BasePath,
+		"iat": time.Now().UTC().Unix(),
+		"authentication": map[string]string{
+			"ad_user": a.Configuration.ADUsername,
+			"ad_pwd": a.Configuration.ADPassword,
+		},
+		"keys_metadata": map[string]interface{}{
+			"set": set,
+			"jwks": body,
+		},
+	}
+
+	payload, err := json.Marshal(&bodyMap)
+	if err != nil {
+		return "", err
+	}
+	jwsMsg, err := jwsSign(jwsHeaders, payload, signingKey)
+	if err != nil {
+		return "", err
+	}
+
+	// create JWE using server's public key
+	jweMsg, err := jweEncrypt(jwsMsg, serverPubKey, serverPubJwk.KeyID())
+	if err != nil {
+		return "", err
+	}
+	return string(jweMsg), nil
+}
+
+/**
+ * Commit an JSON Web Key Set
+ *
+ * @param cookies session cookies
+ * @param commitCode string
+ * @return *CommitResourceResponse
+ */
+func (a JsonWebKeyApi) CommitJsonWebKeySet(cookies map[string]string, commitCode string) (*CommitKeysResponse, *APIResponse, error) {
+	if cookies == nil || len(cookies) == 0 {
+		return nil, nil, errors.New("empty session cookies")
+	}
+
+	var localVarHttpMethod = http.MethodPut
 	// create path and map variables
-	localVarPath := a.Configuration.BasePath + "/keys/{set}"
-	localVarPath = strings.Replace(localVarPath, "{"+"set"+"}", fmt.Sprintf("%v", set), -1)
+	localVarPath := a.Configuration.BasePath + "/keys/commit"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -455,14 +502,28 @@ func (a JsonWebKeyApi) UpdateJsonWebKeySet(set string, body JsonWebKeySet) (*Jso
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+
+	// set Cookie header
+	localVarHttpHeaderCookies := make(map[string]string)
+	for cookieName, cookieValue := range cookies {
+		localVarHttpHeaderCookies[cookieName] = cookieValue
+	}
+
+	localVarHttpHeaderCookie := a.Configuration.APIClient.SelectHeaderCookie(localVarHttpHeaderCookies)
+	if localVarHttpHeaderCookie != "" {
+		localVarHeaderParams["Cookie"] = localVarHttpHeaderCookie
+	}
+
 	// body params
-	localVarPostBody = &body
-	var successPayload = new(JsonWebKeySet)
+	payload := map[string]string{"commit_code": commitCode}
+
+	localVarPostBody = &payload
+	var successPayload = new(CommitKeysResponse)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
 	var localVarURL, _ = url.Parse(localVarPath)
 	localVarURL.RawQuery = localVarQueryParams.Encode()
-	var localVarAPIResponse = &APIResponse{Operation: "UpdateJsonWebKeySet", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
+	var localVarAPIResponse = &APIResponse{Operation: "CommitJsonWebKeySet", Method: localVarHttpMethod, RequestURL: localVarURL.String()}
 	if localVarHttpResponse != nil {
 		localVarAPIResponse.Response = localVarHttpResponse.RawResponse
 		localVarAPIResponse.Payload = localVarHttpResponse.Body()
@@ -472,5 +533,15 @@ func (a JsonWebKeyApi) UpdateJsonWebKeySet(set string, body JsonWebKeySet) (*Jso
 		return successPayload, localVarAPIResponse, err
 	}
 	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
+
 	return successPayload, localVarAPIResponse, err
+}
+
+func (a JsonWebKeyApi) checkADCredentials() (string, error) {
+	user := a.Configuration.ADUsername
+	pwd := a.Configuration.ADPassword
+	if user == "" || pwd == "" {
+		return "", errors.New("AD user credentials required")
+	}
+	return "Basic " + getBasicAuthEncodedString(user, pwd), nil
 }

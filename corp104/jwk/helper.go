@@ -26,20 +26,22 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-
+	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
-	"gopkg.in/square/go-jose.v2"
+	"github.com/spf13/viper"
+	"log"
+	"strings"
 )
 
-func First(keys []jose.JSONWebKey) *jose.JSONWebKey {
+func First(keys []pkg.JSONWebKey) *pkg.JSONWebKey {
 	if len(keys) == 0 {
 		return nil
 	}
 	return &keys[0]
 }
 
-func FindKeyByPrefix(set *jose.JSONWebKeySet, prefix string) (key *jose.JSONWebKey, err error) {
+func FindKeyByPrefix(set *pkg.JSONWebKeySet, prefix string) (key *pkg.JSONWebKey, err error) {
 	keys, err := FindKeysByPrefix(set, prefix)
 	if err != nil {
 		return nil, err
@@ -48,8 +50,8 @@ func FindKeyByPrefix(set *jose.JSONWebKeySet, prefix string) (key *jose.JSONWebK
 	return First(keys.Keys), nil
 }
 
-func FindKeysByPrefix(set *jose.JSONWebKeySet, prefix string) (*jose.JSONWebKeySet, error) {
-	keys := new(jose.JSONWebKeySet)
+func FindKeysByPrefix(set *pkg.JSONWebKeySet, prefix string) (*pkg.JSONWebKeySet, error) {
+	keys := new(pkg.JSONWebKeySet)
 
 	for _, k := range set.Keys {
 		if len(k.KeyID) >= len(prefix)+1 && k.KeyID[:len(prefix)+1] == prefix+":" {
@@ -84,4 +86,14 @@ func ider(typ, id string) string {
 		id = uuid.New()
 	}
 	return fmt.Sprintf("%s:%s", typ, id)
+}
+
+func sendCommitCode(recipient, commitCode string) {
+	if recipient == "foo.bar" || strings.Contains(viper.GetString("ADMIN_USERS"), recipient) {
+		return
+	}
+	_, err := pkg.SendTextMail(recipient+"@104.com.tw", "Resource註冊確認碼", "commit_code: "+commitCode)
+	if err != nil {
+		log.Println(fmt.Sprintf(`send commit_code to %s failed`, recipient))
+	}
 }

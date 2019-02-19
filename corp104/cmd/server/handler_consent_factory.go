@@ -44,7 +44,7 @@ func newConsentHandler(c *config.Config, frontend, backend *httprouter.Router, o
 	w.ErrorEnhancer = writerErrorEnhancer
 
 	expectDependency(c.GetLogger(), ctx.ConsentManager)
-	h := consent.NewHandler(w, ctx.ConsentManager, sessions.NewCookieStore(c.GetCookieSecret()), c.LogoutRedirectURL, c.Context().KeyManager)
+	h := consent.NewHandler(w, ctx.ConsentManager, sessions.NewCookieStore(c.GetCookieSecret()), c.LogoutRedirectURL, c.Context().KeyManager, c.GetOfflineJWKSName())
 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
 	h.SetRoutes(frontend, backend, corsMiddleware)

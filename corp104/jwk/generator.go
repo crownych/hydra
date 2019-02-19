@@ -20,8 +20,8 @@
 
 package jwk
 
-import "gopkg.in/square/go-jose.v2"
+import "github.com/ory/hydra/pkg"
 
 type KeyGenerator interface {
-	Generate(id, use string) (*jose.JSONWebKeySet, error)
+	Generate(id, use string, options ...map[string]interface{}) (*pkg.JSONWebKeySet, error)
 }

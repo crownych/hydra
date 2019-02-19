@@ -22,8 +22,13 @@ package cli
 
 import (
 	"bufio"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator"
 	"github.com/spf13/cobra"
 	"net/http"
 	"net/url"
@@ -154,15 +159,75 @@ func deleteCookies(filename string) {
 	os.Remove(filename)
 }
 
-func parseUnixTimestamp(unixTimestamp string) time.Time {
-	i, err := strconv.ParseInt(unixTimestamp, 10, 64)
+func parseInt64(s string) (*int64, error) {
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &i, nil
+}
+
+func mustParseInt64(s string) int64 {
+	i, err := parseInt64(s)
 	if err != nil {
 		panic(err)
 	}
-	return time.Unix(i, 0)
+	return *i
+}
+
+func parseUnixTimestamp(unixTimestamp string) time.Time {
+	return time.Unix(mustParseInt64(unixTimestamp), 0)
 }
 
 func getAuthServicePublicJWK(cmd *cobra.Command) *hydra.JsonWebKey {
 	authSrvPubKeyJSON, _ := cmd.Flags().GetString("auth-public-jwk")
-	return hydra.LoadJsonWebKey([]byte(authSrvPubKeyJSON))
+	jwk, err := hydra.LoadJsonWebKey([]byte(authSrvPubKeyJSON))
+	if err != nil {
+		pkg.Must(err, "Error: unable to fetch public key of authorization service - " + err.Error())
+	}
+	return jwk
+}
+
+func getJWKSFromCmd(cmd *cobra.Command) *hydra.JsonWebKeySet {
+	jwksJSON, _ := cmd.Flags().GetString("jwks")
+	jwks, err := hydra.LoadJsonWebKeySet([]byte(jwksJSON))
+	if err != nil {
+		pkg.Must(err, "Error: invalid jwks - " + err.Error())
+	}
+	err = validator.New().Struct(jwks)
+	if err != nil {
+		pkg.Must(err, "Error: invalid jwks - " + err.Error())
+	}
+	return jwks
+}
+
+func getSigningJWKFromCmd(cmd *cobra.Command) *hydra.JsonWebKey {
+	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
+	if signingJwkJSON != "" {
+		jwk, err := hydra.LoadJsonWebKey([]byte(signingJwkJSON))
+		if err != nil {
+			pkg.Must(err, "Error: invalid signing-jwk - " + err.Error())
+		}
+		return jwk
+	}
+	// generate new signing key
+	cPrivKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return &hydra.JsonWebKey{
+		Alg: "ES256",
+		Crv: "P-256",
+		Use: "sig",
+		Kty: "EC",
+		X:   base64.RawURLEncoding.EncodeToString(cPrivKey.X.Bytes()),
+		Y:   base64.RawURLEncoding.EncodeToString(cPrivKey.Y.Bytes()),
+		D:   base64.RawURLEncoding.EncodeToString(cPrivKey.D.Bytes()),
+	}
+}
+
+func hydraJsonWebKeyFromPkgJSONWebKey(key pkg.JSONWebKey) hydra.JsonWebKey {
+	buf, err := key.MarshalJSON()
+	pkg.Must(err, "Error: unable to convert key to JSON Web Key because %s", err)
+	var hydraJwk hydra.JsonWebKey
+	err = json.Unmarshal(buf, &hydraJwk)
+	pkg.Must(err, "Error: unable to convert key to JSON Web Key because %s", err)
+	return hydraJwk
 }

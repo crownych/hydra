@@ -37,12 +37,11 @@ import (
 	"github.com/ory/herodot"
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/oauth2"
-	"github.com/ory/hydra/pkg"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
+	"github.com/ory/hydra/pkg"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestIntrospectorSDK(t *testing.T) {
@@ -53,7 +52,7 @@ func TestIntrospectorSDK(t *testing.T) {
 	l := logrus.New()
 	l.Level = logrus.DebugLevel
 
-	jm := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+	jm := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 	keys, err := (&jwk.RS256Generator{}).Generate("", "sig")
 	require.NoError(t, err)
 	require.NoError(t, jm.AddKeySet(context.TODO(), oauth2.OpenIDConnectKeyName, keys))

@@ -22,7 +22,7 @@ package consent
 
 import (
 	"github.com/ory/hydra/corp104/jwk"
-	"gopkg.in/square/go-jose.v2"
+	"github.com/ory/hydra/pkg"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -44,7 +44,7 @@ import (
 )
 
 func TestLogout(t *testing.T) {
-	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+	keyManager := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 	cs := sessions.NewCookieStore([]byte("secret"))
 	r := httprouter.New()
 
@@ -58,6 +58,7 @@ func TestLogout(t *testing.T) {
 		cs,
 		"https://www.ory.sh",
 		keyManager,
+		"auth.offline",
 	)
 
 	sid := uuid.New()

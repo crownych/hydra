@@ -49,8 +49,7 @@ Example:
 
 func init() {
 	clientsCmd.AddCommand(clientsImportCmd)
-	clientsImportCmd.Flags().String("signing-jwk", "", "REQUIRED. Client's JSON Web Key document representing the client's private key used to sign the software statement")
+	clientsImportCmd.Flags().String("signing-jwk", "", "Client's JSON Web Key document representing the client's private key used to sign the software statement")
 	clientsImportCmd.Flags().String("auth-public-jwk", "", "Give the public key of the Auth Service")
-	clientsImportCmd.MarkFlagRequired("signing-jwk")
 	clientsImportCmd.MarkFlagRequired("auth-public-jwk")
 }

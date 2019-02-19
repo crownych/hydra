@@ -22,22 +22,28 @@ package jwk
 
 import (
 	"context"
+	"github.com/104corp/vip3-go-auth/vip3auth/di"
+	"github.com/ory/hydra/pkg"
+)
 
-	"gopkg.in/square/go-jose.v2"
+var (
+	ActiveJWKFilter    = func(key pkg.JSONWebKey) bool { return key.IsActive() }
+	wellKnownJWKFilter = func(key pkg.JSONWebKey) bool { return !key.IsExpired() }
 )
 
 type Manager interface {
-	AddKey(ctx context.Context, set string, key *jose.JSONWebKey) error
+	di.KeyStore
 
-	AddKeySet(ctx context.Context, set string, keys *jose.JSONWebKeySet) error
+	AddKey(ctx context.Context, set string, key *pkg.JSONWebKey) error
 
-	GetKey(ctx context.Context, set, kid string) (*jose.JSONWebKeySet, error)
+	AddKeySet(ctx context.Context, set string, keys *pkg.JSONWebKeySet) error
 
-	GetKeySet(ctx context.Context, set string) (*jose.JSONWebKeySet, error)
+	GetActualKey(ctx context.Context, set, kid string) (*pkg.JSONWebKeySet, error)
+
+	// 指定 filter 時，只會將回傳 true 的 keys 會加到 JSONWebKeySet 中
+	GetActualKeySet(ctx context.Context, set string, filter... func(pkg.JSONWebKey) bool) (*pkg.JSONWebKeySet, error)
 
 	DeleteKey(ctx context.Context, set, kid string) error
 
 	DeleteKeySet(ctx context.Context, set string) error
-
-	GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error)
 }

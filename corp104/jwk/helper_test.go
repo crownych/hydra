@@ -21,17 +21,18 @@
 package jwk
 
 import (
+	"github.com/ory/hydra/pkg"
+	"gopkg.in/square/go-jose.v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestFindKeyByPrefix(t *testing.T) {
-	jwks := &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		{KeyID: "public:foo"},
-		{KeyID: "private:foo"},
+	jwks := &pkg.JSONWebKeySet{Keys: []pkg.JSONWebKey{
+		{JSONWebKey: jose.JSONWebKey{KeyID: "public:foo"}},
+		{JSONWebKey: jose.JSONWebKey{KeyID: "private:foo"}},
 	}}
 
 	key, err := FindKeyByPrefix(jwks, "public")
@@ -45,9 +46,9 @@ func TestFindKeyByPrefix(t *testing.T) {
 	_, err = FindKeyByPrefix(jwks, "asdf")
 	require.Error(t, err)
 
-	jwks = &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		{KeyID: "public:"},
-		{KeyID: "private:"},
+	jwks = &pkg.JSONWebKeySet{Keys: []pkg.JSONWebKey{
+		{JSONWebKey: jose.JSONWebKey{KeyID: "public:"}},
+		{JSONWebKey: jose.JSONWebKey{KeyID: "private:"}},
 	}}
 
 	key, err = FindKeyByPrefix(jwks, "public")
@@ -61,8 +62,8 @@ func TestFindKeyByPrefix(t *testing.T) {
 	_, err = FindKeyByPrefix(jwks, "asdf")
 	require.Error(t, err)
 
-	jwks = &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		{KeyID: ""},
+	jwks = &pkg.JSONWebKeySet{Keys: []pkg.JSONWebKey{
+		{JSONWebKey: jose.JSONWebKey{KeyID: ""}},
 	}}
 	require.Error(t, err)
 }

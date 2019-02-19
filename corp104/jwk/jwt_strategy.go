@@ -107,7 +107,7 @@ func (j *RS256JWTStrategy) GetPublicKeyID(ctx context.Context) (string, error) {
 }
 
 func (j *RS256JWTStrategy) refresh(ctx context.Context) error {
-	keys, err := j.Manager.GetKeySet(ctx, j.Set)
+	keys, err := j.Manager.GetActualKeySet(ctx, j.Set, ActiveJWKFilter)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (j *ES256JWTStrategy) GetPublicKeyID(ctx context.Context) (string, error) {
 }
 
 func (j *ES256JWTStrategy) refresh(ctx context.Context) error {
-	keys, err := j.Manager.GetKeySet(ctx, j.Set)
+	keys, err := j.Manager.GetActualKeySet(ctx, j.Set, ActiveJWKFilter)
 	if err != nil {
 		return err
 	}

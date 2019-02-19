@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ory/hydra/corp104/jwk"
-	"gopkg.in/square/go-jose.v2"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -125,8 +124,8 @@ func TestStrategy(t *testing.T) {
 	cs := sessions.NewCookieStore([]byte("dummy-secret-yay"))
 	writer := herodot.NewJSONWriter(nil)
 	manager := NewMemoryManager(nil)
-	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
-	handler := NewHandler(writer, manager, cs, "https://www.ory.sh", keyManager)
+	keyManager := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
+	handler := NewHandler(writer, manager, cs, "https://www.ory.sh", keyManager, "auth.offline")
 	router := httprouter.New()
 	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {
 		return h
