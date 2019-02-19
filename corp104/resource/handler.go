@@ -348,7 +348,7 @@ func (h *Handler) processResourceStatement(w http.ResponseWriter, r *http.Reques
 	pkg.SaveSessionValue(r, ResourceCommitCodeSessionKey, commitCode)
 
 	// send email to user
-	sendCommitCode(stmt.Authentication.User, commitCode)
+	pkg.SendCommitCode(stmt.Authentication.User, "Resource註冊確認碼", commitCode)
 	h.H.WriteCode(w, r, http.StatusAccepted, &resp)
 }
 

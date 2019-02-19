@@ -417,7 +417,7 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 		}
 		pkg.SaveSessionValue(r, ClientCommitCodeSessionKey, commitCode)
 		// send email to user
-		sendCommitCode(stmt.Authentication.User, commitCode)
+		pkg.SendCommitCode(stmt.Authentication.User, "Client註冊確認碼", commitCode)
 		h.H.WriteCode(w, r, http.StatusAccepted, &resp)
 	}
 }
