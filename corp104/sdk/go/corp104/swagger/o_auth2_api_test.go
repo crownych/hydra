@@ -40,16 +40,6 @@ func _TestOAuth2API(t *testing.T) {
 		Y:   "-RlN-Kk9VtncQ4Oev5rQGNTvruZ63mz_2XSACU2Jpt8",
 	}
 
-	oauth2Api.Configuration.AuthSvcOfflinePublicJWK = &JsonWebKey{
-		Crv: "P-256",
-		Alg: "ES256",
-		Use: "sig",
-		Kty: "EC",
-		Kid: "public:a7ff59a7-f1a1-4271-a0e1-7fd8ff7fbcbc",
-		X:   "DTg9ZW4tZt-MJGTHw2pKE-FtThCUDg9JVLZBXqCKPw0",
-		Y:   "pL1rAIHXqVru0kygBuv4WF3yFrwsm2lLDQnfBhhvcO0",
-	}
-
 	t.Run("case=get oauth authorization server metadata", func(t *testing.T) {
 		wellKnown, _, err := oauth2Api.GetWellKnown()
 		assert.NoError(t, err)
