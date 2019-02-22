@@ -83,7 +83,8 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 	if len(c.Scope) == 0 {
 		c.Scope = strings.Join(v.DefaultClientScopes, " ")
 	}
-	if err := v.validateScope(c.Scope, validScopes); err != nil {
+	scopes, err := v.validateScope(c.Scope, validScopes)
+	if err != nil {
 		return err
 	}
 
@@ -139,13 +140,6 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 			return err
 		}
 
-		if err := v.checkRequired("response_types", c.ResponseTypes); err != nil {
-			return err
-		}
-		if !(len(c.ResponseTypes) == 2 && hasStrings(c.ResponseTypes, "token", "id_token")) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field response_types should be \"token\" and \"id_token\"."))
-		}
-
 		if c.IdTokenSignedResponseAlgorithm == "" {
 			c.IdTokenSignedResponseAlgorithm = "ES256"
 		}
@@ -182,6 +176,10 @@ func (v *Validator) Validate(c *Client, validScopes []string) error {
 		if len(c.JSONWebKeysURI) == 0 && c.JSONWebKeys == nil && c.TokenEndpointAuthMethod == "private_key_jwt" {
 			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("When token_endpoint_auth_method is \"private_key_jwt\", either jwks or jwks_uri must be set."))
 		}
+	}
+
+	if err := v.validateResponseTypes(scopes, c.GrantTypes, c.ResponseTypes); err != nil {
+		return err
 	}
 
 	return nil
@@ -229,32 +227,67 @@ func validateClientSecret(secret string) error {
 }
 
 func (v *Validator) validateGrantTypes(clientProfile string, grantTypes []string) error {
+	if err := v.checkRequired("grant_types", grantTypes); err != nil {
+		return err
+	}
+
 	if found, dup := hasDuplicates(grantTypes); found {
 		return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate grant_type: %s", dup)))
 	}
 
+	var allowedTypes []string
 	switch clientProfile {
 	case WebClientProfile:
-		allowedTypes := []string{"client_credentials", "urn:ietf:params:oauth:grant-type:jwt-bearer"}
-		if !hasStrings(allowedTypes, grantTypes...) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field grant_types should be %s.", joinStringsWithQuotes(allowedTypes, " or ", `"`))))
-		}
+		allowedTypes = []string{AuthorizationCodeGrantType, ClientCredentialsGrantType, JWTBearerGrantType}
 	case UserAgentBasedClientProfile:
-		if !(len(grantTypes) == 2 && hasStrings(grantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
-		}
+		allowedTypes = []string{AuthorizationCodeGrantType, ImplicitGrantType, JWTBearerGrantType}
 	case NativeClientProfile:
-		if !(len(grantTypes) == 2 && hasStrings(grantTypes, "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer")) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"implicit\" and \"urn:ietf:params:oauth:grant-type:jwt-bearer\"."))
-		}
+		allowedTypes = []string{AuthorizationCodeGrantType, JWTBearerGrantType}
 	case BatchClientProfile:
-		allowedTypes := []string{"client_credentials"}
-		if !hasStrings(allowedTypes, grantTypes...) {
-			return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field grant_types should be \"client_credentials\" only."))
-		}
+		allowedTypes = []string{ClientCredentialsGrantType}
 	default:
 		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Invalid client_profile."))
 	}
+	if !hasStrings(allowedTypes, grantTypes...) {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field grant_types must contain %s.", joinStringsWithQuotes(allowedTypes, " or ", `"`))))
+	}
+
+	return nil
+}
+
+func (v *Validator) validateResponseTypes(scopes []string, grantTypes, responseTypes []string) error {
+	if found, dup := hasDuplicates(responseTypes); found {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate response_type: %s.", dup)))
+	}
+
+	var requiredResponseTypes []string
+
+	if stringslice.Has(scopes, "openid") {
+		requiredResponseTypes = append(requiredResponseTypes, IDTokenResponseType)
+	} else if stringslice.Has(responseTypes, IDTokenResponseType) {
+		return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field scope must contain openid when id_token is defined in response_types."))
+	}
+
+	for _, grantType := range grantTypes {
+		switch grantType {
+		case AuthorizationCodeGrantType:
+			requiredResponseTypes = append(requiredResponseTypes, CodeResponseType)
+			if !stringslice.Has(requiredResponseTypes, TokenResponseType) {
+				requiredResponseTypes = append(requiredResponseTypes, TokenResponseType)
+			}
+		case ImplicitGrantType:
+			if !stringslice.Has(requiredResponseTypes, TokenResponseType) {
+				requiredResponseTypes = append(requiredResponseTypes, TokenResponseType)
+			}
+		}
+	}
+
+	if len(requiredResponseTypes) > 0 {
+		if len(responseTypes) != len(requiredResponseTypes) || !hasStrings(responseTypes, requiredResponseTypes...) {
+			return errors.WithStack(fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Field response_types must contain %s.", joinStringsWithQuotes(requiredResponseTypes, " and ", `"`))))
+		}
+	}
+
 	return nil
 }
 
@@ -282,22 +315,22 @@ func (v *Validator) checkRequired(field string, fieldValue interface{}) error {
 	return errors.WithStack(fosite.ErrInvalidRequest.WithHint("Field " + field + " must be set."))
 }
 
-func (v *Validator) validateScope(requestScopes string, validScopes []string) error {
-	var rs []string
-	for _, s := range strings.Fields(requestScopes) {
+func (v *Validator) validateScope(scope string, validScopes []string) ([]string, error) {
+	var scopes []string
+	for _, s := range strings.Fields(scope) {
 		if s == "" {
 			continue
 		}
 		// 檢查是否有重複的 scope
-		if stringslice.Has(rs, s) {
-			return fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate scope: %s", s))
+		if stringslice.Has(scopes, s) {
+			return nil, fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Duplicate scope: %s", s))
 		} else {
-			rs = append(rs, s)
+			scopes = append(scopes, s)
 		}
 		// 檢查 scope 是否有效
 		if  s != "openid" && !stringslice.Has(validScopes, s) {
-			return fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Invalid scope: %s", s))
+			return nil, fosite.ErrInvalidRequest.WithHint(fmt.Sprintf("Invalid scope: %s", s))
 		}
 	}
-	return nil
+	return scopes, nil
 }

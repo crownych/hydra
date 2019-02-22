@@ -36,18 +36,43 @@ as well.
 
 Example:
   
-  # Public Client
+  # "User-agent-based" Public Client (e.g. Single Page Application)
   hydra clients put \
      --endpoint "http://localhost:4444" \
      --id "a3a89ca9-c54c-4731-8494-6c057a16a14c" \
-     --name "my-app" \
+     --name "SPA" \
      --grant-types "implicit" \
+     --grant-types "urn:ietf:params:oauth:grant-type:jwt-bearer" \
+     --client-uri "http://myapp.com" \
+     --contacts "admin@myapp.com" \
+	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
+     --software-version "0.0.1" \
+     --callbacks "http://myapp.com/oauth/callback" \
+     --response-types "token" \
+     --response-types "id_token" \
+     --scope "openid" \
+     --id-token-signed-response-alg "ES256" \
+     --request-object-signing-alg "ES256" \
+     --token-endpoint-auth-method "private_key_jwt+session" \
+     --client-profile "user-agent-based" \
+     --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
+     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \
+     --user foo.bar \
+     --pwd secret
+
+  # "Native" Public Client (e.g. iOS/Android Mobile APP)
+  hydra clients put \
+     --endpoint "http://localhost:4444" \
+     --id "a3a89ca9-c54c-4731-8494-6c057a16a14d" \
+     --name "MobileAPP" \
+     --grant-types "authorization_code" \
      --grant-types "urn:ietf:params:oauth:grant-type:jwt-bearer" \
      --client-uri "http://myapp.com" \
 	 --contacts "admin@myapp.com" \
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
 	 --software-version "0.0.1" \
      --callbacks "http://myapp.com/oauth/callback" \
+     --response-types "code" \
      --response-types "token" \
      --response-types "id_token" \
      --scope "openid" \
@@ -56,13 +81,36 @@ Example:
 	 --token-endpoint-auth-method "private_key_jwt+session" \
 	 --client-profile "user-agent-based" \
 	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
-     --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
-     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}'
+     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \
+     --user foo.bar \
+     --pwd secret
 
-  # Confidential Client
+  # "Web" Confidential Client (e.g. Web application running on a web server)
   hydra clients put \
      --endpoint "http://localhost:4444" \
      --id "fa3030d2-9e16-4b7d-b27f-381e840175cb" \
+     --name "my-app" \
+     --grant-types "authorization_code" \
+     --grant-types "client_credentials" \
+     --response-types "code" \
+     --response-types "token" \
+     --response-types "id_token" \
+     --scope "openid" \
+     --client-uri "http://myapp.com" \
+     --contacts "admin@myapp.com" \
+     --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
+     --software-version "0.0.1" \
+     --token-endpoint-auth-method "private_key_jwt" \
+     --client-profile "web" \
+     --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
+     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \
+     --user foo.bar \
+     --pwd secret
+
+  # "Batch" Confidential Client
+  hydra clients put \
+     --endpoint "http://localhost:4444" \
+     --id "fa3030d2-9e16-4b7d-b27f-381e840175ce" \
      --name "my-app" \
      --grant-types "client_credentials" \
      --client-uri "http://myapp.com" \
@@ -70,13 +118,11 @@ Example:
 	 --software-id "4d51529c-37cd-424c-ba19-cba742d60903" \
 	 --software-version "0.0.1" \
      --token-endpoint-auth-method "private_key_jwt" \
-	 --client-profile "web" \
-	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \ 
-     --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \ 
-     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \ 
-     --user foo.bar \
+	 --client-profile "batch" \
+	 --jwks '{"keys":[{"use":"sig","kty":"EC","kid":"public:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg"}]}' \
+	 --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \
+	 --user foo.bar \
 	 --pwd secret
-
 
 `,
 	Run: cmdHandler.Clients.PutClient,

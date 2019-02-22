@@ -34,18 +34,20 @@ func TestClient(t *testing.T) {
 	c := &Client{
 		ClientID:                "foo",
 		RedirectURIs:            []string{"foo"},
-		Scope:                   "foo bar",
+		Scope:                   "openid foo bar",
 		TokenEndpointAuthMethod: "private_key_jwt+session",
-		ClientProfile:			 WebClientProfile,
+		GrantTypes:              []string{ImplicitGrantType, JWTBearerGrantType},
+		ResponseTypes:           []string{IDTokenResponseType, TokenResponseType},
+		ClientProfile:			 UserAgentBasedClientProfile,
 	}
 
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
 	assert.EqualValues(t, []byte(c.Secret), c.GetHashedSecret())
-	assert.EqualValues(t, fosite.Arguments{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"}, c.GetGrantTypes())
-	assert.EqualValues(t, fosite.Arguments{"token", "id_token"}, c.GetResponseTypes())
+	assert.EqualValues(t, fosite.Arguments{ImplicitGrantType, JWTBearerGrantType}, c.GetGrantTypes())
+	assert.EqualValues(t, fosite.Arguments{IDTokenResponseType, TokenResponseType}, c.GetResponseTypes())
 	assert.EqualValues(t, c.Owner, c.GetOwner())
 	assert.True(t, c.IsPublic())
-	assert.Len(t, c.GetScopes(), 2)
+	assert.Len(t, c.GetScopes(), 3)
 	assert.EqualValues(t, c.RedirectURIs, c.GetRedirectURIs())
 	assert.EqualValues(t, c.ClientProfile, c.GetClientProfile())
 }

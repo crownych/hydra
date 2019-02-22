@@ -239,6 +239,7 @@ func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2
 		IdTokenSignedResponseAlg: "ES256",
 		RequestObjectSigningAlg:  "ES256",
 		TokenEndpointAuthMethod:  "private_key_jwt+session",
+		Scope:                    "openid",
 		ClientProfile: 			  client.UserAgentBasedClientProfile,
 	}
 }

@@ -37,25 +37,50 @@ import (
 
 func TestValidate(t *testing.T) {
 	v := &Validator{
-		DefaultClientScopes: []string{"openid"},
+		DefaultClientScopes: []string{},
 		SubjectTypes:        []string{"public"},
 	}
 
 	var ecTestKey256, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	for k, tc := range []struct {
+		name      string
 		in        *Client
 		check     func(t *testing.T, c *Client)
 		expectErr bool
 		v         *Validator
 	}{
 		{
-			// public client (user-agent-based application)
+			// public client (user-agent-based application with implicit & jwt-bearer grant types)
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
-				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-				ResponseTypes:                  []string{"token", "id_token"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					UserAgentBasedClientProfile,
+			},
+			check: func(t *testing.T, c *Client) {
+				assert.NotEmpty(t, c.ClientID)
+				assert.NotEmpty(t, c.GetID())
+				assert.Equal(t, c.GetID(), c.ClientID)
+			},
+		},
+		{
+			// public client (user-agent-based application with authorization_code & jwt-bearer grant types)
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{AuthorizationCodeGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{CodeResponseType, TokenResponseType, IDTokenResponseType},
 				Name:                           "SPA",
 				ClientURI:                      "https://localhost/spa",
 				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
@@ -78,9 +103,9 @@ func TestValidate(t *testing.T) {
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
-				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-				ResponseTypes:                  []string{"token", "id_token"},
-				Name:                           "SPA",
+				GrantTypes:                     []string{AuthorizationCodeGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{CodeResponseType, TokenResponseType, IDTokenResponseType},
+				Name:                           "MobileAPP",
 				ClientURI:                      "https://localhost/spa",
 				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
 				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
@@ -98,7 +123,8 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			// confidential client (web application with "urn:ietf:params:oauth:grant-type:jwt-bearer" grant type)
+			// confidential client (web application with jwt-bearer grant type)
+			name: "confidential client (web application with jwt-bearer grant type)",
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -112,7 +138,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
+				GrantTypes:              []string{JWTBearerGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -126,7 +152,8 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			// confidential client (web application with "client_credentials" grant type)
+			// confidential client (web application with client_credentials grant type)
+			name: "confidential client (web application with client_credentials grant type)",
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -140,7 +167,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"client_credentials"},
+				GrantTypes:              []string{ClientCredentialsGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -153,7 +180,7 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			// confidential client (web application with "urn:ietf:params:oauth:grant-type:jwt-bearer" and "client_credentials" grant types)
+			// confidential client (web application with jwt-bearer, client_credentials and authorization_code grant types)
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -167,13 +194,15 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer", "client_credentials"},
+				GrantTypes:              []string{JWTBearerGrantType, ClientCredentialsGrantType, AuthorizationCodeGrantType},
+				ResponseTypes:           []string{IDTokenResponseType, TokenResponseType, CodeResponseType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
 				SoftwareId:              "4d51529c-37cd-424c-ba19-cba742d60903",
 				SoftwareVersion:         "0.0.1",
 				RedirectURIs:            []string{"https://localhost/oauth/cb"},
+				Scope:                   "openid",
 				ClientProfile:			 WebClientProfile,
 			},
 			check: func(t *testing.T, c *Client) {
@@ -195,7 +224,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"client_credentials"},
+				GrantTypes:              []string{ClientCredentialsGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -208,12 +237,92 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
+			// fail when public client (user-agent-based application) with invalid grant_types
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{ClientCredentialsGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					UserAgentBasedClientProfile,
+			},
+			expectErr: true,
+		},
+		{
+			// fail when public client (native application) with invalid grant_types
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{ClientCredentialsGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "MobileAPP",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					NativeClientProfile,
+			},
+			expectErr: true,
+		},
+		{
+			// fail when confidential client (web application) with invalid grant_types
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "MobileAPP",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					WebClientProfile,
+			},
+			expectErr: true,
+		},
+		{
+			// fail when confidential client (batch application) with invalid grant_types
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "MobileAPP",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					BatchClientProfile,
+			},
+			expectErr: true,
+		},
+		{
 			// fail with duplicate scope
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
-				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-				ResponseTypes:                  []string{"token", "id_token"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
 				Name:                           "SPA",
 				ClientURI:                      "https://localhost/spa",
 				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
@@ -224,11 +333,6 @@ func TestValidate(t *testing.T) {
 				TokenEndpointAuthMethod:        "private_key_jwt+session",
 				Scope: 							"openid openid",
 				ClientProfile:					UserAgentBasedClientProfile,
-			},
-			check: func(t *testing.T, c *Client) {
-				assert.NotEmpty(t, c.ClientID)
-				assert.NotEmpty(t, c.GetID())
-				assert.Equal(t, c.GetID(), c.ClientID)
 			},
 			expectErr: true,
 		},
@@ -247,7 +351,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"client_credentials"},
+				GrantTypes:              []string{ClientCredentialsGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -256,7 +360,6 @@ func TestValidate(t *testing.T) {
 				Scope:                   "undefined",
 				ClientProfile:			 WebClientProfile,
 			},
-			check: func(t *testing.T, c *Client) {},
 			expectErr: true,
 		},
 		{
@@ -264,8 +367,8 @@ func TestValidate(t *testing.T) {
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
-				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-				ResponseTypes:                  []string{"token", "id_token"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
 				Name:                           "SPA",
 				ClientURI:                      "https://localhost/spa",
 				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
@@ -276,20 +379,15 @@ func TestValidate(t *testing.T) {
 				TokenEndpointAuthMethod:        "private_key_jwt+session",
 				Scope: 							"openid",
 			},
-			check: func(t *testing.T, c *Client) {
-				assert.NotEmpty(t, c.ClientID)
-				assert.NotEmpty(t, c.GetID())
-				assert.Equal(t, c.GetID(), c.ClientID)
-			},
 			expectErr: true,
 		},
 		{
-			// fail when public client with wrong client profile
+			// fail when public client with invalid client profile
 			in: &Client{
 				ClientID:                       uuid.New(),
 				RedirectURIs:                   []string{"https://localhost/login/cb"},
-				GrantTypes:                     []string{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-				ResponseTypes:                  []string{"token", "id_token"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
 				Name:                           "SPA",
 				ClientURI:                      "https://localhost/spa",
 				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
@@ -301,15 +399,10 @@ func TestValidate(t *testing.T) {
 				Scope: 							"openid",
 				ClientProfile:					WebClientProfile,
 			},
-			check: func(t *testing.T, c *Client) {
-				assert.NotEmpty(t, c.ClientID)
-				assert.NotEmpty(t, c.GetID())
-				assert.Equal(t, c.GetID(), c.ClientID)
-			},
 			expectErr: true,
 		},
 		{
-			// fail when confidential client with wrong client profile
+			// fail when confidential client with invalid client profile
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -323,7 +416,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"client_credentials"},
+				GrantTypes:              []string{ClientCredentialsGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -331,13 +424,10 @@ func TestValidate(t *testing.T) {
 				SoftwareVersion:         "0.0.1",
 				ClientProfile:			 UserAgentBasedClientProfile,
 			},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, c.GetID(), c.ClientID)
-			},
 			expectErr: true,
 		},
 		{
-			// fail when batch client with "urn:ietf:params:oauth:grant-type:jwt-bearer" grant type
+			// fail when batch client with jwt-bearer grant type
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -351,7 +441,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 				TokenEndpointAuthMethod: "private_key_jwt",
-				GrantTypes:              []string{"urn:ietf:params:oauth:grant-type:jwt-bearer", "client_credentials"},
+				GrantTypes:              []string{ClientCredentialsGrantType, JWTBearerGrantType},
 				Name:                    "foo",
 				ClientURI:               "https://localhost/client",
 				Contacts:                []string{"周星馳(星輝海外有限公司)"},
@@ -359,13 +449,52 @@ func TestValidate(t *testing.T) {
 				SoftwareVersion:         "0.0.1",
 				ClientProfile:			 BatchClientProfile,
 			},
-			check: func(t *testing.T, c *Client) {
-				assert.Equal(t, c.GetID(), c.ClientID)
+			expectErr: true,
+		},
+		{
+			// fail when grant_types contains authorization_code and response_types does not contain code
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{AuthorizationCodeGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{TokenResponseType, IDTokenResponseType},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					UserAgentBasedClientProfile,
+			},
+			expectErr: true,
+		},
+		{
+			// fail when grant_types contains implicit and response_types does not contain token
+			in: &Client{
+				ClientID:                       uuid.New(),
+				RedirectURIs:                   []string{"https://localhost/login/cb"},
+				GrantTypes:                     []string{ImplicitGrantType, JWTBearerGrantType},
+				ResponseTypes:                  []string{IDTokenResponseType},
+				Name:                           "SPA",
+				ClientURI:                      "https://localhost/spa",
+				Contacts:                       []string{"周星馳(星輝海外有限公司)"},
+				SoftwareId:                     "4d51529c-37cd-424c-ba19-cba742d60903",
+				SoftwareVersion:                "0.0.1",
+				IdTokenSignedResponseAlgorithm: "ES256",
+				RequestObjectSigningAlgorithm:  "ES256",
+				TokenEndpointAuthMethod:        "private_key_jwt+session",
+				Scope: 							"openid",
+				ClientProfile:					UserAgentBasedClientProfile,
 			},
 			expectErr: true,
 		},
 	} {
-		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
+		//t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case=%d %s", k, tc.name), func(t *testing.T) {
+			fmt.Println(tc.name)
 			if tc.v == nil {
 				tc.v = v
 			}
