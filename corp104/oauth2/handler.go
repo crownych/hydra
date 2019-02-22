@@ -31,6 +31,7 @@ import (
 	"github.com/ory/hydra/corp104/resource"
 
 	jwt2 "github.com/dgrijalva/jwt-go"
+	jwtFosite "github.com/ory/fosite/token/jwt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
@@ -65,6 +66,8 @@ const (
 	CheckSessionPath = "/check-session"
 
 	EndSessionPath = "/oauth2/auth/sessions/login/revoke"
+
+	AuthorizationServerMetadataMIME = "server-metadata+jwt"
 )
 
 type SignedMetadata struct {
@@ -272,12 +275,7 @@ func (h *Handler) WellKnownHandler(w http.ResponseWriter, r *http.Request) {
 		RequestObjectSigningAlgValuesSupported:          []string{"ES256"},
 	}).ToMapClaims()
 
-	metaStrategy := h.OAuthServerMetadataStrategy
-	jwtHeader := &jwt.Headers{}
-	extraHeaders := make(map[string]interface{})
-	pubKeyId, _ := metaStrategy.GetPublicKeyID(r.Context())
-	extraHeaders["kid"] = pubKeyId
-	token, _, _ := metaStrategy.Generate(r.Context(), claims, jwtHeader)
+	token, _, _ := h.OAuthServerMetadataStrategy.Generate(r.Context(), claims, &jwtFosite.Headers{Extra: map[string]interface{}{"typ": AuthorizationServerMetadataMIME}})
 
 	h.H.Write(w, r, &SignedMetadata{token})
 }

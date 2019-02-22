@@ -25,6 +25,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/104corp/vip3-go-auth/vip3auth/token"
 	"github.com/ory/hydra/pkg"
 	"io/ioutil"
 	"net/http"
@@ -363,9 +364,9 @@ func TestUserinfo(t *testing.T) {
 func TestHandlerWellKnown(t *testing.T) {
 	jwkManager := new(jwk.MemoryManager)
 	keySet := "auth.offline"
-	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-offline-jwks", "sig")
+	keys, _ := (&jwk.ECDSA256Generator{}).Generate("test-auth-offline", "sig")
 	jwkManager.AddKeySet(context.TODO(), keySet, keys)
-	metadataStrategy, _ := jwk.NewES256JWTStrategy(jwkManager, keySet)
+	metadataStrategy := token.Vip3ES256JWTStrategy{KeyStore: jwkManager, Set: keySet}
 
 	h := &oauth2.Handler{
 		H:                           herodot.NewJSONWriter(nil),
@@ -415,6 +416,7 @@ func TestHandlerWellKnown(t *testing.T) {
 	// validate & decode
 	dToken, err := metadataStrategy.Decode(context.TODO(), signedMetadataResp.Token)
 	require.NoError(t, err, "problem validating signed_metadata json response: %+v", err)
+	assert.EqualValues(t, oauth2.AuthorizationServerMetadataMIME, dToken.Header["typ"].(string))
 	// compare content
 	claimMap := map[string]interface{}(dToken.Claims.(jwt2.MapClaims))
 	for k, v := range trueConfig {
