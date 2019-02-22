@@ -44,7 +44,6 @@ func TestValidate(t *testing.T) {
 	var ecTestKey256, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	for k, tc := range []struct {
-		name      string
 		in        *Client
 		check     func(t *testing.T, c *Client)
 		expectErr bool
@@ -124,7 +123,6 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			// confidential client (web application with jwt-bearer grant type)
-			name: "confidential client (web application with jwt-bearer grant type)",
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -153,7 +151,6 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			// confidential client (web application with client_credentials grant type)
-			name: "confidential client (web application with client_credentials grant type)",
 			in: &Client{
 				ClientID: uuid.New(),
 				JSONWebKeys: &jose.JSONWebKeySet{
@@ -492,9 +489,7 @@ func TestValidate(t *testing.T) {
 			expectErr: true,
 		},
 	} {
-		//t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
-		t.Run(fmt.Sprintf("case=%d %s", k, tc.name), func(t *testing.T) {
-			fmt.Println(tc.name)
+		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
 			if tc.v == nil {
 				tc.v = v
 			}
