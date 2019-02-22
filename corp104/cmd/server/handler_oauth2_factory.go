@@ -236,20 +236,11 @@ func newOAuth2Handler(c *config.Config, frontend, backend *httprouter.Router, cm
 		AccessTokenStrategy:    c.OAuth2AccessTokenStrategy,
 		//IDTokenLifespan:        c.GetIDTokenLifespan(),
 		ShareOAuth2Debug:            c.SendOAuth2DebugMessagesToClients,
-		OAuthServerMetadataStrategy: initOAuthServerMetadataStrategy(c),
+		OAuthServerMetadataStrategy: token.Vip3ES256JWTStrategy{KeyStore: c.Context().KeyManager, Set: c.GetOfflineJWKSName()},
 		ResourceManager:             rm,
 	}
 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
 	handler.SetRoutes(frontend, backend, corsMiddleware)
 	return handler
-}
-
-// initialize OAuth server metadata JWTStrategy
-func initOAuthServerMetadataStrategy(c *config.Config) jwk.JWTStrategy {
-	// 建立 OAuth2 authorization server metadata strategy
-	metadataStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, c.GetOfflineJWKSName())
-	pkg.Must(err, "Could not fetch private signing key for OAuth 2.0 Authorization Metadata")
-
-	return metadataStrategy
 }

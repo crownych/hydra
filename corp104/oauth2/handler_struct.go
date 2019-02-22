@@ -21,6 +21,7 @@
 package oauth2
 
 import (
+	"github.com/104corp/vip3-go-auth/vip3auth/token"
 	"net/url"
 	"time"
 
@@ -65,6 +66,6 @@ type Handler struct {
 
 	ShareOAuth2Debug bool
 
-	OAuthServerMetadataStrategy jwk.JWTStrategy
+	OAuthServerMetadataStrategy token.Vip3ES256JWTStrategy
 	ResourceManager             resource.Manager
 }
