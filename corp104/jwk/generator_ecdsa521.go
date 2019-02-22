@@ -25,6 +25,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"github.com/ory/hydra/pkg"
 
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ import (
 
 type ECDSA512Generator struct{}
 
-func (g *ECDSA512Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
+func (g *ECDSA512Generator) Generate(id, use string, options ...map[string]interface{}) (*pkg.JSONWebKeySet, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, errors.Errorf("Could not generate key because %s", err)
@@ -43,19 +44,40 @@ func (g *ECDSA512Generator) Generate(id, use string) (*jose.JSONWebKeySet, error
 		id = uuid.New()
 	}
 
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
+	var notBefore, expiresAt *int64
+	if len(options) > 0 {
+		props := options[0]
+		if props["nbf"] != nil {
+			notBefore = props["nbf"].(*int64)
+		}
+		if props["exp"] != nil {
+			expiresAt = props["exp"].(*int64)
+		}
+	}
+
+	return &pkg.JSONWebKeySet{
+		Keys: []pkg.JSONWebKey{
 			{
-				Key:          key,
-				Use:          use,
-				KeyID:        ider("private", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "ES512",
+					Key:          key,
+					Use:          use,
+					KeyID:        ider("private", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 			{
-				Key:          &key.PublicKey,
-				Use:          use,
-				KeyID:        ider("public", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "ES512",
+					Key:          &key.PublicKey,
+					Use:          use,
+					KeyID:        ider("public", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 		},
 	}, nil

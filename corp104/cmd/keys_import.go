@@ -29,9 +29,15 @@ the imported keys will be added to that set. Otherwise, a new set will be create
 
 Please be aware that importing a private key does not automatically import its public key as well.
 
-Examples:
-	hydra keys import my-set ./path/to/jwk.json ./path/to/jwk-2.json
-	hydra keys import my-set ./path/to/rsa.key ./path/to/rsa.pub
+Example:
+
+  hydra keys import my-set ./path/to/jwk.json ./path/to/jwk-2.json \
+     --endpoint "http://localhost:4444" \
+     --use sig \
+     --signing-jwk '{"use":"sig","kty":"EC","kid":"private:89b940e8-a16f-48ce-a238-b52d7e252634","crv":"P-256","alg":"ES256","x":"6yi0V0cyxGVc5fEiu2U2PuZr4TxavTguccdcco1XyuA","y":"kX_biw0hYHyt1qaVP4EbP7WScIu9QyPK0Aj3fXpBRCg","d":"G4ExPHksANQZgLJzElHUGL43The7h0AKJE69qrgcZRo"}' \
+     --auth-public-jwk '{"use":"sig","kty":"EC","kid":"public:7d59b645-94e7-48c5-9f73-695b19294737","crv":"P-256","alg":"ES256","x":"zrt4vi0eIGY6iqAzpmrBqth33xl2D8R0kkp7laLqzYQ","y":"wbKUX4uBMidl840SANrfWPoTNU6YmYgYh-Aj51TrrWI"}' \
+     --user auth.admin \
+     --pwd secret
 `,
 	Run: cmdHandler.Keys.ImportKeys,
 }
@@ -39,4 +45,12 @@ Examples:
 func init() {
 	keysCmd.AddCommand(keysImportCmd)
 	keysImportCmd.Flags().String("use", "sig", "Sets the \"use\" value of the JSON Web Key if not \"use\" value was defined by the key itself")
+	keysImportCmd.Flags().String("signing-jwk", "", "Client's JSON Web Key document representing the client's private key used to sign the keys statement")
+	keysImportCmd.Flags().String("auth-public-jwk", "", "Give the public key of the Auth Service")
+	keysImportCmd.Flags().String("user", "", "Give the AD account")
+	keysImportCmd.Flags().String("pwd", "", "Give the AD account password")
+	// Mark required flags
+	keysImportCmd.MarkFlagRequired("auth-public-jwk")
+	keysImportCmd.MarkFlagRequired("user")
+	keysImportCmd.MarkFlagRequired("pwd")
 }

@@ -71,17 +71,7 @@ func (h *ClientHandler) ImportClients(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	signingJwkJSON, err := cmd.Flags().GetString("signing-jwk")
-	if err != nil {
-		pkg.Must(err, "Please provide client's JSON Web Key document representing signing private key using flag --signing-jwk.")
-	}
-	var signingJwk *hydra.JsonWebKey
-	err = json.Unmarshal([]byte(signingJwkJSON), &signingJwk)
-	if err != nil {
-		fmt.Println("Invalid signing jwk:", err.Error())
-		return
-	}
-	m.Configuration.PrivateJWK = signingJwk
+	m.Configuration.PrivateJWK = getSigningJWKFromCmd(cmd)
 
 	for _, path := range args {
 		reader, err := os.Open(path)
@@ -110,7 +100,8 @@ func (h *ClientHandler) PutClient(cmd *cobra.Command, args []string) {
 	secret, _ := cmd.Flags().GetString("secret")
 
 	endpoint, _ := cmd.Flags().GetString("endpoint")
-	cc, signingJwk := h.getClientFromPutCmd(cmd)
+	cc := h.getClientFromPutCmd(cmd)
+	signingJwk := getSigningJWKFromCmd(cmd)
 	if secret != "" {
 		cc.ClientSecret = secret
 	}
@@ -186,7 +177,7 @@ func (h *ClientHandler) GetClient(cmd *cobra.Command, args []string) {
 	fmt.Printf("%s\n", formatResponse(cl))
 }
 
-func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Client, *hydra.JsonWebKey) {
+func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) hydra.OAuth2Client {
 	responseTypes, _ := cmd.Flags().GetStringSlice("response-types")
 	grantTypes, _ := cmd.Flags().GetStringSlice("grant-types")
 	allowedScopes, _ := cmd.Flags().GetStringSlice("scope")
@@ -203,8 +194,6 @@ func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Cli
 	contacts, _ := cmd.Flags().GetStringSlice("contacts")
 	softwareId, _ := cmd.Flags().GetString("software-id")
 	softwareVersion, _ := cmd.Flags().GetString("software-version")
-	jwksJSON, _ := cmd.Flags().GetString("jwks")
-	signingJwkJSON, _ := cmd.Flags().GetString("signing-jwk")
 	idTokenSignedResponseAlg, _ := cmd.Flags().GetString("id-token-signed-response-alg")
 	requestObjectSigningAlg, _ := cmd.Flags().GetString("request-object-signing-alg")
 	clientProfile, _ := cmd.Flags().GetString("client-profile")
@@ -231,11 +220,7 @@ func (h *ClientHandler) getClientFromPutCmd(cmd *cobra.Command) (hydra.OAuth2Cli
 		ClientProfile:			  clientProfile,
 	}
 
-	if jwksJSON != "" {
-		cc.Jwks = hydra.LoadJsonWebKeySet([]byte(jwksJSON))
-	}
+	cc.Jwks = getJWKSFromCmd(cmd)
 
-	signingJwk := hydra.LoadJsonWebKey([]byte(signingJwkJSON))
-
-	return cc, signingJwk
+	return cc
 }

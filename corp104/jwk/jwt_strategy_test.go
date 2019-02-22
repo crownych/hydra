@@ -21,6 +21,7 @@
 package jwk
 
 import (
+	"github.com/ory/hydra/pkg"
 	"testing"
 
 	"context"
@@ -29,14 +30,13 @@ import (
 	"github.com/ory/fosite/token/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestRS256JWTStrategy(t *testing.T) {
 	testGenerator := &RS256Generator{}
 
 	m := &MemoryManager{
-		Keys: map[string]*jose.JSONWebKeySet{},
+		Keys: map[string]*pkg.JSONWebKeySet{},
 	}
 
 	ks, err := testGenerator.Generate("foo", "sig")
@@ -78,7 +78,7 @@ func TestES256JWTStrategy(t *testing.T) {
 	testGenerator := &ECDSA256Generator{}
 
 	m := &MemoryManager{
-		Keys: map[string]*jose.JSONWebKeySet{},
+		Keys: map[string]*pkg.JSONWebKeySet{},
 	}
 
 	ks, err := testGenerator.Generate("foo", "sig")

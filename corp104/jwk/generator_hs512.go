@@ -23,6 +23,7 @@ package jwk
 import (
 	"crypto/rand"
 	"crypto/x509"
+	"github.com/ory/hydra/pkg"
 	"io"
 
 	"github.com/pborman/uuid"
@@ -32,7 +33,7 @@ import (
 
 type HS512Generator struct{}
 
-func (g *HS512Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
+func (g *HS512Generator) Generate(id, use string, options ...map[string]interface{}) (*pkg.JSONWebKeySet, error) {
 	// Taken from NewHMACKey
 	key := &[32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
@@ -46,14 +47,29 @@ func (g *HS512Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
 
 	var sliceKey = key[:]
 
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
+	var notBefore, expiresAt *int64
+	if len(options) > 0 {
+		props := options[0]
+		if props["nbf"] != nil {
+			notBefore = props["nbf"].(*int64)
+		}
+		if props["exp"] != nil {
+			expiresAt = props["exp"].(*int64)
+		}
+	}
+
+	return &pkg.JSONWebKeySet{
+		Keys: []pkg.JSONWebKey{
 			{
-				Algorithm:    "HS512",
-				Key:          sliceKey,
-				Use:          use,
-				KeyID:        id,
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "HS512",
+					Key:          sliceKey,
+					Use:          use,
+					KeyID:        id,
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 		},
 	}, nil

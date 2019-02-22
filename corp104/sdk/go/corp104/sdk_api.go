@@ -31,13 +31,12 @@ type SDK interface {
 }
 
 type JWKApi interface {
-	CreateJsonWebKeySet(set string, body swagger.JsonWebKeySetGeneratorRequest) (*swagger.JsonWebKeySet, *swagger.APIResponse, error)
+	CommitJsonWebKeySet(cookies map[string]string, commitCode string) (*swagger.CommitKeysResponse, *swagger.APIResponse, error)
 	DeleteJsonWebKey(kid string, set string) (*swagger.APIResponse, error)
 	DeleteJsonWebKeySet(set string) (*swagger.APIResponse, error)
 	GetJsonWebKey(kid string, set string) (*swagger.JsonWebKeySet, *swagger.APIResponse, error)
 	GetJsonWebKeySet(set string) (*swagger.JsonWebKeySet, *swagger.APIResponse, error)
-	UpdateJsonWebKey(kid string, set string, body swagger.JsonWebKey) (*swagger.JsonWebKey, *swagger.APIResponse, error)
-	UpdateJsonWebKeySet(set string, body swagger.JsonWebKeySet) (*swagger.JsonWebKeySet, *swagger.APIResponse, error)
+	PutJsonWebKeySet(set string, body swagger.JsonWebKeySet) (*swagger.PutKeysResponse, *swagger.APIResponse, error)
 }
 
 type OAuth2API interface {

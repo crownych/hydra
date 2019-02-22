@@ -24,6 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"github.com/ory/hydra/pkg"
 
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ type RS256Generator struct {
 	KeyLength int
 }
 
-func (g *RS256Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
+func (g *RS256Generator) Generate(id, use string, options ...map[string]interface{}) (*pkg.JSONWebKeySet, error) {
 	if g.KeyLength < 4096 {
 		g.KeyLength = 4096
 	}
@@ -52,21 +53,41 @@ func (g *RS256Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
 
 	// jose does not support this...
 	key.Precomputed = rsa.PrecomputedValues{}
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
+
+	var notBefore, expiresAt *int64
+	if len(options) > 0 {
+		props := options[0]
+		if props["nbf"] != nil {
+			notBefore = props["nbf"].(*int64)
+		}
+		if props["exp"] != nil {
+			expiresAt = props["exp"].(*int64)
+		}
+	}
+
+	return &pkg.JSONWebKeySet{
+		Keys: []pkg.JSONWebKey{
 			{
-				Algorithm:    "RS256",
-				Key:          key,
-				Use:          use,
-				KeyID:        ider("private", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "RS256",
+					Key:          key,
+					Use:          use,
+					KeyID:        ider("private", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 			{
-				Algorithm:    "RS256",
-				Use:          use,
-				Key:          &key.PublicKey,
-				KeyID:        ider("public", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "RS256",
+					Use:          use,
+					Key:          &key.PublicKey,
+					KeyID:        ider("public", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 		},
 	}, nil

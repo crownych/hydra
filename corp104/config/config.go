@@ -464,6 +464,6 @@ func (c *Config) GetOfflineJWKSName() string {
 	if c.offlineJWKSName != "" {
 		return c.offlineJWKSName
 	}
-	c.offlineJWKSName = "jwk.offline"
+	c.offlineJWKSName = "auth.offline"
 	return c.offlineJWKSName
 }

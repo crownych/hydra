@@ -24,13 +24,12 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *HealthApi* | [**IsInstanceAlive**](docs/HealthApi.md#isinstancealive) | **Get** /health/alive | Check the Alive Status
 *HealthApi* | [**IsInstanceReady**](docs/HealthApi.md#isinstanceready) | **Get** /health/ready | Check the Readiness Status
-*JsonWebKeyApi* | [**CreateJsonWebKeySet**](docs/JsonWebKeyApi.md#createjsonwebkeyset) | **Post** /keys/{set} | Generate a new JSON Web Key
+*JsonWebKeyApi* | [**CommitJsonWebKeySet**](docs/JsonWebKeyApi.md#commitjsonwebkeyset) | **Put** /keys/commit | Commit a JSON Web Key Set
 *JsonWebKeyApi* | [**DeleteJsonWebKey**](docs/JsonWebKeyApi.md#deletejsonwebkey) | **Delete** /keys/{set}/{kid} | Delete a JSON Web Key
 *JsonWebKeyApi* | [**DeleteJsonWebKeySet**](docs/JsonWebKeyApi.md#deletejsonwebkeyset) | **Delete** /keys/{set} | Delete a JSON Web Key Set
 *JsonWebKeyApi* | [**GetJsonWebKey**](docs/JsonWebKeyApi.md#getjsonwebkey) | **Get** /keys/{set}/{kid} | Retrieve a JSON Web Key
 *JsonWebKeyApi* | [**GetJsonWebKeySet**](docs/JsonWebKeyApi.md#getjsonwebkeyset) | **Get** /keys/{set} | Retrieve a JSON Web Key Set
-*JsonWebKeyApi* | [**UpdateJsonWebKey**](docs/JsonWebKeyApi.md#updatejsonwebkey) | **Put** /keys/{set}/{kid} | Update a JSON Web Key
-*JsonWebKeyApi* | [**UpdateJsonWebKeySet**](docs/JsonWebKeyApi.md#updatejsonwebkeyset) | **Put** /keys/{set} | Update a JSON Web Key Set
+*JsonWebKeyApi* | [**PutJsonWebKeySet**](docs/JsonWebKeyApi.md#putjsonwebkeyset) | **Put** /keys | Create or update a JSON Web Key Set
 *MetricsApi* | [**GetPrometheusMetrics**](docs/MetricsApi.md#getprometheusmetrics) | **Get** /metrics/prometheus | Retrieve Prometheus metrics
 *OAuth2Api* | [**AcceptConsentRequest**](docs/OAuth2Api.md#acceptconsentrequest) | **Put** /oauth2/auth/requests/consent/{challenge}/accept | Accept an consent request
 *OAuth2Api* | [**AcceptLoginRequest**](docs/OAuth2Api.md#acceptloginrequest) | **Put** /oauth2/auth/requests/login/{challenge}/accept | Accept an login request
@@ -66,6 +65,8 @@ Class | Method | HTTP request | Description
  - [AcceptLoginRequest](docs/AcceptLoginRequest.md)
  - [AuthenticationSession](docs/AuthenticationSession.md)
  - [CommitClientResponse](docs/CommitClientResponse.md)
+ - [CommitKeysResponse](docs/CommitKeysResponse.md)
+ - [CommitResourceResponse](docs/CommitResourceResponse.md)
  - [CompletedRequest](docs/CompletedRequest.md)
  - [ConsentRequest](docs/ConsentRequest.md)
  - [ConsentRequestSession](docs/ConsentRequestSession.md)
@@ -84,6 +85,8 @@ Class | Method | HTTP request | Description
  - [OpenIdConnectContext](docs/OpenIdConnectContext.md)
  - [PreviousConsentSession](docs/PreviousConsentSession.md)
  - [PutClientResponse](docs/PutClientResponse.md)
+ - [PutKeysResponse](docs/PutKeysResponse.md)
+ - [PutResourceResponse](docs/PutResourceResponse.md)
  - [RawMessage](docs/RawMessage.md)
  - [RejectRequest](docs/RejectRequest.md)
  - [SwaggerFlushInactiveAccessTokens](docs/SwaggerFlushInactiveAccessTokens.md)

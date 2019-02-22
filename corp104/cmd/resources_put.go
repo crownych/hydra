@@ -42,7 +42,6 @@ func init() {
 	resourcesPutCmd.Flags().String("pwd", "", "Give the AD account password")
 	// Mark required flags
 	resourcesPutCmd.MarkFlagRequired("resource-metadata")
-	resourcesPutCmd.MarkFlagRequired("signing-jwk")
 	resourcesPutCmd.MarkFlagRequired("auth-public-jwk")
 	resourcesPutCmd.MarkFlagRequired("user")
 	resourcesPutCmd.MarkFlagRequired("pwd")

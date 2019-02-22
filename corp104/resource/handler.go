@@ -23,7 +23,7 @@ package resource
 import (
 	"context"
 	"encoding/json"
-	"github.com/ory/hydra/jwk"
+	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/pagination"
 	"github.com/pborman/uuid"
@@ -104,7 +104,7 @@ func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
+		h.H.WriteError(w, r, pkg.NewBadRequestError("invalid content: " + err.Error()))
 		return
 	}
 
@@ -164,7 +164,7 @@ func (h *Handler) Commit(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	// get metadata from session and check client should not be public client
+	// get metadata from session
 	metadata := pkg.GetSessionValue(r, ResourceMetadataSessionKey)
 	if metadata == "" {
 		h.H.WriteError(w, r, pkg.NewBadRequestError("metadata not found"))
@@ -348,7 +348,7 @@ func (h *Handler) processResourceStatement(w http.ResponseWriter, r *http.Reques
 	pkg.SaveSessionValue(r, ResourceCommitCodeSessionKey, commitCode)
 
 	// send email to user
-	sendCommitCode(stmt.Authentication.User, commitCode)
+	pkg.SendCommitCode(stmt.Authentication.User, "Resource註冊確認碼", commitCode)
 	h.H.WriteCode(w, r, http.StatusAccepted, &resp)
 }
 

@@ -118,7 +118,6 @@ func init() {
 	clientsPutCmd.MarkFlagRequired("contacts")
 	clientsPutCmd.MarkFlagRequired("software-id")
 	clientsPutCmd.MarkFlagRequired("software-version")
-	clientsPutCmd.MarkFlagRequired("signing-jwk")
 	clientsPutCmd.MarkFlagRequired("auth-public-jwk")
 	clientsPutCmd.MarkFlagRequired("token-endpoint-auth-method")
 	clientsPutCmd.MarkFlagRequired("client-profile")

@@ -26,11 +26,31 @@ import (
 
 // getCmd represents the get command
 var keysGetCmd = &cobra.Command{
-	Use:   "get <set>",
-	Short: "Get a new JSON Web Key Set",
+	Use:   "get <set> <key>",
+	Short: "Get a JSON Web Key Set or a JSON Web Key",
+	Long: `This command retrieves a JSON Web Key Set or a JSON Web Key.
+
+Example:
+
+  # get a JSON Web Key Set
+  hydra keys get my-set \
+     --endpoint "http://localhost:4444" \
+     --user auth.admin \
+     --pwd secret
+
+  # get a JSON Web Key
+  hydra keys get my-set public:123456 \
+     --endpoint "http://localhost:4444" \
+     --user auth.admin \
+     --pwd secret
+`,
 	Run:   cmdHandler.Keys.GetKeys,
 }
 
 func init() {
 	keysCmd.AddCommand(keysGetCmd)
+	keysGetCmd.Flags().String("user", "", "Give the AD account")
+	keysGetCmd.Flags().String("pwd", "", "Give the AD account password")
+	keysGetCmd.MarkFlagRequired("user")
+	keysGetCmd.MarkFlagRequired("pwd")
 }

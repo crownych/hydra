@@ -25,7 +25,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
-
+	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/square/go-jose.v2"
@@ -33,7 +33,7 @@ import (
 
 type ECDSA256Generator struct{}
 
-func (g *ECDSA256Generator) Generate(id, use string) (*jose.JSONWebKeySet, error) {
+func (g *ECDSA256Generator) Generate(id, use string, options ...map[string]interface{}) (*pkg.JSONWebKeySet, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, errors.Errorf("Could not generate key because %s", err)
@@ -43,21 +43,54 @@ func (g *ECDSA256Generator) Generate(id, use string) (*jose.JSONWebKeySet, error
 		id = uuid.New()
 	}
 
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
+	var notBefore, expiresAt *int64
+	if len(options) > 0 {
+		props := options[0]
+		if props["nbf"] != nil {
+			switch nbf := props["nbf"].(type) {
+			case *int64:
+				notBefore = nbf
+			case int64:
+				notBefore = &nbf
+			default:
+				return nil, errors.New("Could not generate key because \"nbf\" is invalid")
+			}
+		}
+		if props["exp"] != nil {
+			switch exp := props["exp"].(type) {
+			case *int64:
+				expiresAt = exp
+			case int64:
+				expiresAt = &exp
+			default:
+				return nil, errors.New("Could not generate key because \"exp\" is invalid")
+			}
+		}
+	}
+
+	return &pkg.JSONWebKeySet{
+		Keys: []pkg.JSONWebKey{
 			{
-				Algorithm:    "ES256",
-				Key:          key,
-				Use:          use,
-				KeyID:        ider("private", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "ES256",
+					Key:          key,
+					Use:          use,
+					KeyID:        ider("private", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 			{
-				Algorithm:    "ES256",
-				Key:          &key.PublicKey,
-				Use:          use,
-				KeyID:        ider("public", id),
-				Certificates: []*x509.Certificate{},
+				JSONWebKey: jose.JSONWebKey{
+					Algorithm:    "ES256",
+					Key:          &key.PublicKey,
+					Use:          use,
+					KeyID:        ider("public", id),
+					Certificates: []*x509.Certificate{},
+				},
+				NotBefore: notBefore,
+				ExpiresAt: expiresAt,
 			},
 		},
 	}, nil

@@ -21,10 +21,9 @@
 package jwk
 
 import (
-	"sync"
-
 	"fmt"
 	"net/http"
+	"sync"
 
 	"context"
 
@@ -35,17 +34,17 @@ import (
 )
 
 type MemoryManager struct {
-	Keys map[string]*jose.JSONWebKeySet
+	Keys map[string]*pkg.JSONWebKeySet
 	sync.RWMutex
 }
 
-func (m *MemoryManager) AddKey(ctx context.Context, set string, key *jose.JSONWebKey) error {
+func (m *MemoryManager) AddKey(ctx context.Context, set string, key *pkg.JSONWebKey) error {
 	m.Lock()
 	defer m.Unlock()
 
 	m.alloc()
 	if m.Keys[set] == nil {
-		m.Keys[set] = &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{}}
+		m.Keys[set] = &pkg.JSONWebKeySet{Keys: []pkg.JSONWebKey{}}
 	}
 
 	for _, k := range m.Keys[set].Keys {
@@ -58,18 +57,39 @@ func (m *MemoryManager) AddKey(ctx context.Context, set string, key *jose.JSONWe
 		}
 	}
 
-	m.Keys[set].Keys = append([]jose.JSONWebKey{*key}, m.Keys[set].Keys...)
+	m.Keys[set].Keys = append([]pkg.JSONWebKey{*key}, m.Keys[set].Keys...)
 	return nil
 }
 
-func (m *MemoryManager) AddKeySet(ctx context.Context, set string, keys *jose.JSONWebKeySet) error {
+func (m *MemoryManager) AddKeySet(ctx context.Context, set string, keys *pkg.JSONWebKeySet) error {
 	for _, key := range keys.Keys {
-		m.AddKey(ctx, set, &key)
+		err := m.AddKey(ctx, set, &key)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (m *MemoryManager) GetKey(ctx context.Context, set, kid string) (*jose.JSONWebKeySet, error) {
+	jwks, err := m.GetActualKey(ctx, set, kid)
+	if err != nil {
+		return nil, err
+	}
+
+	return jwks.ToJoseJSONWebKeySet(), nil
+}
+
+func (m *MemoryManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWebKeySet, error) {
+	jwks, err := m.GetActualKeySet(ctx, set, ActiveJWKFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	return jwks.ToJoseJSONWebKeySet(), nil
+}
+
+func (m *MemoryManager) GetActualKey(ctx context.Context, set, kid string) (*pkg.JSONWebKeySet, error) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -84,12 +104,12 @@ func (m *MemoryManager) GetKey(ctx context.Context, set, kid string) (*jose.JSON
 		return nil, errors.WithStack(pkg.ErrNotFound)
 	}
 
-	return &jose.JSONWebKeySet{
+	return &pkg.JSONWebKeySet{
 		Keys: result,
 	}, nil
 }
 
-func (m *MemoryManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWebKeySet, error) {
+func (m *MemoryManager) GetActualKeySet(ctx context.Context, set string, filter... func(pkg.JSONWebKey) bool) (*pkg.JSONWebKeySet, error) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -97,6 +117,16 @@ func (m *MemoryManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWe
 	keys, found := m.Keys[set]
 	if !found {
 		return nil, errors.WithStack(pkg.ErrNotFound)
+	}
+
+	if len(filter) > 0 {
+		var fKeys []pkg.JSONWebKey
+		for _, key := range keys.Keys {
+			if filter[0](key) {
+				fKeys = append(fKeys, key)
+			}
+		}
+		keys.Keys = fKeys
 	}
 
 	if len(keys.Keys) == 0 {
@@ -107,16 +137,16 @@ func (m *MemoryManager) GetKeySet(ctx context.Context, set string) (*jose.JSONWe
 }
 
 func (m *MemoryManager) DeleteKey(ctx context.Context, set, kid string) error {
-	keys, err := m.GetKeySet(ctx, set)
+	keys, err := m.GetActualKeySet(ctx, set)
 	if err != nil {
 		return err
 	}
 
 	m.Lock()
-	var results []jose.JSONWebKey
+	var results []pkg.JSONWebKey
 	for _, key := range keys.Keys {
 		if key.KeyID != kid {
-			results = append(results)
+			results = append(results, key)
 		}
 	}
 	m.Keys[set].Keys = results
@@ -135,22 +165,6 @@ func (m *MemoryManager) DeleteKeySet(ctx context.Context, set string) error {
 
 func (m *MemoryManager) alloc() {
 	if m.Keys == nil {
-		m.Keys = make(map[string]*jose.JSONWebKeySet)
+		m.Keys = make(map[string]*pkg.JSONWebKeySet)
 	}
-}
-
-func (m *MemoryManager) GetKeysById(ctx context.Context, kid string) (map[string][]jose.JSONWebKey, error) {
-	m.RLock()
-	defer m.RUnlock()
-
-	m.alloc()
-	setKeys := make(map[string][]jose.JSONWebKey)
-	for set, jwks := range m.Keys {
-		keys := jwks.Key(kid)
-		if len(keys) > 0 {
-			setKeys[set] = keys
-		}
-	}
-
-	return setKeys, nil
 }

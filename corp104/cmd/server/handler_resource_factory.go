@@ -30,8 +30,6 @@ import (
 	"github.com/ory/hydra/corp104/client"
 	"github.com/ory/hydra/corp104/config"
 	"github.com/ory/hydra/corp104/resource"
-	"github.com/ory/hydra/jwk"
-	"github.com/ory/hydra/pkg"
 )
 
 func newResourceManager(c *config.Config) resource.Manager {
@@ -55,12 +53,4 @@ func newResourceHandler(c *config.Config, frontend, backend *httprouter.Router, 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)
 	h.SetRoutes(frontend, backend, corsMiddleware)
 	return h
-}
-
-// initialize resources metadata JWTStrategy
-func initResourcesMetadataStrategy(c *config.Config) jwk.JWTStrategy {
-	metadataStrategy, err := jwk.NewES256JWTStrategy(c.Context().KeyManager, c.GetOfflineJWKSName())
-	pkg.Must(err, "Could not fetch private signing key for OAuth 2.0 Resource Metadata")
-
-	return metadataStrategy
 }

@@ -110,6 +110,7 @@ func getOrCreateTLSCertificate(cmd *cobra.Command, c *config.Config) tls.Certifi
 		if err := ctx.KeyManager.DeleteKey(context.TODO(), tlsKeyName, privateKey.KeyID); err != nil {
 			c.GetLogger().WithError(err).Fatalf(`Could not update (delete) the self signed TLS certificate.`)
 		}
+
 		if err := ctx.KeyManager.AddKey(context.TODO(), tlsKeyName, privateKey); err != nil {
 			c.GetLogger().WithError(err).Fatalf(`Could not update (add) the self signed TLS certificate.`)
 		}

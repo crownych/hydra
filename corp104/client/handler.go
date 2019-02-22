@@ -111,7 +111,7 @@ func (h *Handler) SetRoutes(frontend, backend *httprouter.Router, corsMiddleware
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	bodyMap, err := pkg.GetMapFromRequestBody(r)
 	if err != nil {
-		h.H.WriteError(w, r, errors.WithStack(err))
+		h.H.WriteError(w, r, pkg.NewBadRequestError("invalid content: " + err.Error()))
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	h.processSoftwareStatement(w, r, decryptedMsg, authSrvPrivateKey)
 }
 
-// swagger:route PUT /clients oAuth2 commitOAuth2Client
+// swagger:route PUT /clients/commit oAuth2 commitOAuth2Client
 //
 // Create or update an OAuth 2.0 Client
 //
@@ -417,7 +417,7 @@ func (h *Handler) processSoftwareStatement(w http.ResponseWriter, r *http.Reques
 		}
 		pkg.SaveSessionValue(r, ClientCommitCodeSessionKey, commitCode)
 		// send email to user
-		sendCommitCode(stmt.Authentication.User, commitCode)
+		pkg.SendCommitCode(stmt.Authentication.User, "Client註冊確認碼", commitCode)
 		h.H.WriteCode(w, r, http.StatusAccepted, &resp)
 	}
 }

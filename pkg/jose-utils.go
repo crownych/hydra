@@ -17,6 +17,8 @@
 package pkg
 
 import (
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -26,15 +28,129 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jws"
+	"golang.org/x/crypto/ed25519"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"gopkg.in/square/go-jose.v2"
 )
 
-func LoadJSONWebKey(json []byte, pub bool) (*jose.JSONWebKey, error) {
-	var jwk jose.JSONWebKey
+type JSONWebKeySet struct {
+	Keys []JSONWebKey `json:"keys"`
+}
+
+func (s *JSONWebKeySet) Key(kid string) []JSONWebKey {
+	var keys []JSONWebKey
+	for _, key := range s.Keys {
+		if key.KeyID == kid {
+			keys = append(keys, key)
+		}
+	}
+
+	return keys
+}
+
+func (s *JSONWebKeySet) ToJoseJSONWebKeySet() *jose.JSONWebKeySet {
+	var result []jose.JSONWebKey
+	for _, key := range s.Keys {
+		result = append(result, key.JSONWebKey)
+	}
+
+	return &jose.JSONWebKeySet{
+		Keys: result,
+	}
+}
+
+type JSONWebKey struct {
+	jose.JSONWebKey
+
+	// NotBefore is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key is not to be used before.
+	NotBefore *int64 `json:"nbf,omitempty"`
+
+	// ExpiresAt is an integer timestamp, measured in the number of seconds since January 1 1970 UTC, indicating when this key will expire.
+	ExpiresAt *int64 `json:"exp,omitempty"`
+}
+
+func (k *JSONWebKey) IsActive() bool {
+	if k.NotBefore != nil && *k.NotBefore > time.Now().UTC().Unix() {
+		return false
+	}
+	if k.IsExpired() {
+		return false
+	}
+	return true
+}
+
+func (k *JSONWebKey) IsExpired() bool {
+	if k.ExpiresAt != nil && *k.ExpiresAt <= time.Now().UTC().Unix() {
+		return true
+	}
+	return false
+}
+
+// Public creates JSONWebKey with corresponding public key if JWK represents asymmetric private key.
+func (k *JSONWebKey) Public() JSONWebKey {
+	if k.IsPublic() {
+		return *k
+	}
+	ret := *k
+	switch key := k.Key.(type) {
+	case *ecdsa.PrivateKey:
+		ret.Key = key.Public()
+	case *rsa.PrivateKey:
+		ret.Key = key.Public()
+	case ed25519.PrivateKey:
+		ret.Key = key.Public()
+	default:
+		return JSONWebKey{} // returning invalid key
+	}
+	return ret
+}
+
+func (k JSONWebKey) MarshalJSON() ([]byte, error) {
+	buf, err := k.JSONWebKey.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	var kmap map[string]interface{}
+	err = json.Unmarshal(buf, &kmap)
+	if err != nil {
+		return nil, err
+	}
+	if k.NotBefore != nil {
+		kmap["nbf"] = k.NotBefore
+	}
+	if k.ExpiresAt != nil {
+		kmap["exp"] = k.ExpiresAt
+	}
+	return json.Marshal(kmap)
+}
+
+func (k *JSONWebKey) UnmarshalJSON(data []byte) (err error) {
+	err = k.JSONWebKey.UnmarshalJSON(data)
+	if err != nil {
+		return err
+	}
+	var kmap map[string]interface{}
+	err = json.Unmarshal(data, &kmap)
+	if err != nil {
+		return err
+	}
+	if kmap["nbf"] != nil {
+		nbf := int64(kmap["nbf"].(float64))
+		k.NotBefore = &nbf
+	}
+	if kmap["exp"] != nil {
+		exp := int64(kmap["exp"].(float64))
+		k.ExpiresAt = &exp
+	}
+	return
+}
+
+func LoadJSONWebKey(json []byte, pub bool) (*JSONWebKey, error) {
+	var jwk JSONWebKey
 	err := jwk.UnmarshalJSON(json)
 	if err != nil {
 		return nil, err
@@ -73,7 +189,7 @@ func LoadPublicKey(data []byte) (interface{}, error) {
 		return jwk, nil
 	}
 
-	return nil, fmt.Errorf("square/go-jose: parse error, got '%s', '%s' and '%s'", err0, err1, err2)
+	return nil, fmt.Errorf("JOSE: parse error, got '%s', '%s' and '%s'", err0, err1, err2)
 }
 
 // LoadPrivateKey loads a private key from PEM/DER/JWK-encoded data.
@@ -106,7 +222,7 @@ func LoadPrivateKey(data []byte) (interface{}, error) {
 		return jwk, nil
 	}
 
-	return nil, fmt.Errorf("square/go-jose: parse error, got '%s', '%s', '%s' and '%s'", err0, err1, err2, err3)
+	return nil, fmt.Errorf("JOSE: parse error, got '%s', '%s', '%s' and '%s'", err0, err1, err2, err3)
 }
 
 func GetValueFromRequestBody(r *http.Request, field string) ([]byte, error) {
@@ -148,17 +264,6 @@ func ExtractKidFromJWE(compactJwe []byte) (string, error) {
 	serverKeyId = strings.Replace(serverKeyId, "public:", "private:", 1)
 
 	return serverKeyId, nil
-}
-
-func GetElementFromKeySet(setKeys map[string][]jose.JSONWebKey, kid string) (*jose.JSONWebKey, error) {
-	for _, keys := range setKeys {
-		for _, key := range keys {
-			if key.KeyID == kid && !key.IsPublic() {
-				return &key, nil
-			}
-		}
-	}
-	return nil, errors.New("JSONWebKey not found for kid: " + kid)
 }
 
 func VerifyJWSUsingEmbeddedKey(compactJws []byte,
@@ -222,15 +327,19 @@ func GetContentFromJWS(compactJws string) (map[string]interface{}, map[string]in
 	return header, payload, nil
 }
 
-func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, keyValuePairs map[string]interface{}) (string, error) {
+func GenerateResponseJWT(authSrvPrivateKey *jose.JSONWebKey, claims map[string]interface{}, header ...map[string]interface{}) (string, error) {
 	headers := &jws.StandardHeaders{}
 	headers.Set("alg", authSrvPrivateKey.Algorithm)
 	headers.Set("typ", "JWT")
 	headers.Set("kid", strings.Replace(authSrvPrivateKey.KeyID, "private:", "public:", 1))
 
-	claims := make(map[string]interface{})
-	for k, v := range keyValuePairs {
-		claims[k] = v
+	if len(header) > 0 {
+		for k, v := range header[0] {
+			if k == "alg" || k == "kid" {
+				continue
+			}
+			headers.Set(k, v)
+		}
 	}
 
 	payload, err := json.Marshal(claims)
@@ -281,7 +390,7 @@ func DecryptJWEByKid(compactJwe []byte, validKeySet *jose.JSONWebKeySet) ([]byte
 	// Check private key from valid JWKS
 	keys := validKeySet.Key(kid)
 	if keys == nil || len(keys) == 0 {
-		pubKeyId := strings.Replace(kid, "private", "public", 1)
+		pubKeyId := strings.Replace(kid, "private:", "public:", 1)
 		return nil, nil, NewBadRequestError(fmt.Sprintf("invalid public key (kid: %s)", pubKeyId))
 	}
 

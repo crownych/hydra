@@ -22,6 +22,7 @@ package jwk
 
 import (
 	"crypto/rand"
+	"github.com/ory/hydra/pkg"
 	"io"
 	"testing"
 	"time"
@@ -31,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func RandomBytes(n int) ([]byte, error) {
@@ -42,7 +42,7 @@ func RandomBytes(n int) ([]byte, error) {
 	return bytes, nil
 }
 
-func TestHelperManagerKey(m Manager, keys *jose.JSONWebKeySet, suffix string) func(t *testing.T) {
+func TestHelperManagerKey(m Manager, keys *pkg.JSONWebKeySet, suffix string) func(t *testing.T) {
 	pub := keys.Key("public:" + suffix)
 	priv := keys.Key("private:" + suffix)
 
@@ -54,18 +54,18 @@ func TestHelperManagerKey(m Manager, keys *jose.JSONWebKeySet, suffix string) fu
 		err = m.AddKey(context.TODO(), "faz", First(priv))
 		require.NoError(t, err)
 
-		got, err := m.GetKey(context.TODO(), "faz", "private:"+suffix)
+		got, err := m.GetActualKey(context.TODO(), "faz", "private:"+suffix)
 		require.NoError(t, err)
 		assert.Equal(t, priv, got.Keys)
 
 		err = m.AddKey(context.TODO(), "faz", First(pub))
 		require.NoError(t, err)
 
-		got, err = m.GetKey(context.TODO(), "faz", "private:"+suffix)
+		got, err = m.GetActualKey(context.TODO(), "faz", "private:"+suffix)
 		require.NoError(t, err)
 		assert.Equal(t, priv, got.Keys)
 
-		got, err = m.GetKey(context.TODO(), "faz", "public:"+suffix)
+		got, err = m.GetActualKey(context.TODO(), "faz", "public:"+suffix)
 		require.NoError(t, err)
 		assert.Equal(t, pub, got.Keys)
 
@@ -76,10 +76,10 @@ func TestHelperManagerKey(m Manager, keys *jose.JSONWebKeySet, suffix string) fu
 		err = m.AddKey(context.TODO(), "faz", First(pub))
 		require.NoError(t, err)
 
-		_, err = m.GetKey(context.TODO(), "faz", "new-key-id:"+suffix)
+		_, err = m.GetActualKey(context.TODO(), "faz", "new-key-id:"+suffix)
 		require.NoError(t, err)
 
-		keys, err = m.GetKeySet(context.TODO(), "faz")
+		keys, err = m.GetActualKeySet(context.TODO(), "faz")
 		require.NoError(t, err)
 		assert.EqualValues(t, "new-key-id:"+suffix, First(keys.Keys).KeyID)
 
@@ -91,7 +91,7 @@ func TestHelperManagerKey(m Manager, keys *jose.JSONWebKeySet, suffix string) fu
 	}
 }
 
-func TestHelperManagerKeySet(m Manager, keys *jose.JSONWebKeySet, suffix string) func(t *testing.T) {
+func TestHelperManagerKeySet(m Manager, keys *pkg.JSONWebKeySet, suffix string) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Parallel()
 		_, err := m.GetKeySet(context.TODO(), "foo")
@@ -100,7 +100,7 @@ func TestHelperManagerKeySet(m Manager, keys *jose.JSONWebKeySet, suffix string)
 		err = m.AddKeySet(context.TODO(), "bar", keys)
 		require.NoError(t, err)
 
-		got, err := m.GetKeySet(context.TODO(), "bar")
+		got, err := m.GetActualKeySet(context.TODO(), "bar")
 		require.NoError(t, err)
 		assert.Equal(t, keys.Key("public:"+suffix), got.Key("public:"+suffix))
 		assert.Equal(t, keys.Key("private:"+suffix), got.Key("private:"+suffix))

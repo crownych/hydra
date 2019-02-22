@@ -38,12 +38,10 @@ import (
 	"github.com/ory/hydra/mock-dep"
 	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/negroni"
-	"gopkg.in/square/go-jose.v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -76,10 +74,10 @@ func TestClientSDK(t *testing.T) {
 	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
 	viper.Set("TEST_MODE", true)
 	webSessionName := "web_sid"
-	keyManager := &jwk.MemoryManager{Keys: map[string]*jose.JSONWebKeySet{}}
+	keyManager := &jwk.MemoryManager{Keys: map[string]*pkg.JSONWebKeySet{}}
 	authSrvJwks, err := (&jwk.ECDSA256Generator{}).Generate(uuid.New(), "sig")
 	require.NoError(t, err)
-	require.NoError(t, keyManager.AddKeySet(context.TODO(), "jwk.offline", authSrvJwks))
+	require.NoError(t, keyManager.AddKeySet(context.TODO(), "auth.offline", authSrvJwks))
 	ecAuthSrvPubJwk := authSrvJwks.Keys[1].Key.(*ecdsa.PublicKey)
 	authSrvPubJwk := &hydra.JsonWebKey{
 		Kid: authSrvJwks.Keys[1].KeyID,
@@ -114,7 +112,7 @@ func TestClientSDK(t *testing.T) {
 	resourceManager := &resource.MemoryManager{}
 
 	manager := client.NewMemoryManager(nil)
-	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{}, []string{"public"}, keyManager, resourceManager, "http://localhost:4444", "jwk.offline")
+	handler := client.NewHandler(manager, herodot.NewJSONWriter(nil), []string{}, []string{"public"}, keyManager, resourceManager, "http://localhost:4444", "auth.offline")
 
 	router := httprouter.New()
 	handler.SetRoutes(router, router, func(h http.Handler) http.Handler {
@@ -172,7 +170,7 @@ func TestClientSDK(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 			assert.NotEmpty(t, result)
-			sessionCookie := getCookieFromResponse(response)
+			sessionCookie := hydra.GetCookieFromAPIResponse(response)
 			assert.NotEmpty(t, sessionCookie)
 
 			t.Run("case=commit confidential client", func(t *testing.T) {
@@ -180,7 +178,7 @@ func TestClientSDK(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, http.StatusOK, response.StatusCode)
 				require.NotEmpty(t, commitResult.SignedClientCredentials)
-				clientSecret, err := getClientSecretFromSignedCredentials(commitResult.SignedClientCredentials)
+				clientSecret, err := hydra.GetClientSecretFromSignedCredentials(commitResult.SignedClientCredentials)
 				require.NoError(t, err)
 
 				t.Run("case=get client with client credentials", func(t *testing.T) {
@@ -201,7 +199,7 @@ func TestClientSDK(t *testing.T) {
 					require.NoError(t, err)
 					require.EqualValues(t, http.StatusAccepted, response.StatusCode, "%s", response.Payload)
 
-					sessionCookie := getCookieFromResponse(response)
+					sessionCookie := hydra.GetCookieFromAPIResponse(response)
 					assert.NotEmpty(t, sessionCookie)
 
 					_, response, err = c.CommitOAuth2Client(sessionCookie, viper.GetString("COMMIT_CODE"))
@@ -258,25 +256,4 @@ func createTestConfidentialClient(prefix string, pubJwk hydra.JsonWebKey) hydra.
 		Jwks:                    &hydra.JsonWebKeySet{Keys: []hydra.JsonWebKey{pubJwk}},
 		ClientProfile:			 client.WebClientProfile,
 	}
-}
-
-func getClientSecretFromSignedCredentials(signedCredentials string) (string, error) {
-	_, payload, err := pkg.GetContentFromJWS(signedCredentials)
-	if err != nil {
-		return "", nil
-	}
-	clientSecret := payload["client_secret"]
-	if clientSecret == "" {
-		return "", errors.New("empty client secret")
-	}
-	return clientSecret.(string), nil
-}
-
-func getCookieFromResponse(response *hydra.APIResponse) map[string]string {
-	respCookies := response.Cookies()
-	sessionCookie := map[string]string{}
-	for _, respCookie := range respCookies {
-		sessionCookie[respCookie.Name] = respCookie.Value
-	}
-	return sessionCookie
 }

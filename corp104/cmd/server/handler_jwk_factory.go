@@ -57,6 +57,8 @@ func newJWKHandler(c *config.Config, frontend, backend *httprouter.Router, o fos
 		nil,
 		w,
 		wellKnown,
+		c.Issuer,
+		c.GetOfflineJWKSName(),
 	)
 
 	corsMiddleware := newCORSMiddleware(viper.GetString("CORS_ENABLED") == "true", c, corsx.ParseOptions(), o.IntrospectToken, clm.GetConcreteClient)

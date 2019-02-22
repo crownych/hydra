@@ -22,11 +22,12 @@ package jwk
 
 import (
 	"fmt"
+	"github.com/ory/hydra/pkg"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestGenerator(t *testing.T) {
@@ -34,69 +35,137 @@ func TestGenerator(t *testing.T) {
 		t.SkipNow()
 	}
 
+	nbf := time.Now().UTC().Unix()
+	exp := nbf + 3600
+
 	for k, c := range []struct {
 		g     KeyGenerator
 		use   string
-		check func(*jose.JSONWebKeySet)
+		check func(*pkg.JSONWebKeySet)
+		options map[string]interface{}
 	}{
 		{
 			g:   &RS256Generator{},
 			use: "sig",
-			check: func(ks *jose.JSONWebKeySet) {
-				assert.Len(t, ks, 2)
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
 				assert.NotEmpty(t, ks.Keys[0].Key)
 				assert.NotEmpty(t, ks.Keys[1].Key)
 				assert.Equal(t, "sig", ks.Keys[0].Use)
 				assert.Equal(t, "sig", ks.Keys[1].Use)
 			},
+			options: nil,
 		},
 		{
 			g:   &ECDSA512Generator{},
 			use: "enc",
-			check: func(ks *jose.JSONWebKeySet) {
-				assert.Len(t, ks, 2)
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
 				assert.NotEmpty(t, ks.Keys[0].Key)
 				assert.NotEmpty(t, ks.Keys[1].Key)
 				assert.Equal(t, "enc", ks.Keys[0].Use)
 				assert.Equal(t, "enc", ks.Keys[1].Use)
+			},
+			options: nil,
+		},
+		{
+			g:   &ECDSA256Generator{},
+			use: "sig",
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
+				assert.NotEmpty(t, ks.Keys[0].Key)
+				assert.NotEmpty(t, ks.Keys[1].Key)
+				assert.Equal(t, "sig", ks.Keys[0].Use)
+				assert.Equal(t, "sig", ks.Keys[1].Use)
+				assert.Nil(t, ks.Keys[0].NotBefore)
+				assert.Nil(t, ks.Keys[1].NotBefore)
+				assert.Nil(t, ks.Keys[0].ExpiresAt)
+				assert.Nil(t, ks.Keys[1].ExpiresAt)
+			},
+			options: nil,
+		},
+		{
+			g:   &ECDSA256Generator{},
+			use: "sig",
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
+				assert.NotEmpty(t, ks.Keys[0].Key)
+				assert.NotEmpty(t, ks.Keys[1].Key)
+				assert.Equal(t, "sig", ks.Keys[0].Use)
+				assert.Equal(t, "sig", ks.Keys[1].Use)
+				assert.Nil(t, ks.Keys[0].NotBefore)
+				assert.Nil(t, ks.Keys[1].NotBefore)
+				assert.Nil(t, ks.Keys[0].ExpiresAt)
+				assert.Nil(t, ks.Keys[1].ExpiresAt)
+			},
+			options: map[string]interface{}{
+				"nbf": nil,
+				"exp": nil,
 			},
 		},
 		{
 			g:   &ECDSA256Generator{},
 			use: "sig",
-			check: func(ks *jose.JSONWebKeySet) {
-				assert.Len(t, ks, 2)
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
 				assert.NotEmpty(t, ks.Keys[0].Key)
 				assert.NotEmpty(t, ks.Keys[1].Key)
 				assert.Equal(t, "sig", ks.Keys[0].Use)
 				assert.Equal(t, "sig", ks.Keys[1].Use)
+				assert.Equal(t, nbf, *ks.Keys[0].NotBefore)
+				assert.Equal(t, nbf, *ks.Keys[1].NotBefore)
+				assert.Equal(t, exp, *ks.Keys[0].ExpiresAt)
+				assert.Equal(t, exp, *ks.Keys[1].ExpiresAt)
+			},
+			options: map[string]interface{}{
+				"nbf": &nbf,
+				"exp": &exp,
+			},
+		},
+		{
+			g:   &ECDSA256Generator{},
+			use: "sig",
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 2)
+				assert.NotEmpty(t, ks.Keys[0].Key)
+				assert.NotEmpty(t, ks.Keys[1].Key)
+				assert.Equal(t, "sig", ks.Keys[0].Use)
+				assert.Equal(t, "sig", ks.Keys[1].Use)
+				assert.Equal(t, nbf, *ks.Keys[0].NotBefore)
+				assert.Equal(t, nbf, *ks.Keys[1].NotBefore)
+				assert.Equal(t, exp, *ks.Keys[0].ExpiresAt)
+				assert.Equal(t, exp, *ks.Keys[1].ExpiresAt)
+			},
+			options: map[string]interface{}{
+				"nbf": nbf,
+				"exp": exp,
 			},
 		},
 		{
 			g:   &HS256Generator{},
 			use: "sig",
-			check: func(ks *jose.JSONWebKeySet) {
-				assert.Len(t, ks, 1)
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 1)
 				assert.NotEmpty(t, ks.Keys[0].Key)
 				assert.Equal(t, "sig", ks.Keys[0].Use)
-				assert.Equal(t, "sig", ks.Keys[1].Use)
 			},
+			options: nil,
 		},
 		{
 			g:   &HS512Generator{},
 			use: "enc",
-			check: func(ks *jose.JSONWebKeySet) {
-				assert.Len(t, ks, 1)
+			check: func(ks *pkg.JSONWebKeySet) {
+				assert.Len(t, ks.Keys, 1)
 				assert.NotEmpty(t, ks.Keys[0].Key)
 				assert.Equal(t, "enc", ks.Keys[0].Use)
-				assert.Equal(t, "enc", ks.Keys[1].Use)
 			},
+			options: nil,
 		},
 	} {
 		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
-			keys, err := c.g.Generate("foo", c.use)
+			keys, err := c.g.Generate("foo", c.use, c.options)
 			require.NoError(t, err)
-			if err != nil {
+			if err == nil {
 				c.check(keys)
 			}
 		})

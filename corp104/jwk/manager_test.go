@@ -141,7 +141,7 @@ func TestManagerRotate(t *testing.T) {
 			require.Error(t, err)
 
 			m.Cipher = newCipher
-			got, err := m.GetKeySet(context.TODO(), "TestManagerRotate")
+			got, err := m.GetActualKeySet(context.TODO(), "TestManagerRotate")
 			require.NoError(t, err)
 
 			for _, key := range ks.Keys {

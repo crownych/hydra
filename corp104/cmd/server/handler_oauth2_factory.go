@@ -22,6 +22,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/pborman/uuid"
 	"net/url"
 	"strings"
 	"time"
@@ -45,7 +46,6 @@ import (
 	"github.com/ory/hydra/corp104/resource"
 	"github.com/ory/hydra/pkg"
 	"github.com/ory/hydra/tracing"
-	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
 )
 
@@ -60,12 +60,12 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 	var store = ctx.FositeStore
 	expectDependency(c.GetLogger(), ctx.FositeStore)
 
-	kid := uuid.New()
-	if _, err := createOrGetJWK(c, oauth2.OpenIDConnectKeyName, kid, "private"); err != nil {
+	privKey, err := createOrGetJWK(c, oauth2.OpenIDConnectKeyName, uuid.New(), "private")
+	if err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch private signing key for OpenID Connect - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 	}
 
-	if _, err := createOrGetJWK(c, oauth2.OpenIDConnectKeyName, kid, "public"); err != nil {
+	if _, err := createOrGetJWK(c, oauth2.OpenIDConnectKeyName, privKey.KeyID, "public"); err != nil {
 		c.GetLogger().WithError(err).Fatalf(`Could not fetch public signing key for OpenID Connect - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 	}
 
@@ -95,12 +95,12 @@ func newOAuth2Provider(c *config.Config) fosite.OAuth2Provider {
 	var coreStrategy foauth2.CoreStrategy
 	hmacStrategy := compose.NewOAuth2HMACStrategy(fc, c.GetSystemSecret(), nil)
 	if c.OAuth2AccessTokenStrategy == "jwt" {
-		kid := uuid.New()
-		if _, err := createOrGetJWK(c, oauth2.OAuth2JWTKeyName, kid, "private"); err != nil {
+		privKey, err := createOrGetJWK(c, oauth2.OAuth2JWTKeyName, uuid.New(), "private")
+		if err != nil {
 			c.GetLogger().WithError(err).Fatalf(`Could not fetch private signing key for OAuth 2.0 Access Tokens - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 		}
 
-		if _, err := createOrGetJWK(c, oauth2.OAuth2JWTKeyName, kid, "public"); err != nil {
+		if _, err := createOrGetJWK(c, oauth2.OAuth2JWTKeyName, privKey.KeyID, "public"); err != nil {
 			c.GetLogger().WithError(err).Fatalf(`Could not fetch public signing key for OAuth 2.0 Access Tokens - did you forget to run "hydra migrate sql" or forget to set the SYSTEM_SECRET?`)
 		}
 
