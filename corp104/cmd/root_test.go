@@ -55,15 +55,16 @@ func init() {
 	os.Setenv("DATABASE_URL", "memory")
 	//os.Setenv("HYDRA_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
 	os.Setenv("OAUTH2_ISSUER_URL", fmt.Sprintf("https://localhost:%d/", frontendPort))
-	os.Setenv("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
 }
 
 func TestExecute(t *testing.T) {
-	viper.Set("ADMIN_USERS", "auth.admin")
-	viper.Set("TEST_MODE", true)
-	// start mock server
 	err := mock_dep.StartMockServer()
 	require.NoError(t, err)
+	defer mock_dep.StopMockServer()
+
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
+	viper.Set("ADMIN_USERS", "auth.admin")
+	viper.Set("TEST_MODE", true)
 
 	var osArgs = make([]string, len(os.Args))
 	copy(osArgs, os.Args)
@@ -167,7 +168,4 @@ func TestExecute(t *testing.T) {
 			}
 		})
 	}
-
-	// stop mock server
-	mock_dep.StopMockServer()
 }

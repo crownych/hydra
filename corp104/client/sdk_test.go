@@ -71,6 +71,11 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 }
 
 func TestClientSDK(t *testing.T) {
+	err := mock_dep.StartMockServer()
+	require.NoError(t, err)
+	defer mock_dep.StopMockServer()
+
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
 	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
 	viper.Set("TEST_MODE", true)
 	webSessionName := "web_sid"
@@ -133,11 +138,6 @@ func TestClientSDK(t *testing.T) {
 	c.Configuration.PrivateJWK = cPrivJwk
 	c.Configuration.AuthSvcOfflinePublicJWK = authSrvPubJwk
 	handler.IssuerURL = server.URL
-
-	// start mock server
-	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
-	err = mock_dep.StartMockServer()
-	require.NoError(t, err)
 
 	t.Run("case=public client is created", func(t *testing.T) {
 		createClient := createTestPublicClient("", cPubJwk)
@@ -220,9 +220,6 @@ func TestClientSDK(t *testing.T) {
 			})
 		})
 	})
-
-	// stop mock server
-	mock_dep.StopMockServer()
 }
 
 func createTestPublicClient(prefix string, pubJwk hydra.JsonWebKey) hydra.OAuth2Client {

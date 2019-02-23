@@ -2,12 +2,14 @@ package mock_dep
 
 import (
 	"context"
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/phayes/freeport"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -61,15 +63,30 @@ func StartMockServer() error {
 		return err
 	}
 
-	// waiting for the server to start
-	time.Sleep(5 * time.Second)
+	waitForServerReady()
 
 	return nil
 }
 
 func StopMockServer() error {
-	timeout := 5 * time.Second
-	return cli.ContainerStop(ctx, containerID, &timeout)
+	return removeContainer()
+}
+
+func waitForServerReady() {
+	for w := 0; w < 5; w++ {
+		if isServerReady() {
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func isServerReady() bool {
+	res, _ := http.Get(fmt.Sprintf("http://localhost:%d/__admin/", port))
+	if res != nil && res.StatusCode == http.StatusOK {
+		return true
+	}
+	return false
 }
 
 func pullImage() error {
@@ -123,4 +140,8 @@ func createContainer() error {
 
 func startContainer() error {
 	return cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+}
+
+func removeContainer() error {
+	return cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{RemoveVolumes: true, RemoveLinks: false, Force: true})
 }
