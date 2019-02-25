@@ -68,8 +68,8 @@ type Client struct {
 	RedirectURIs []string `json:"redirect_uris"`
 
 	// GrantTypes is an array of grant types the client is allowed to use.
-	// Public Client 必須是 ["implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer", "authorize_code"].
-	// Confidential Client 必須是 ["urn:ietf:params:oauth:grant-type:jwt-bearer", "authorize_code"].
+	// Public Client 必須是 ["implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer", "authorization_code"].
+	// Confidential Client 必須是 ["urn:ietf:params:oauth:grant-type:jwt-bearer", "authorization_code"].
 	GrantTypes []string `json:"grant_types"`
 
 	// ResponseTypes is an array of the OAuth 2.0 response type strings that the client can

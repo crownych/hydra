@@ -54,7 +54,7 @@ func createTestClient(prefix string) hydra.OAuth2Client {
 		ClientSecret:              prefix + "secret",
 		ClientUri:                 prefix + "uri",
 		Contacts:                  []string{prefix + "peter", prefix + "pan"},
-		GrantTypes:                []string{prefix + "client_credentials", prefix + "authorize_code"},
+		GrantTypes:                []string{prefix + "client_credentials", prefix + "authorization_code"},
 		LogoUri:                   prefix + "logo",
 		Owner:                     prefix + "an-owner",
 		PolicyUri:                 prefix + "policy-uri",

@@ -41,7 +41,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "1-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public) VALUES ('1-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true)`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public) VALUES ('1-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true)`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='1-data'`,
@@ -50,7 +50,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "2-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at) VALUES ('2-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0)`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at) VALUES ('2-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0)`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='2-data'`,
@@ -59,7 +59,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "3-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('3-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0, 'http://sector', '{"keys": []}', 'http://jwks', 'client_secret', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('3-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0, 'http://sector', '{"keys": []}', 'http://jwks', 'client_secret', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='3-data'`,
@@ -68,7 +68,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "4-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('4-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0, 'http://sector', '{"keys": []}', 'http://jwks', 'client_secret', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, public, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('4-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', true, 0, 'http://sector', '{"keys": []}', 'http://jwks', 'client_secret', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='4-data'`,
@@ -77,7 +77,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "5-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('5-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg) VALUES ('5-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='5-data'`,
@@ -86,7 +86,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "6-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('6-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
+			`INSERT INTO hydra_client (id, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('6-data', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='6-data'`,
@@ -95,7 +95,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "7-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('7-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
+			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('7-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='7-data'`,
@@ -104,7 +104,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "8-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('8-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
+			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type) VALUES ('8-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'rs256', 'rs526', 'public')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='8-data'`,
@@ -113,7 +113,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "9-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type, software_id, software_version, id_token_signed_response_alg, client_profile) VALUES ('9-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'ES256', 'ES526', 'public', '4d51529c-37cd-424c-ba19-cba742d60903', '0.0.1', 'ES256', 'user-agent-based')`,
+			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type, software_id, software_version, id_token_signed_response_alg, client_profile) VALUES ('9-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'ES256', 'ES526', 'public', '4d51529c-37cd-424c-ba19-cba742d60903', '0.0.1', 'ES256', 'user-agent-based')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='9-data'`,
@@ -122,7 +122,7 @@ var createClientMigrations = []*migrate.Migration{
 	{
 		Id: "10-data",
 		Up: []string{
-			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type, software_id, software_version, id_token_signed_response_alg, client_profile) VALUES ('10-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorize_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'ES256', 'ES526', 'public', '4d51529c-37cd-424c-ba19-cba742d60903', '0.0.1', 'ES256', 'user-agent-based')`,
+			`INSERT INTO hydra_client (id, allowed_cors_origins, client_name, client_secret, redirect_uris, grant_types, response_types, scope, owner, policy_uri, tos_uri, client_uri, logo_uri, contacts, client_secret_expires_at, sector_identifier_uri, jwks, jwks_uri, token_endpoint_auth_method, request_uris, request_object_signing_alg, userinfo_signed_response_alg, subject_type, software_id, software_version, id_token_signed_response_alg, client_profile) VALUES ('10-data', 'http://localhost|http://google', 'some-client', 'abcdef', 'http://localhost|http://google', 'authorization_code|implicit', 'token|id_token', 'foo|bar', 'aeneas', 'http://policy', 'http://tos', 'http://client', 'http://logo', 'aeneas|foo', 0, 'http://sector', '{"keys": []}', 'http://jwks', 'none', 'http://uri1|http://uri2', 'ES256', 'ES526', 'public', '4d51529c-37cd-424c-ba19-cba742d60903', '0.0.1', 'ES256', 'user-agent-based')`,
 		},
 		Down: []string{
 			`DELETE FROM hydra_client WHERE id='10-data'`,
