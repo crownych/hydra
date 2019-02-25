@@ -14,7 +14,7 @@ import (
 	"github.com/ory/hydra/corp104/jwk"
 	"github.com/ory/hydra/corp104/resource"
 	hydra "github.com/ory/hydra/corp104/sdk/go/corp104/swagger"
-	"github.com/ory/hydra/mock-dep"
+	mock_dep "github.com/ory/hydra/mock-dep"
 	"github.com/ory/hydra/pkg"
 	"github.com/pborman/uuid"
 	"github.com/spf13/viper"
@@ -27,6 +27,11 @@ import (
 )
 
 func TestResourceSDK(t *testing.T) {
+	err := mock_dep.StartMockServer()
+	require.NoError(t, err)
+	defer mock_dep.StopMockServer()
+
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
 	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
 	viper.Set("TEST_MODE", true)
 	webSessionName := "web_sid"
@@ -87,11 +92,6 @@ func TestResourceSDK(t *testing.T) {
 	c.Configuration.PrivateJWK = cPrivJwk
 	c.Configuration.AuthSvcOfflinePublicJWK = authSrvPubJwk
 	handler.IssuerURL = server.URL
-
-	// start mock server
-	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
-	err = mock_dep.StartMockServer()
-	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		name	 string
@@ -178,9 +178,6 @@ func TestResourceSDK(t *testing.T) {
 			})
 		})
 	}
-
-	// stop mock server
-	mock_dep.StopMockServer()
 }
 
 func createRestResource(pubJwk hydra.JsonWebKey) hydra.OAuth2Resource {

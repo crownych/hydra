@@ -28,14 +28,25 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-// client profiles
-const WebClientProfile = "web"
-const UserAgentBasedClientProfile = "user-agent-based"
-const NativeClientProfile = "native"
-const BatchClientProfile = "batch"
+const (
+	WebClientProfile = "web"
+	UserAgentBasedClientProfile = "user-agent-based"
+	NativeClientProfile = "native"
+	BatchClientProfile = "batch"
+
+	AuthorizationCodeGrantType = "authorization_code"
+	ImplicitGrantType = "implicit"
+	ClientCredentialsGrantType = "client_credentials"
+	JWTBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+
+	CodeResponseType = "code"
+	IDTokenResponseType = "id_token"
+	TokenResponseType = "token"
+)
 
 var PublicClientProfiles = []string{UserAgentBasedClientProfile, NativeClientProfile}
 var ConfidentialClientProfiles = []string{WebClientProfile, BatchClientProfile}
+
 
 // Client represents an OAuth 2.0 Client.
 //
@@ -57,8 +68,8 @@ type Client struct {
 	RedirectURIs []string `json:"redirect_uris"`
 
 	// GrantTypes is an array of grant types the client is allowed to use.
-	// Public Client 必須是 ["implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"].
-	// Confidential Client 必須是 ["urn:ietf:params:oauth:grant-type:jwt-bearer"].
+	// Public Client 必須是 ["implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer", "authorization_code"].
+	// Confidential Client 必須是 ["urn:ietf:params:oauth:grant-type:jwt-bearer", "authorization_code"].
 	GrantTypes []string `json:"grant_types"`
 
 	// ResponseTypes is an array of the OAuth 2.0 response type strings that the client can
@@ -194,17 +205,7 @@ func (c *Client) GetGrantTypes() fosite.Arguments {
 	// JSON array containing a list of the OAuth 2.0 Grant Types that the Client is declaring
 	// that it will restrict itself to using.
 	if len(c.GrantTypes) == 0 {
-		if c.IsPublic() {
-			return fosite.Arguments{"implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer"}
-		} else if c.GetClientProfile() == WebClientProfile {
-			if len(c.RedirectURIs) == 0 {
-				return fosite.Arguments{"client_credentials"}
-			} else {
-				return fosite.Arguments{"urn:ietf:params:oauth:grant-type:jwt-bearer"}
-			}
-		} else if c.GetClientProfile() == BatchClientProfile {
-			return fosite.Arguments{"client_credentials"}
-		}
+		return fosite.Arguments{AuthorizationCodeGrantType}
 	}
 	return fosite.Arguments(c.GrantTypes)
 }
@@ -214,8 +215,8 @@ func (c *Client) GetResponseTypes() fosite.Arguments {
 	//
 	// <JSON array containing a list of the OAuth 2.0 response_type values that the Client is declaring
 	// that it will restrict itself to using.
-	if len(c.ResponseTypes) == 0 && c.IsPublic() {
-		return fosite.Arguments{"token", "id_token"}
+	if len(c.ResponseTypes) == 0 {
+		return fosite.Arguments{CodeResponseType, TokenResponseType}
 	}
 	return fosite.Arguments(c.ResponseTypes)
 }
@@ -259,5 +260,8 @@ func (c *Client) GetRequestURIs() []string {
 }
 
 func (c *Client) GetClientProfile() string {
+	if c.ClientProfile == "" {
+		return WebClientProfile
+	}
 	return c.ClientProfile
 }

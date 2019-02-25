@@ -687,7 +687,7 @@ func _TestAuthCodeWithDefaultStrategy(t *testing.T) {
 	}
 }
 
-// TestAuthCodeWithMockStrategy runs the authorize_code flow against various ConsentStrategy scenarios.
+// TestAuthCodeWithMockStrategy runs the authorization_code flow against various ConsentStrategy scenarios.
 // For that purpose, the consent strategy is mocked so all scenarios can be applied properly. This test suite checks:
 //
 // - [x] should pass request if strategy passes

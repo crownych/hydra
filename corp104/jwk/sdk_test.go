@@ -46,6 +46,15 @@ import (
 )
 
 func TestJWKSDK(t *testing.T) {
+	err := mock_dep.StartMockServer()
+	require.NoError(t, err)
+	defer mock_dep.StopMockServer()
+
+	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
+	viper.Set("ADMIN_USERS", "auth.admin")
+	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
+	viper.Set("TEST_MODE", true)
+
 	webSessionName := "web_sid"
 	authOfflineJWKSName := "auth.offline"
 
@@ -98,15 +107,6 @@ func TestJWKSDK(t *testing.T) {
 	client.Configuration.PrivateJWK = cPrivJwk
 	client.Configuration.AuthSvcOfflinePublicJWK = authSrvPubJwk
 	h.IssuerURL = server.URL
-
-	// start mock server
-	err = mock_dep.StartMockServer()
-	require.NoError(t, err)
-	viper.Set("AD_LOGIN_URL", fmt.Sprintf("http://localhost:%d/ad/login", mock_dep.GetPort()))
-
-	viper.Set("ADMIN_USERS", "auth.admin")
-	viper.Set("EMAIL_SERVICE_URL", "http://localhost:10025")
-	viper.Set("TEST_MODE", true)
 
 	t.Run("JWK Set", func(t *testing.T) {
 		client.Configuration.ADUsername = "auth.admin"
