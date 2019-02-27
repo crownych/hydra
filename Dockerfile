@@ -26,8 +26,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -X github.com/or
 
 #CMD ["serve", "all"]
 
-RUN ln ./hydra /usr/bin/hydra \
-  && chmod a+x ./start-all.sh \
-  && chmod a+x ./start-public.sh \
-  && chmod a+x ./start-admin.sh
+RUN ln ./hydra /usr/bin/hydra
+
 CMD ["/bin/sh", "-c", "./start-all.sh"]
