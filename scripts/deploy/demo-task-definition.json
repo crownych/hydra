@@ -1,0 +1,203 @@
+{
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "1024",
+    "containerDefinitions": [
+        {
+            "name": "entry_point",
+            "image": "$$ECR_URI_TAG_CUSTOM$$",
+            "essential": true,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "portMappings": [
+                {
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "containerPort": 80
+                }
+            ],
+            "command": [
+                "/bin/sh",
+                "-c",
+                "./start-all.sh"
+            ],
+            "cpu": 0,
+            "secrets": [
+                {
+                    "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNT_ID$$:parameter/$$ECS_SERVICE$$/OIDC_SUBJECT_TYPE_PAIRWISE_SALT"
+                },
+                {
+                    "name": "SYSTEM_SECRET",
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNT_ID$$:parameter/$$ECS_SERVICE$$/SYSTEM_SECRET"
+                }
+            ],
+            "environment": [
+                {
+                    "name": "AD_LOGIN_URL",
+                    "value": "https://integration.vip3.104-dev.com.tw/ad/login"
+                },
+                {
+                    "name": "BY_PASS_ROUTES",
+                    "value": "/clients,/forgotPassword,/resetPassword,/resources,/keys"
+                },
+                {
+                    "name": "CORP_INTERNAL_API_URL",
+                    "value": "https://integration.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "CORS_ALLOWED_CREDENTIALS",
+                    "value": "true"
+                },
+                {
+                    "name": "CORS_ALLOWED_METHODS",
+                    "value": "GET,POST,PUT,OPTIONS"
+                },
+                {
+                    "name": "CORS_ALLOWED_ORIGINS",
+                    "value": "https://vip3.104-dev.com.tw,https://biz.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "CORS_ENABLED",
+                    "value": "true"
+                },
+                {
+                    "name": "DATABASE_URL",
+                    "value": "postgres://hydra:secret@localhost:5432/hydra?sslmode=disable"
+                },
+                {
+                    "name": "DISABLE_CONSENT_FLOW",
+                    "value": "1"
+                },
+                {
+                    "name": "DISABLE_TELEMETRY",
+                    "value": "1"
+                },
+                {
+                    "name": "EMAIL_SERVICE_URL",
+                    "value": "http://localhost:10025"
+                },
+                {
+                    "name": "GRAPHQL_API_URL",
+                    "value": "https://biz.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "debug"
+                },
+                {
+                    "name": "OAUTH2_ACCESS_TOKEN_STRATEGY",
+                    "value": "jwt"
+                },
+                {
+                    "name": "OAUTH2_CONSENT_URL",
+                    "value": "https://auth.vip3.104-dev.com.tw/consent"
+                },
+                {
+                    "name": "OAUTH2_ISSUER_URL",
+                    "value": "https://auth.vip3.104-dev.com.tw"
+                },
+                {
+                    "name": "OAUTH2_LOGIN_URL",
+                    "value": "https://vip3.104-dev.com.tw/login"
+                },
+                {
+                    "name": "OAUTH2_LOGOUT_REDIRECT_URL",
+                    "value": "https://vip3.104-dev.com.tw/logout-callback"
+                },
+                {
+                    "name": "OAUTH2_SHARE_ERROR_DEBUG",
+                    "value": "1"
+                },
+                {
+                    "name": "PUBLIC_PORT",
+                    "value": "80"
+                },
+                {
+                    "name": "RESET_PASSWORD_ROUTE",
+                    "value": "https://vip3.104-dev.com.tw/reset-password"
+                },
+                {
+                    "name": "ADMIN_USERS",
+                    "value": "auth.admin,angus.lee"
+                },
+                {
+                    "name": "TEST_MODE",
+                    "value": "1"
+                }
+            ]
+        },
+        {
+            "image": "postgres:9.6-alpine",
+            "essential": true,
+            "name": "postgresd",
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "portMappings": [
+                {
+                    "hostPort": 5432,
+                    "protocol": "tcp",
+                    "containerPort": 5432
+                }
+            ],
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "POSTGRES_DB",
+                    "value": "hydra"
+                },
+                {
+                    "name": "POSTGRES_PASSWORD",
+                    "value": "secret"
+                },
+                {
+                    "name": "POSTGRES_USER",
+                    "value": "hydra"
+                }
+            ]
+        },
+        {
+            "name": "mta",
+            "image": "clifflu/ses-wrapper:latest",
+            "essential": true,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "$$CLW_LOG_GROUP$$",
+                    "awslogs-region": "$$AWS_DEFAULT_REGION$$",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-west-2"
+                },
+                {
+                    "name": "PORT",
+                    "value": "10025"
+                },
+                {
+                    "name": "SENDERS",
+                    "value": "jobbank@104.com.tw"
+                }
+            ]
+        }
+    ]
+}
