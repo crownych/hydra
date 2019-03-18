@@ -39,7 +39,6 @@ before_deploy:
       export AWS_SECRET_ACCESS_KEY=${DEV_AWS_SECRET_ACCESS_KEY};
       export TASK_DEFINITION_TEMPLATE="${TRAVIS_BUILD_DIR}/scripts/deploy/demo-task-definition.json";
       export TASK_DESIRED_COUNT="1";
-      # Overwrite ECS_SERVICE_STACKNAME for demo env
       export ECS_SERVICE_STACKNAME=demo-${ECS_SERVICE_STACKNAME};
     fi
   # Set deploy/develop branch variables
