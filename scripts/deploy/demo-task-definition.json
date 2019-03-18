@@ -44,7 +44,7 @@
             "environment": [
                 {
                     "name": "AD_LOGIN_URL",
-                    "value": "https://integration.vip3.104-dev.com.tw/ad/login"
+                    "value": "https://integration.demo.vip3.104-dev.com.tw/ad/login"
                 },
                 {
                     "name": "BY_PASS_ROUTES",
@@ -52,7 +52,7 @@
                 },
                 {
                     "name": "CORP_INTERNAL_API_URL",
-                    "value": "https://integration.vip3.104-dev.com.tw"
+                    "value": "https://integration.demo.vip3.104-dev.com.tw"
                 },
                 {
                     "name": "CORS_ALLOWED_CREDENTIALS",
@@ -64,7 +64,7 @@
                 },
                 {
                     "name": "CORS_ALLOWED_ORIGINS",
-                    "value": "https://vip3.104-dev.com.tw,https://biz.vip3.104-dev.com.tw"
+                    "value": "https://demo.vip3.104-dev.com.tw,https://biz.demo.vip3.104-dev.com.tw"
                 },
                 {
                     "name": "CORS_ENABLED",
@@ -88,7 +88,7 @@
                 },
                 {
                     "name": "GRAPHQL_API_URL",
-                    "value": "https://biz.vip3.104-dev.com.tw"
+                    "value": "https://biz.demo.vip3.104-dev.com.tw"
                 },
                 {
                     "name": "LOG_LEVEL",
@@ -100,11 +100,11 @@
                 },
                 {
                     "name": "OAUTH2_CONSENT_URL",
-                    "value": "https://auth.vip3.104-dev.com.tw/consent"
+                    "value": "https://auth.demo.vip3.104-dev.com.tw/consent"
                 },
                 {
                     "name": "OAUTH2_ISSUER_URL",
-                    "value": "https://auth.vip3.104-dev.com.tw"
+                    "value": "https://auth.demo.vip3.104-dev.com.tw"
                 },
                 {
                     "name": "OAUTH2_LOGIN_URL",
