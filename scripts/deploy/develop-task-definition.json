@@ -34,11 +34,11 @@
             "secrets": [
                 {
                     "name": "OIDC_SUBJECT_TYPE_PAIRWISE_SALT",
-                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/$$ECS_SERVICE$$/OIDC_SUBJECT_TYPE_PAIRWISE_SALT"
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNT_ID$$:parameter/$$ECS_SERVICE$$/OIDC_SUBJECT_TYPE_PAIRWISE_SALT"
                 },
                 {
                     "name": "SYSTEM_SECRET",
-                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNTID$$:parameter/$$ECS_SERVICE$$/SYSTEM_SECRET"
+                    "valueFrom": "arn:aws:ssm:$$AWS_DEFAULT_REGION$$:$$AWS_ACCOUNT_ID$$:parameter/$$ECS_SERVICE$$/SYSTEM_SECRET"
                 }
             ],
             "environment": [
