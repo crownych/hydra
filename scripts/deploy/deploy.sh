@@ -1,12 +1,12 @@
 #!/bin/bash 
 set -e -o pipefail
 
-print_fun_name(){
+function print_function_name(){
     echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
 }
 
-set_env_var() {
-    print_fun_name
+function set_env_var() {
+    print_function_name
 
     # Get CFN stack outputs
     local outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
@@ -37,8 +37,8 @@ set_env_var() {
     fi
 }
 
-ecs_register_task_definition() {
-    print_fun_name
+function ecs_register_task_definition() {
+    print_function_name
 
     # Register new version task definition
     local outputs=$(aws ecs register-task-definition \
@@ -49,8 +49,8 @@ ecs_register_task_definition() {
     echo $( echo $outputs | jq -r '.taskDefinition|"Registered taskdefinition : "+.family+":"+(.revision|tostring)' )
 }
 
-ecs_update_service() {
-    print_fun_name
+function ecs_update_service() {
+    print_function_name
 
     # Update service with new version task definition
     local outputs=$( aws ecs update-service \
@@ -62,20 +62,20 @@ ecs_update_service() {
     
 }
 
-ecs_wait_services_stable() {
-    print_fun_name
+function ecs_wait_services_stable() {
+    print_function_name
 
     aws ecs wait services-stable --services "${ECS_SERVICE}"  --cluster  ${ECS_CLUSTER}
 }
 
-install_tools() {
-    print_fun_name
+function install_tools() {
+    print_function_name
 
     pip install -q --user awscli 
 }
 
-get_sts(){
-    print_fun_name
+function get_sts(){
+    print_function_name
 
     if [[ ${AWS_ACCESS_KEY_ID} == "" ]]; then
         echo "empty AWS_ACCESS_KEY_ID"
@@ -84,14 +84,14 @@ get_sts(){
     source ${TRAVIS_BUILD_DIR}/scripts/deploy/sts.sh
 }
 
-ecr_login() {
-    print_fun_name
+function ecr_login() {
+    print_function_name
 
     eval $( aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} )
 }
 
-docker_build_tag_push() {
-    print_fun_name
+function docker_build_tag_push() {
+    print_function_name
 
     # Build, tag and push image 
     docker build -t image .
@@ -101,8 +101,8 @@ docker_build_tag_push() {
     docker push ${ECR_URI_TAG_CUSTOM}
 }
 
-replace_var_in_taskdefinition(){
-    print_fun_name
+function replace_var_in_taskdefinition(){
+    print_function_name
 
     # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with environment variable
     # Example :
@@ -119,7 +119,7 @@ replace_var_in_taskdefinition(){
 }
 
 # Main
-main() {
+function main() {
     if [[ ${TRAVIS_REPO_SLUG} != "104corp/hydra" ]]; then
         exit 0
     fi
