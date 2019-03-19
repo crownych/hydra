@@ -8,9 +8,6 @@ function print_function_name(){
 function set_env_var() {
     print_function_name
     
-    export ECR_URI_TAG_LATEST=${ECR_URI}:latest
-    export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
-    
     # Set env varables from cloudformation stack outputs: 
     #   Outputs[].OutputKey==Cluster
     #   Outputs[].OutputKey==Service
@@ -27,7 +24,9 @@ function set_env_var() {
     export ECR_URI=$( echo $outputs | jq -r '.| select(.OutputKey=="ElasticContainerRegistry") | .OutputValue' )
     export CLW_LOG_GROUP=$( echo $outputs | jq -r '.| select(.OutputKey=="LogGroup") | .OutputValue' )
     export TASK_DEFINITION_FAMILY=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskDefinition") | .OutputValue'| awk -F "/" '{print $(NF)}' | awk -F ":" '{print $1}' )
-    
+    export ECR_URI_TAG_LATEST=${ECR_URI}:latest
+    export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
+
     # Set ECS task desire-count . Default: 1
     if [[ -z ${TASK_DESIRED_COUNT} ]]; then 
         export TASK_DESIRED_COUNT_CLI="--desired-count 1"
