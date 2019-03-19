@@ -1,5 +1,5 @@
-#!/bin/bash 
-set -e -o pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 function print_function_name(){
     echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
@@ -80,7 +80,15 @@ function get_sts(){
         echo "empty AWS_ACCESS_KEY_ID"
         exit 1
     fi
-    source ${TRAVIS_BUILD_DIR}/scripts/deploy/sts.sh
+
+    local sts_session_name=TravisDeploy-$(echo ${TRAVIS_REPO_SLUG} | tr -dc '[:alnum:]\n\r' | cut -b 1-50 )
+    local accountid=$( aws sts get-caller-identity | jq -r .Account )
+    local temp_role=$( aws sts assume-role --role-arn arn:aws:iam::$accountid:role/${ROLE_NAME} --role-session-name $sts_session_name )
+
+    export AWS_ACCESS_KEY_ID=$( echo $temp_role | jq -r .Credentials.AccessKeyId )
+    export AWS_SECRET_ACCESS_KEY=$( echo $temp_role | jq -r .Credentials.SecretAccessKey )
+    export AWS_SESSION_TOKEN=$( echo $temp_role | jq -r .Credentials.SessionToken )
+    export AWS_ACCOUNT_ID=$accountid
 }
 
 function ecr_login() {
