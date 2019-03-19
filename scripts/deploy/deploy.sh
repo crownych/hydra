@@ -7,19 +7,19 @@ function print_function_name(){
 
 function set_env_var() {
     print_function_name
-
-    # Get CFN stack outputs
-    local outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
-
-    # Set ENV Variables
-    # Stack.Outputs[].OutputKey==Cluster
-    # Stack.Outputs[].OutputKey==Service
-    # Stack.Outputs[].OutputKey==ExecutionRole
-    # Stack.Outputs[].OutputKey==TaskRole
-    # Stack.Outputs[].OutputKey==ElasticContainerRegistry
-    # Stack.Outputs[].OutputKey==LogGroup
-    # Stack.Outputs[].OutputKey==TaskDefinition
-
+    
+    export ECR_URI_TAG_LATEST=${ECR_URI}:latest
+    export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
+    
+    # Set env varables from cloudformation stack outputs: 
+    #   Outputs[].OutputKey==Cluster
+    #   Outputs[].OutputKey==Service
+    #   Outputs[].OutputKey==ExecutionRole
+    #   Outputs[].OutputKey==TaskRole
+    #   Outputs[].OutputKey==ElasticContainerRegistry
+    #   Outputs[].OutputKey==LogGroup
+    #   Outputs[].OutputKey==TaskDefinition
+    local outputs=$( aws cloudformation describe-stacks | jq --arg ECS_SERVICE_STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$ECS_SERVICE_STACKNAME)|.Outputs[]' )
     export ECS_CLUSTER=$( echo $outputs | jq -r '.| select(.OutputKey=="Cluster") | .OutputValue' )
     export ECS_SERVICE=$( echo $outputs | jq -r '.| select(.OutputKey=="Service") | .OutputValue' | awk -F "/" '{print $NF}' )
     export TASK_DEFINITION_EXECUTION_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="ExecutionRole") | .OutputValue' )
@@ -27,9 +27,8 @@ function set_env_var() {
     export ECR_URI=$( echo $outputs | jq -r '.| select(.OutputKey=="ElasticContainerRegistry") | .OutputValue' )
     export CLW_LOG_GROUP=$( echo $outputs | jq -r '.| select(.OutputKey=="LogGroup") | .OutputValue' )
     export TASK_DEFINITION_FAMILY=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskDefinition") | .OutputValue'| awk -F "/" '{print $(NF)}' | awk -F ":" '{print $1}' )
-    export ECR_URI_TAG_LATEST=${ECR_URI}:latest
-    export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
     
+    # Set ECS task desire-count . Default: 1
     if [[ -z ${TASK_DESIRED_COUNT} ]]; then 
         export TASK_DESIRED_COUNT_CLI="--desired-count 1"
     else 
