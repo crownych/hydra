@@ -1,25 +1,22 @@
-#!/bin/bash 
-set -e -o pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
-print_fun_name(){
+function print_function_name(){
     echo "$(tput bold;tput setaf 2 ) === ${FUNCNAME[1]} === $(tput sgr0)"
 }
 
-set_env_var() {
-    print_fun_name
-
-    # Get CFN stack outputs
-    local outputs=$( aws cloudformation describe-stacks | jq --arg STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$STACKNAME)|.Outputs[]' )
-
-    # Set ENV Variables
-    # Stack.Outputs[].OutputKey==Cluster
-    # Stack.Outputs[].OutputKey==Service
-    # Stack.Outputs[].OutputKey==ExecutionRole
-    # Stack.Outputs[].OutputKey==TaskRole
-    # Stack.Outputs[].OutputKey==ElasticContainerRegistry
-    # Stack.Outputs[].OutputKey==LogGroup
-    # Stack.Outputs[].OutputKey==TaskDefinition
-
+function set_env_var() {
+    print_function_name
+    
+    # Set env varables from cloudformation stack outputs: 
+    #   Outputs[].OutputKey==Cluster
+    #   Outputs[].OutputKey==Service
+    #   Outputs[].OutputKey==ExecutionRole
+    #   Outputs[].OutputKey==TaskRole
+    #   Outputs[].OutputKey==ElasticContainerRegistry
+    #   Outputs[].OutputKey==LogGroup
+    #   Outputs[].OutputKey==TaskDefinition
+    local outputs=$( aws cloudformation describe-stacks | jq --arg ECS_SERVICE_STACKNAME ${ECS_SERVICE_STACKNAME} -r '.Stacks[] | select(.StackName==$ECS_SERVICE_STACKNAME)|.Outputs[]' )
     export ECS_CLUSTER=$( echo $outputs | jq -r '.| select(.OutputKey=="Cluster") | .OutputValue' )
     export ECS_SERVICE=$( echo $outputs | jq -r '.| select(.OutputKey=="Service") | .OutputValue' | awk -F "/" '{print $NF}' )
     export TASK_DEFINITION_EXECUTION_ROLE_ARN=$( echo $outputs | jq -r '.| select(.OutputKey=="ExecutionRole") | .OutputValue' )
@@ -29,7 +26,8 @@ set_env_var() {
     export TASK_DEFINITION_FAMILY=$( echo $outputs | jq -r '.| select(.OutputKey=="TaskDefinition") | .OutputValue'| awk -F "/" '{print $(NF)}' | awk -F ":" '{print $1}' )
     export ECR_URI_TAG_LATEST=${ECR_URI}:latest
     export ECR_URI_TAG_CUSTOM=${ECR_URI}:${TRAVIS_COMMIT}
-    
+
+    # Set ECS task desire-count . Default: 1
     if [[ -z ${TASK_DESIRED_COUNT} ]]; then 
         export TASK_DESIRED_COUNT_CLI="--desired-count 1"
     else 
@@ -37,8 +35,8 @@ set_env_var() {
     fi
 }
 
-ecs_register_task_definition() {
-    print_fun_name
+function ecs_register_task_definition() {
+    print_function_name
 
     # Register new version task definition
     local outputs=$(aws ecs register-task-definition \
@@ -49,8 +47,8 @@ ecs_register_task_definition() {
     echo $( echo $outputs | jq -r '.taskDefinition|"Registered taskdefinition : "+.family+":"+(.revision|tostring)' )
 }
 
-ecs_update_service() {
-    print_fun_name
+function ecs_update_service() {
+    print_function_name
 
     # Update service with new version task definition
     local outputs=$( aws ecs update-service \
@@ -62,36 +60,44 @@ ecs_update_service() {
     
 }
 
-ecs_wait_services_stable() {
-    print_fun_name
+function ecs_wait_services_stable() {
+    print_function_name
 
     aws ecs wait services-stable --services "${ECS_SERVICE}"  --cluster  ${ECS_CLUSTER}
 }
 
-install_tools() {
-    print_fun_name
+function install_tools() {
+    print_function_name
 
     pip install -q --user awscli 
 }
 
-get_sts(){
-    print_fun_name
+function get_sts(){
+    print_function_name
 
     if [[ ${AWS_ACCESS_KEY_ID} == "" ]]; then
         echo "empty AWS_ACCESS_KEY_ID"
         exit 1
     fi
-    source ${TRAVIS_BUILD_DIR}/scripts/deploy/sts.sh
+
+    local sts_session_name=TravisDeploy-$(echo ${TRAVIS_REPO_SLUG} | tr -dc '[:alnum:]\n\r' | cut -b 1-50 )
+    local accountid=$( aws sts get-caller-identity | jq -r .Account )
+    local temp_role=$( aws sts assume-role --role-arn arn:aws:iam::$accountid:role/${ROLE_NAME} --role-session-name $sts_session_name )
+
+    export AWS_ACCESS_KEY_ID=$( echo $temp_role | jq -r .Credentials.AccessKeyId )
+    export AWS_SECRET_ACCESS_KEY=$( echo $temp_role | jq -r .Credentials.SecretAccessKey )
+    export AWS_SESSION_TOKEN=$( echo $temp_role | jq -r .Credentials.SessionToken )
+    export AWS_ACCOUNT_ID=$accountid
 }
 
-ecr_login() {
-    print_fun_name
+function ecr_login() {
+    print_function_name
 
     eval $( aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} )
 }
 
-docker_build_tag_push() {
-    print_fun_name
+function docker_build_tag_push() {
+    print_function_name
 
     # Build, tag and push image 
     docker build -t image .
@@ -101,8 +107,8 @@ docker_build_tag_push() {
     docker push ${ECR_URI_TAG_CUSTOM}
 }
 
-replace_var_in_taskdefinition(){
-    print_fun_name
+function replace_var_in_taskdefinition(){
+    print_function_name
 
     # This will replace '$$ENV_VAR_NAME$$' in ${TASK_DEFINITION_TEMPLATE} with environment variable
     # Example :
@@ -119,7 +125,7 @@ replace_var_in_taskdefinition(){
 }
 
 # Main
-main() {
+function main() {
     if [[ ${TRAVIS_REPO_SLUG} != "104corp/hydra" ]]; then
         exit 0
     fi
