@@ -10,7 +10,7 @@ services:
 go_import_path: github.com/ory/hydra
 
 go:
-  - 1.12.6
+  - 1.12.7
 
 env:
   - DEP_VERSION="0.5.0"
